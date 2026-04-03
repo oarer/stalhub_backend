@@ -1,7 +1,14 @@
-import { Elysia } from "elysia";
+import { app } from './app'
+import { env } from './env'
+import { createElysia } from './utils/elysia'
 
-const app = new Elysia().get("/", () => "Hello Elysia").listen(3000);
+const server = createElysia()
 
-console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
-);
+  // Routes
+  .use(app)
+
+server.listen({ port: env.PORT }, ({ hostname, port }) => {
+  const url = env.NODE_ENV === 'production' ? 'https' : 'http'
+
+  console.log(`StalHub backend started on: ${url}://${hostname}:${port}`)
+})
