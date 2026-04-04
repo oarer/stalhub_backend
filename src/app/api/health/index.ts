@@ -1,6 +1,5 @@
 import { createElysia } from '@/utils/elysia'
 
-
 export const routeHealth = createElysia()
   .get('/health', () => ({
     status: 'ok',

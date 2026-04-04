@@ -1,4 +1,4 @@
-import { logixlysia } from 'logixlysia';
+import { logixlysia } from 'logixlysia'
 
 export const logger = logixlysia({
   config: {
@@ -14,4 +14,4 @@ export const logger = logixlysia({
     },
     ip: true,
   },
-});
+})

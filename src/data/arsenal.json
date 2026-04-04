@@ -1,0 +1,600 @@
+[
+    {
+        "name": {
+            "ru": "Дорогие сигареты",
+            "en": "Expensive Cigarettes",
+            "es": "Cigarrillos caros",
+            "fr": "Cigarettes chères",
+            "ko": "고급 담배"
+        },
+        "drop": true,
+        "reputation": 5,
+        "price": 3000,
+        "weight": 0.3
+    },
+    {
+        "name": {
+            "ru": "Запчасти для ПДА",
+            "en": "PDA Spare Parts",
+            "es": "Piezas de recambio de PDA",
+            "fr": "Pièces de rechange pour PDA",
+            "ko": "PDA 예비 부품"
+        },
+        "drop": true,
+        "reputation": 18,
+        "weight": 0.7,
+        "id": "z3wgm"
+    },
+    {
+        "name": {
+            "ru": "Огромный артефактный фрагмент",
+            "en": "Huge Artifact Fragment",
+            "es": "Fragmento de artefacto enorme",
+            "fr": "Énorme fragment d'artefact",
+            "ko": "거대 아티팩트 조각"
+        },
+        "drop": true,
+        "reputation": 2,
+        "weight": 0.5,
+        "id": "w39k3"
+    },
+    {
+        "name": {
+            "ru": "Обычный артефактный фрагмент",
+            "en": "Common Artifact Fragment",
+            "es": "Fragmento de artefacto común",
+            "fr": "Fragment d'artefact commun",
+            "ko": "일반 아티팩트 조각"
+        },
+        "drop": true,
+        "reputation": 2,
+        "weight": 0.3,
+        "id": "55ymq"
+    },
+    {
+        "name": {
+            "ru": "Остатки приборов «Шепота»",
+            "en": "Remains of Murmur Devices",
+            "es": "Restos de dispositivos de Susurro",
+            "fr": "Restes d'appareils du Murmure",
+            "ko": "속삭임 장치의 잔해"
+        },
+        "drop": true,
+        "reputation": 95,
+        "weight": 2.5,
+        "id": "55olq"
+    },
+    {
+        "name": {
+            "ru": "Фильтр",
+            "en": "Filter",
+            "es": "Filtro",
+            "fr": "Filtre",
+            "ko": "정화통"
+        },
+        "drop": true,
+        "reputation": 12,
+        "weight": 0.5,
+        "id": "y4g93"
+    },
+    {
+        "name": {
+            "ru": "Драгоценности",
+            "en": "Jewelry",
+            "es": "Joyería",
+            "fr": "Bijoux",
+            "ko": "보석"
+        },
+        "drop": true,
+        "reputation": 65,
+        "price": 60000,
+        "weight": 0.2
+    },
+    {
+        "name": {
+            "ru": "Малый артефактный фрагмент",
+            "en": "Small Artifact Fragment",
+            "es": "Fragmento de artefacto pequeño",
+            "fr": "Petit fragment d'artefact",
+            "ko": "작은 아티팩트 조각"
+        },
+        "drop": true,
+        "reputation": 1,
+        "weight": 0.2,
+        "id": "z3k1m"
+    },
+    {
+        "name": {
+            "ru": "Рука сильного шныря",
+            "en": "Strong Skitter’s Hand",
+            "es": "Mano de merodeador fuerte",
+            "fr": "Main de Pilleur Fort",
+            "ko": "강력한 스키터 손"
+        },
+        "drop": true,
+        "reputation": 9,
+        "weight": 0.5,
+        "id": "wjlzz"
+    },
+    {
+        "name": {
+            "ru": "Протоартефакт",
+            "en": "Protoartifact",
+            "es": "Protoartefacto",
+            "fr": "Proto-artéfact",
+            "ko": "원시아티팩트"
+        },
+        "drop": true,
+        "reputation": 4,
+        "weight": 0,
+        "id": "dm6l2"
+    },
+    {
+        "name": {
+            "ru": "Большой ящик с продовольствием",
+            "en": "Big Crate of Rations",
+            "es": "Caja de raciones grande",
+            "fr": "Grande caisse de rations",
+            "ko": "대형 보급 식량 상자"
+        },
+        "drop": true,
+        "reputation": 9,
+        "price": 6000,
+        "weight": 6
+    },
+    {
+        "name": {
+            "ru": "Черная селезенка",
+            "en": "Black Spleen",
+            "es": "Bazo negro",
+            "fr": "Rate noire",
+            "ko": "시커먼 비장"
+        },
+        "drop": true,
+        "reputation": 150,
+        "weight": 1.6,
+        "id": "l0ryo"
+    },
+    {
+        "name": {
+            "ru": "Сердце Лимб",
+            "en": "Heart of Limbo",
+            "es": "Corazón de limbo",
+            "fr": "Cœur de Limbes",
+            "ko": "림보의 심장"
+        },
+        "drop": true,
+        "reputation": 1000,
+        "weight": 3,
+        "id": "rjvwy"
+    },
+    {
+        "name": {
+            "ru": "Лоскут светящейся кожи",
+            "en": "Graft of Glowing Skin",
+            "es": "Injerto de piel brillante",
+            "fr": "Greffe de peau brillante",
+            "ko": "빛나는 살가죽"
+        },
+        "drop": true,
+        "reputation": 15,
+        "weight": 0.4,
+        "id": "krpnp"
+    },
+    {
+        "name": {
+            "ru": "Глаз сильного бурелома",
+            "en": "Strong Behemoth’s Eye",
+            "es": "Ojo de mastodonte fuerte",
+            "fr": "Œil de Béhémoth Fort",
+            "ko": "강력한 베히모스 눈"
+        },
+        "drop": true,
+        "reputation": 15,
+        "weight": 1,
+        "id": "knpzj"
+    },
+    {
+        "name": {
+            "ru": "Медная катушка",
+            "en": "Copper Coil",
+            "es": "Bobina de cobre",
+            "fr": "Bobine en cuivre",
+            "ko": "구리 코일"
+        },
+        "drop": true,
+        "reputation": 10,
+        "weight": 0.3,
+        "id": "9d3gy"
+    },
+    {
+        "name": {
+            "ru": "Кость мутанта",
+            "en": "Mutant’s Bone",
+            "es": "Hueso de mutante",
+            "fr": "Os de mutant",
+            "ko": "돌연변이의 뼈"
+        },
+        "drop": true,
+        "reputation": 6,
+        "weight": 2,
+        "id": "007oy"
+    },
+    {
+        "name": {
+            "ru": "Медицинские инструменты",
+            "en": "Medical Instruments",
+            "es": "Instrumentos médicos",
+            "fr": "Instruments médicaux",
+            "ko": "의료 기구"
+        },
+        "drop": true,
+        "reputation": 20,
+        "weight": 0.3,
+        "id": "y4n40"
+    },
+    {
+        "name": {
+            "ru": "Комплект заводских инструментов",
+            "en": "Factory Tool Set",
+            "es": "Conjunto de herramientas de fábrica",
+            "fr": "Outils d'usine",
+            "ko": "공장 도구 세트"
+        },
+        "drop": true,
+        "reputation": 11,
+        "weight": 0.4,
+        "id": "gn1nn"
+    },
+    {
+        "name": {
+            "ru": "Блок данных «Лямбда»",
+            "en": "Lambda Data Block",
+            "es": "Bloque de datos lambda",
+            "fr": "Bloc de données Lambda",
+            "ko": "람다 데이터 블록"
+        },
+        "drop": false,
+        "reputation": 150,
+        "weight": 0.2,
+        "id": "y4y33"
+    },
+    {
+        "name": {
+            "ru": "Прототипы «Шепота»",
+            "en": "Murmur Prototypes",
+            "es": "Prototipos de Susurro",
+            "fr": "Prototypes du Murmure",
+            "ko": "속삭임 프로토타입"
+        },
+        "drop": true,
+        "reputation": 55,
+        "price": 40000,
+        "weight": 0.3
+    },
+    {
+        "name": {
+            "ru": "Ящик с деталями",
+            "en": "Crate of Parts",
+            "es": "Caja de piezas",
+            "fr": "Caisse de pièces détachées",
+            "ko": "부품 상자"
+        },
+        "drop": true,
+        "reputation": 6,
+        "price": 2000,
+        "weight": 3
+    },
+    {
+        "name": {
+            "ru": "Крупный артефактный фрагмент",
+            "en": "Large Artifact Fragment",
+            "es": "Fragmento de artefacto grande",
+            "fr": "Grand fragment d'artefact",
+            "ko": "대형 아티팩트 조각"
+        },
+        "drop": true,
+        "reputation": 3,
+        "weight": 0.4,
+        "id": "y4gr3"
+    },
+    {
+        "name": {
+            "ru": "Соленоид",
+            "en": "Solenoid",
+            "es": "Solenoide",
+            "fr": "Solénoïde",
+            "ko": "솔레노이드"
+        },
+        "drop": true,
+        "reputation": 2,
+        "weight": 0.4,
+        "id": "gnk55"
+    },
+    {
+        "name": {
+            "ru": "Расцветший Горьколистник",
+            "en": "Flowering Bitterleaf",
+            "es": "Hoja amarga en flor",
+            "fr": "Vernonie fleurie",
+            "ko": "꽃 핀 고엽초"
+        },
+        "drop": false,
+        "reputation": 85,
+        "weight": 0.05,
+        "id": "z3ogm"
+    },
+    {
+        "name": {
+            "ru": "Набор компонентов брони",
+            "en": "Pack of Armor Components",
+            "es": "Pack de componentes de armadura",
+            "fr": "Lot de composants d'armure",
+            "ko": "방어구 부품 팩"
+        },
+        "drop": false,
+        "reputation": 2,
+        "price": 2500,
+        "weight": 0.2
+    },
+    {
+        "name": {
+            "ru": "Темный Лимб",
+            "en": "Dark Limbo",
+            "es": "Limbo oscuro",
+            "fr": "Limbes Sombres",
+            "ko": "암흑 림보"
+        },
+        "drop": false,
+        "reputation": 90,
+        "weight": 0.2,
+        "id": "gnpr5"
+    },
+    {
+        "name": {
+            "ru": "Компоненты редких сплавов",
+            "en": "Rare Alloy Components",
+            "es": "Componentes de aleación raros",
+            "fr": "Composants en alliage rare",
+            "ko": "희귀 합금 부품"
+        },
+        "drop": true,
+        "reputation": 35,
+        "weight": 0.4,
+        "id": "j0q0l"
+    },
+    {
+        "name": {
+            "ru": "Концентрированная лимбоплазма",
+            "en": "Concentrated Limboplasma",
+            "es": "Limboplasma concentrado",
+            "fr": "Limboplasma concentré",
+            "ko": "농축된 림보플라즈마"
+        },
+        "drop": false,
+        "reputation": 800,
+        "weight": 0.3,
+        "id": "4k3qo"
+    },
+    {
+        "name": {
+            "ru": "Хроносфера",
+            "en": "Chronosphere",
+            "es": "Cronosfera",
+            "fr": "Chronosphère",
+            "ko": "크로노스피어"
+        },
+        "drop": false,
+        "reputation": 175,
+        "weight": 0.25,
+        "id": "1rl61"
+    },
+    {
+        "name": {
+            "ru": "Ноутбук",
+            "en": "Laptop",
+            "es": "Portátil",
+            "fr": "Ordinateur portable",
+            "ko": "노트북"
+        },
+        "drop": true,
+        "reputation": 12,
+        "weight": 10,
+        "id": "771lj"
+    },
+    {
+        "name": {
+            "ru": "Системы наведения",
+            "en": "Targeting Systems",
+            "es": "Sistemas de guiado",
+            "fr": "Systèmes de visée",
+            "ko": "조준 시스템"
+        },
+        "drop": true,
+        "reputation": 16,
+        "price": 25000,
+        "weight": 0.4
+    },
+    {
+        "name": {
+            "ru": "Блок данных «Бета»",
+            "en": "Beta Data Block",
+            "es": "Bloque de datos beta",
+            "fr": "Bloc de données Bêta",
+            "ko": "베타 데이터 블록"
+        },
+        "drop": false,
+        "reputation": 45,
+        "weight": 0.2,
+        "id": "dr61j"
+    },
+    {
+        "name": {
+            "ru": "Портативный квантовый генератор",
+            "en": "Portable Quantum Generator",
+            "es": "Generador cuántico portátil",
+            "fr": "Générateur quantique portable",
+            "ko": "휴대용 양자 발전기"
+        },
+        "drop": false,
+        "reputation": 50,
+        "weight": 3,
+        "id": "gn975"
+    },
+    {
+        "name": {
+            "ru": "Цветущий рыжий папоротник",
+            "en": "Flowering Red Fern",
+            "es": "Helecho rojo en flor",
+            "fr": "Fougère rouge fleurie",
+            "ko": "꽃 핀 붉은 고사리"
+        },
+        "drop": false,
+        "reputation": 12,
+        "weight": 0.05,
+        "id": "z30my"
+    },
+    {
+        "name": {
+            "ru": "Малый ящик с продовольствием",
+            "en": "Small Crate of Rations",
+            "es": "Caja de raciones pequeña",
+            "fr": "Petite caisse de rations",
+            "ko": "소형 보급 식량 상자"
+        },
+        "drop": true,
+        "reputation": 1,
+        "price": 2000,
+        "weight": 1
+    },
+    {
+        "name": {
+            "ru": "Ящик с запчастями",
+            "en": "Box of Spare Parts",
+            "es": "Caja de piezas de recambio",
+            "fr": "Boîte de pièces de rechange",
+            "ko": "예비 부품 상자"
+        },
+        "drop": true,
+        "reputation": 1,
+        "weight": 2.5,
+        "id": "drym2"
+    },
+    {
+        "name": {
+            "ru": "Блок данных «Гамма»",
+            "en": "Gamma Data Block",
+            "es": "Bloque de datos gamma",
+            "fr": "Bloc de données Gamma",
+            "ko": "감마 데이터 블록"
+        },
+        "drop": false,
+        "reputation": 45,
+        "weight": 0.2,
+        "id": "y409k"
+    },
+    {
+        "name": {
+            "ru": "Военный радиопередатчик",
+            "en": "Military Radio Transmitter",
+            "es": "Transmisor de radio militar",
+            "fr": "Radio-émetteur militaire",
+            "ko": "군용 무전 송신기"
+        },
+        "drop": true,
+        "reputation": 10,
+        "weight": 0.4,
+        "id": "9d10q"
+    },
+    {
+        "name": {
+            "ru": "Блок данных «Альфа»",
+            "en": "Alpha Data Block",
+            "es": "Bloque de datos alfa",
+            "fr": "Bloc de données Alpha",
+            "ko": "알파 데이터 블록"
+        },
+        "drop": false,
+        "reputation": 45,
+        "weight": 0.2,
+        "id": "4k5gr"
+    },
+    {
+        "name": {
+            "ru": "Модифицированная аномальная батарея",
+            "en": "Modified Anomalous Battery",
+            "es": "Batería anómala modificada",
+            "fr": "Batterie anormale modifiée",
+            "ko": "개조된 이상 배터리"
+        },
+        "drop": false,
+        "reputation": 1000,
+        "weight": 0.45,
+        "id": "w3zj3"
+    },
+    {
+        "name": {
+            "ru": "Пси-маячок",
+            "en": "Psy-Tracker",
+            "es": "Rastreador psy",
+            "fr": "Traceur-Psy",
+            "ko": "사이킥 추적 장치"
+        },
+        "drop": false,
+        "reputation": 7,
+        "weight": 0.15,
+        "id": "9dk7y"
+    },
+    {
+        "name": {
+            "ru": "Очищенное вещество 07270",
+            "en": "Purified Substance 07270",
+            "es": "Sustancia 07270 purificada",
+            "fr": "Substance purifiée 07270",
+            "ko": "정제된 물질 07270"
+        },
+        "drop": false,
+        "reputation": 9,
+        "weight": 0.05,
+        "id": "gn976"
+    },
+    {
+        "name": {
+            "ru": "Промышленные запчасти",
+            "en": "Industrial Spare Parts",
+            "es": "Piezas de recambio industriales",
+            "fr": "Pièces détachées industrielles",
+            "ko": "산업용 예비 부품"
+        },
+        "drop": true,
+        "reputation": 6,
+        "price": 15000,
+        "weight": 0.4
+    },
+    {
+        "name": {
+            "ru": "Обычный ящик с продовольствием",
+            "en": "Common Crate of Rations",
+            "es": "Caja de raciones común",
+            "fr": "Caisse de rations communes",
+            "ko": "일반 보급 식량 상자"
+        },
+        "drop": true,
+        "reputation": 3,
+        "price": 2000,
+        "weight": 2
+    },
+    {
+        "name": {
+            "ru": "Набор компонентов оружия",
+            "en": "Pack of Weapon Components",
+            "es": "Caja de raciones común",
+            "fr": "Paquet de composants d'armes",
+            "ko": "무기 부품 팩"
+        },
+        "drop": false,
+        "reputation": 6,
+        "price": 35000,
+        "weight": 0.2
+    }
+]
