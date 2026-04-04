@@ -1,6 +1,4 @@
 import { cron } from '@elysiajs/cron'
-import items from '@/data/arsenal.json'
-import type { ItemInput, ItemResult } from '@/types/arsenal.type'
 import { createElysia } from '@/utils/elysia'
 import {
     getCache,
