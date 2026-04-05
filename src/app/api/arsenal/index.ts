@@ -29,7 +29,6 @@ export const routeArsenal = createElysia()
             const fresh = await getCache()
 
             return {
-                status: 'ok',
                 updatedAt: fresh?.updatedAt,
                 total: fresh?.items.length ?? 0,
                 items: fresh?.items ?? [],
@@ -41,7 +40,6 @@ export const routeArsenal = createElysia()
         }
 
         return {
-            status: 'ok',
             updatedAt: cached.updatedAt,
             total: cached.items.length,
             items: cached.items,

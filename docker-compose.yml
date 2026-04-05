@@ -18,7 +18,7 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
+      interval: 3s
       timeout: 5s
       retries: 5
 
