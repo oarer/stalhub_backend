@@ -1,10 +1,7 @@
 import { apiClient } from '@/app/interceptors/sc.interceptor'
 import items from '@/data/arsenal.json'
-import type {
-    AuctionHistoryResponse,
-    ItemInput,
-    ItemResult,
-} from '@/types/arsenal.type'
+import type { LotsHistoryResponse } from '@/types/api.type'
+import type { ItemInput, ItemResult } from '@/types/arsenal.type'
 import { acquireLock, releaseLock, setCache } from './cache'
 
 const getAveragePrice = (prices: { price: number }[]) => {
@@ -16,7 +13,7 @@ const getAveragePrice = (prices: { price: number }[]) => {
 
 export const fetchItemPrice = async (itemId: string, region = 'eu') => {
     try {
-        const { data } = await apiClient.get<AuctionHistoryResponse>(
+        const { data } = await apiClient.get<LotsHistoryResponse>(
             `/${region}/auction/${itemId}/history`,
             { params: { limit: 20 } }
         )
@@ -37,7 +34,7 @@ export const updatePrices = async () => {
                 const fetched = item.id ? await fetchItemPrice(item.id) : null
                 return {
                     ...item,
-                    currentPrice: fetched ?? item.price ?? null,
+                    currentPrice: (fetched ?? item.currentPrice) || 0,
                 } satisfies ItemResult
             })
         )

@@ -1,6 +1,6 @@
 export type ItemInput = {
 	name: Record<string, string>
-	price?: number
+	currentPrice?: number
 	id?: string
 }
 
