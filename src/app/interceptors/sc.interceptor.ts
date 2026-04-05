@@ -1,6 +1,6 @@
-import { env } from '@/env'
 import type { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import axios from 'axios'
+import { env } from '@/env'
 
 export const apiClient = axios.create({
 	baseURL: 'https://eapi.stalcraft.net',
