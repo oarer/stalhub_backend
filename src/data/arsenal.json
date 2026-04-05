@@ -9,7 +9,7 @@
         },
         "drop": true,
         "reputation": 5,
-        "price": 3000,
+        "currentPrice": 3000,
         "weight": 0.3
     },
     {
@@ -87,7 +87,7 @@
         },
         "drop": true,
         "reputation": 65,
-        "price": 60000,
+        "currentPrice": 60000,
         "weight": 0.2
     },
     {
@@ -139,7 +139,7 @@
         },
         "drop": true,
         "reputation": 9,
-        "price": 6000,
+        "currentPrice": 6000,
         "weight": 6
     },
     {
@@ -269,7 +269,7 @@
         },
         "drop": true,
         "reputation": 55,
-        "price": 40000,
+        "currentPrice": 40000,
         "weight": 0.3
     },
     {
@@ -282,7 +282,7 @@
         },
         "drop": true,
         "reputation": 6,
-        "price": 2000,
+        "currentPrice": 2000,
         "weight": 3
     },
     {
@@ -334,7 +334,7 @@
         },
         "drop": false,
         "reputation": 2,
-        "price": 2500,
+        "currentPrice": 2500,
         "weight": 0.2
     },
     {
@@ -412,7 +412,7 @@
         },
         "drop": true,
         "reputation": 16,
-        "price": 25000,
+        "currentPrice": 25000,
         "weight": 0.4
     },
     {
@@ -464,7 +464,7 @@
         },
         "drop": true,
         "reputation": 1,
-        "price": 2000,
+        "currentPrice": 2000,
         "weight": 1
     },
     {
@@ -568,7 +568,7 @@
         },
         "drop": true,
         "reputation": 6,
-        "price": 15000,
+        "currentPrice": 15000,
         "weight": 0.4
     },
     {
@@ -581,7 +581,7 @@
         },
         "drop": true,
         "reputation": 3,
-        "price": 2000,
+        "currentPrice": 2000,
         "weight": 2
     },
     {
@@ -594,7 +594,7 @@
         },
         "drop": false,
         "reputation": 6,
-        "price": 35000,
+        "currentPrice": 35000,
         "weight": 0.2
     }
 ]
