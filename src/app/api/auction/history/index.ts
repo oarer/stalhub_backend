@@ -4,11 +4,10 @@ import { apiClient } from '@/app/interceptors/sc.interceptor'
 import { type LotsHistoryResponse, Regions } from '@/types/api.type'
 
 export const lotsHistoryRoute = new Elysia().get(
-    '/:id/history',
+    '/:region/:id/history',
     async ({ params, query, set }) => {
-        const { id } = params
+        const { id, region } = params
 
-        const region = query.region ?? 'RU'
         const limit = query.limit ?? '10'
         const additional = query.additional ?? 'true'
 
@@ -37,9 +36,9 @@ export const lotsHistoryRoute = new Elysia().get(
     {
         params: t.Object({
             id: t.String(),
+            region: t.Enum(Regions),
         }),
         query: t.Object({
-            region: t.Optional(t.Enum(Regions)),
             limit: t.Optional(t.String()),
             additional: t.Optional(t.String()),
         }),

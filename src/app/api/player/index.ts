@@ -30,7 +30,7 @@ export const playerRoute = new Elysia().get(
     {
         params: t.Object({
             character: t.String(),
-            region: t.Optional(t.Enum(Regions)),
+            region: t.Enum(Regions),
         }),
     }
 )
