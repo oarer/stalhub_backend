@@ -504,6 +504,7 @@
         "drop": true,
         "reputation": 10,
         "weight": 0.4,
+        "currentPrice": 30000,
         "id": "9d10q"
     },
     {
