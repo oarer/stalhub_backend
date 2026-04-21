@@ -1,12 +1,21 @@
-FROM oven/bun:1.2.21
+FROM oven/bun AS build
 
 WORKDIR /app
 
-COPY package.json bun.lock ./
+COPY package.json package.json
+COPY bun.lock bun.lock
+
 RUN bun install
 
-COPY . .
+COPY tsconfig.json tsconfig.json
 
-EXPOSE 3000
+COPY ./src ./src
 
-CMD ["bun", "run", "src/index.ts"]
+ENV NODE_ENV=production
+
+RUN bun build \
+ --compile \
+ --minify-whitespace \
+ --minify-syntax \
+ --outfile server \
+ src/index.ts

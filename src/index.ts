@@ -5,7 +5,7 @@ import { createElysia } from './utils/elysia'
 const server = createElysia()
   // Routes
   .use(app)
-  
+
   .get(
     "/",
     () =>
