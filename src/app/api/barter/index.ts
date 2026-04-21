@@ -1,107 +1,18 @@
 import { cron } from '@elysiajs/cron'
-import { LOCALE, type Locale } from '@/types/api.type'
 import type {
 	BarterEntry,
-	BarterItemResult,
-	BarterOffer,
 	BarterRecipe,
-	BarterRecipeResult,
-	ListingItem,
 } from '@/types/barter.type'
 import { createElysia } from '@/utils/elysia'
-import { loadBarter, loadListing, resetCache } from './utils'
-
-type SettlementTitleResult = Record<Locale, string>
-
-const normalizeTitles = (
-	lines: Record<string, string | undefined>
-): SettlementTitleResult =>
-	LOCALE.reduce((acc, lang) => {
-		acc[lang] = lines[lang] ?? ''
-		return acc
-	}, {} as SettlementTitleResult)
-
-const getItemInfo = (listing: Record<string, ListingItem>, itemId: string) =>
-	listing[itemId]
-
-const transformOffer = (
-	offer: BarterOffer,
-	listing: Record<string, ListingItem>
-): BarterRecipeResult | null => {
-	if (offer.currency !== 'money') return null
-
-	const items = offer.requiredItems
-		.map((req) => {
-			const info = getItemInfo(listing, req.item)
-			if (!info) return null
-
-			return {
-				amount: req.amount,
-				lines: info.name,
-				icon: info.icon,
-			}
-		})
-		.filter((i): i is BarterItemResult => i !== null)
-
-	if (!items.length && offer.cost === 0) return null
-
-	return {
-		money: String(offer.cost),
-		items,
-	}
-}
-
-const transformRecipe = (
-	recipe: BarterRecipe,
-	listing: Record<string, ListingItem>
-): BarterRecipeResult[] =>
-	recipe.offers
-		.map((offer) => transformOffer(offer, listing))
-		.filter((x): x is BarterRecipeResult => x !== null)
-
-type UsedInItem = { item_id: string; icon: string }
-
-const collectUsedIn = (
-	barterData: BarterEntry[],
-	itemId: string,
-	listing: Record<string, ListingItem>
-): UsedInItem[] => {
-	const set = new Map<string, UsedInItem>()
-
-	for (const settlement of barterData) {
-		for (const recipe of settlement.recipes) {
-			const isUsed = recipe.offers.some((o) =>
-				o.requiredItems.some((ri) => ri.item === itemId)
-			)
-
-			if (!isUsed) continue
-
-			const info = listing[recipe.item]
-			if (!info) continue
-
-			set.set(recipe.item, {
-				item_id: recipe.item,
-				icon: info.icon,
-			})
-		}
-	}
-
-	return [...set.values()]
-}
-
-const pickBestMatch = (
-	matched: {
-		settlement: BarterEntry
-		recipe: BarterRecipe
-	}[]
-) => {
-	return matched.reduce((best, curr) => {
-		return curr.recipe.settlementRequiredLevel <
-			best.recipe.settlementRequiredLevel
-			? curr
-			: best
-	})
-}
+import {
+	collectUsedIn,
+	loadBarter,
+	loadListing,
+	normalizeTitles,
+	pickBestMatch,
+	resetCache,
+	transformRecipe
+} from './utils'
 
 export const routeBarter = createElysia()
 	.use(
