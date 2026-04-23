@@ -1,6 +1,10 @@
-import type { AxiosError, InternalAxiosRequestConfig } from 'axios'
-import axios from 'axios'
+import axios, { type InternalAxiosRequestConfig } from 'axios'
 import { env } from '@/env'
+import type { ApiErrorResponse } from '@/types/api.type'
+
+type RetryAxiosRequestConfig = InternalAxiosRequestConfig & {
+	_retry?: boolean
+}
 
 export const apiClient = axios.create({
 	baseURL: 'https://eapi.stalcraft.net',
@@ -8,32 +12,34 @@ export const apiClient = axios.create({
 	headers: { 'Content-Type': 'application/json' },
 })
 
-apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-	const headers = {
-		...config.headers,
-		Authorization: `Bearer ${env.EXBO_TOKEN}`,
-	} as InternalAxiosRequestConfig['headers']
-
-	return {
-		...config,
-		headers,
-	}
+apiClient.interceptors.request.use((config) => {
+	config.headers.set('Authorization', `Bearer ${env.EXBO_TOKEN}`)
+	return config
 })
 
 apiClient.interceptors.response.use(
 	(res) => res,
-	async (error: AxiosError) => {
-		const config = error.config as
-			| (InternalAxiosRequestConfig & { _retry?: boolean })
-			| undefined
+	async (error: unknown) => {
+		if (!axios.isAxiosError<ApiErrorResponse>(error)) {
+			return Promise.reject(error)
+		}
 
-		const status = error.response?.status
+		const config = error.config as RetryAxiosRequestConfig | undefined
+		const status = error.response?.status ?? 500
 
 		if (status === 429 && config && !config._retry) {
 			config._retry = true
 			return apiClient(config)
 		}
 
-		return Promise.reject(error)
+		const data = error.response?.data
+
+		const normalizedError = {
+			status,
+			message: data?.title ?? error.message ?? 'Unknown error',
+			details: data?.details,
+		}
+
+		return Promise.reject(normalizedError)
 	}
 )

@@ -1,6 +1,12 @@
 export type Locale = 'ru' | 'en' | 'es' | 'fr' | 'ko'
 export const LOCALE = ['ru', 'en', 'es', 'fr', 'ko'] as const
 
+export type ApiErrorResponse<T = Record<string, unknown>> = {
+    title: string
+    status: number
+    details: T
+}
+
 export enum Regions {
     RU = 'RU',
     EU = 'EU',
