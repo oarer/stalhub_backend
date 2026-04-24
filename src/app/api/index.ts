@@ -5,9 +5,10 @@ import { routeBarter } from './barter'
 import { routeHealth } from './health'
 import { playerRoute } from './player'
 
-export const routes = createElysia({ prefix: '/api' })
+export const api = createElysia()
 	.use(routeHealth)
 	.use(routeArsenal)
 	.use(auctionRoutes)
 	.use(playerRoute)
 	.use(routeBarter)
+

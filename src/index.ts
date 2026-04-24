@@ -1,17 +1,22 @@
-import { app } from './app'
+import cors from '@elysiajs/cors'
+import { swagger } from '@elysiajs/swagger'
+import { createElysia } from '@/utils/elysia'
+
+import { logger } from '@/utils/logger'
+import { routes } from './app'
 import { env } from './env'
-import { createElysia } from './utils/elysia'
 
-export const server = createElysia()
-  .use(app)
+export const app = createElysia()
+  .use(swagger())
+  .use(cors())
+  .use(logger)
+  .use(routes)
 
-  .get(
-    "/",
-    () =>
-      `Hi!\nThis API was created for https://stalhub.tech <3\n\nBy: https://github.com/oarer`
-  )
   .listen({ port: env.PORT }, ({ hostname, port }) => {
-    const url = env.NODE_ENV === 'production' ? 'https' : 'http'
-
-    console.log(`StalHub backend started on: ${url}://${hostname}:${port}`)
+    const protocol = env.NODE_ENV === 'production' ? 'https' : 'http'
+    console.log(
+      `StalHub backend started on: ${protocol}://${hostname}:${port}`
+    )
   })
+
+export type App = typeof app

@@ -1,14 +1,12 @@
-import cors from '@elysiajs/cors'
-import { swagger } from '@elysiajs/swagger'
+
 import { createElysia } from '@/utils/elysia'
-import { logger } from '@/utils/logger'
-import { routes } from './api'
+import { api } from './api'
 
-export const app = createElysia()
-    .use(swagger())
-    .use(cors())
-    .use(logger)
+export const routes = createElysia({ prefix: '/api' })
+    .use(api)
 
-    .use(routes)
-
-export type App = typeof app
+    .get(
+        '/',
+        () =>
+            `Hi!\nThis API was created for https://stalhub.tech <3\n\nBy: https://github.com/oarer`
+    )
