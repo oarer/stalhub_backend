@@ -43,3 +43,6 @@ package-lock.json
 **/*.bun
 
 test.*
+/generated/prisma
+
+/generated/prisma

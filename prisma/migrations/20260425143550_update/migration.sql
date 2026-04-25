@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "PlayerNote" ALTER COLUMN "role" SET DEFAULT 'SCAMMER';

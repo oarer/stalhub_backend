@@ -2,7 +2,7 @@ services:
   app:
     build: .
     container_name: StalHub_backend
-    command: bun run --watch src/index.ts
+    command: "bun run --watch src/index.ts"
     volumes:
       - .:/app
       - /app/node_modules
@@ -12,6 +12,7 @@ services:
       - .env
     depends_on:
       - redis
+      - postgres
 
   redis:
     image: redis:7-alpine
@@ -22,5 +23,18 @@ services:
       - redis_data:/data
     command: ["redis-server", "--appendonly", "yes"]
 
+  postgres:
+    image: postgres:17.4-alpine
+    container_name: StalHub_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: stalhub
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data_dev:/var/lib/postgresql/data
+
 volumes:
   redis_data:
+  pg_data_dev:

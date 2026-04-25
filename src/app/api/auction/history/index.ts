@@ -43,5 +43,8 @@ export const lotsHistoryRoute = createElysia()
                 limit: t.Optional(t.String()),
                 additional: t.Optional(t.String()),
             }),
+            detail: {
+                tags: ['Auction'],
+            },
         }
     )

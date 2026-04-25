@@ -1,0 +1,24 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  EXBO
+  MEDIA
+  SCAMMER
+  STALHUB
+}
+
+model PlayerNote {
+  id          String   @id @default(cuid())
+  uuid        String   @unique
+  role        Role     @default(SCAMMER)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

@@ -4,8 +4,10 @@ WORKDIR /app
 
 COPY package.json package.json
 COPY bun.lock bun.lock
+COPY prisma ./prisma
 
 RUN bun install
+RUN bun db:deploy
 
 COPY tsconfig.json tsconfig.json
 
