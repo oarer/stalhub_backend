@@ -11,7 +11,10 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
-    command: ["./server"]
+    command: [
+      "bun db:deploy",
+      "./server"
+      ]
 
   redis:
     image: redis:7-alpine
