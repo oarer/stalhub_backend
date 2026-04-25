@@ -40,55 +40,55 @@ export const playersRoute = createElysia().group('/player', (app) =>
 				},
 			}
 		)
+	//! TODO ну мб поймёшь
+	// .post(
+	// 	'',
+	// 	async ({ body: { uuid, description, role } }) => {
+	// 		return playerService.create({ uuid, description, role })
+	// 	},
+	// 	{
+	// 		body: t.Object({
+	// 			uuid: t.String({ error: 'Property uuid is missing' }),
+	// 			description: t.String({
+	// 				error: 'Property description is missing',
+	// 			}),
+	// 			role: t.Enum(PlayerRole, { error: 'Property role is missing' })
+	// 		}),
+	// 		detail: {
+	// 			tags: ['Player'],
+	// 		},
+	// 	}
+	// )
 
-		.post(
-			'',
-			async ({ body: { uuid, description, role } }) => {
-				return playerService.create({ uuid, description, role })
-			},
-			{
-				body: t.Object({
-					uuid: t.String({ error: 'Property uuid is missing' }),
-					description: t.String({
-						error: 'Property description is missing',
-					}),
-					role: t.Enum(PlayerRole, { error: 'Property role is missing' })
-				}),
-				detail: {
-					tags: ['Player'],
-				},
-			}
-		)
+	// .patch(
+	// 	'',
+	// 	async ({ body: { uuid, description, role } }) => {
+	// 		return playerService.patch({ uuid, description, role })
+	// 	},
+	// 	{
+	// 		body: t.Object({
+	// 			uuid: t.String({ error: 'Property uuid is missing' }),
+	// 			description: t.Optional(t.String()),
+	// 			role: t.Optional(t.Enum(PlayerRole, { error: 'Property role is missing' }))
+	// 		}),
+	// 		detail: {
+	// 			tags: ['Player'],
+	// 		},
+	// 	}
+	// )
 
-		.patch(
-			'',
-			async ({ body: { uuid, description, role } }) => {
-				return playerService.patch({ uuid, description, role })
-			},
-			{
-				body: t.Object({
-					uuid: t.String({ error: 'Property uuid is missing' }),
-					description: t.Optional(t.String()),
-					role: t.Optional(t.Enum(PlayerRole, { error: 'Property role is missing' }))
-				}),
-				detail: {
-					tags: ['Player'],
-				},
-			}
-		)
-
-		.delete(
-			'',
-			async ({ body: { uuid } }) => {
-				return playerService.delete(uuid)
-			},
-			{
-				body: t.Object({
-					uuid: t.String({ error: 'Property uuid is missing' }),
-				}),
-				detail: {
-					tags: ['Player'],
-				},
-			}
-		)
+	// .delete(
+	// 	'',
+	// 	async ({ body: { uuid } }) => {
+	// 		return playerService.delete(uuid)
+	// 	},
+	// 	{
+	// 		body: t.Object({
+	// 			uuid: t.String({ error: 'Property uuid is missing' }),
+	// 		}),
+	// 		detail: {
+	// 			tags: ['Player'],
+	// 		},
+	// 	}
+	// )
 )
