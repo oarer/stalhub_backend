@@ -6,6 +6,8 @@ services:
       - 8000:3002
     env_file:
       - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
     depends_on:
       redis:
         condition: service_healthy
