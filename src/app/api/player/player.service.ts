@@ -31,7 +31,7 @@ class PlayerService {
         return {
             ...data,
             role: {
-                role: (note?.role as PlayerRole) ?? 'exbo',
+                role: (note?.role as PlayerRole) ?? null,
                 description: note?.description ?? null,
             },
         }
