@@ -3,7 +3,7 @@ services:
     container_name: StalHub_backend
     build: .
     ports:
-      - "8000:3001"
+      - 8000:3002
     env_file:
       - .env
     depends_on:
