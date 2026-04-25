@@ -8,6 +8,7 @@ COPY prisma ./prisma
 
 RUN bun install
 RUN bunx prisma generate
+COPY prisma.config.ts prisma.config.ts
 
 COPY tsconfig.json tsconfig.json
 

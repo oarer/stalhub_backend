@@ -3,7 +3,7 @@ services:
     container_name: StalHub_backend
     build: .
     ports:
-      - 8000:3002
+      - 8000:3001
     env_file:
       - .env
     environment:
@@ -13,7 +13,7 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
-    command: sh -c "bun run db:deploy && bun ./server"
+    command: ["sh", "-c", "bun run db:deploy && ./server"]
 
   redis:
     image: redis:7-alpine
