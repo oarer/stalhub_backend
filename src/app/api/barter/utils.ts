@@ -6,6 +6,7 @@ import type {
 	BarterRecipe,
 	BarterRecipeResult,
 	ListingItem,
+	UsedInItem,
 } from '@/types/barter.type'
 
 const BARTER_URL =
@@ -101,8 +102,6 @@ export const transformRecipe = (
 		.map((offer) => transformOffer(offer, listing))
 		.filter((x): x is BarterRecipeResult => x !== null)
 
-type UsedInItem = { item_id: string; icon: string }
-
 export const collectUsedIn = (
 	barterData: BarterEntry[],
 	itemId: string,
@@ -124,6 +123,7 @@ export const collectUsedIn = (
 			set.set(recipe.item, {
 				item_id: recipe.item,
 				icon: info.icon,
+				lines: info.name,
 			})
 		}
 	}

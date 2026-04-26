@@ -38,6 +38,12 @@ export type ListingItem = {
 	color: string
 }
 
+export type UsedInItem = {
+	item_id: string
+	icon: string
+	lines: Message
+}
+
 export type BarterItemResult = {
 	amount: number
 	lines: Message
