@@ -7,6 +7,7 @@ const envVariables = z.object({
 		.enum(['development', 'production', 'test'])
 		.default('development'),
 	EXBO_TOKEN: z.string(),
+	TOKEN: z.string()
 })
 
 export const env = envVariables.parse(process.env)
