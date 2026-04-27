@@ -81,7 +81,7 @@ export const transformOffer = (
 			return {
 				amount: req.amount,
 				lines: info.name,
-				icon: info.icon,
+				category: info.icon.replace(/^\/icons/, "").replace(/\.png$/, ""),
 				color: info.color
 			}
 		})
@@ -123,7 +123,7 @@ export const collectUsedIn = (
 
 			set.set(recipe.item, {
 				item_id: recipe.item,
-				icon: info.icon,
+				category: info.icon.replace(/^\/icons/, "").replace(/\.png$/, ""),
 				lines: info.name,
 				color: info.color
 			})

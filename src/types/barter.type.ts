@@ -40,7 +40,7 @@ export type ListingItem = {
 
 export type UsedInItem = {
 	item_id: string
-	icon: string
+	category: string
 	lines: Message
 	color: string
 }
@@ -48,7 +48,7 @@ export type UsedInItem = {
 export type BarterItemResult = {
 	amount: number
 	lines: Message
-	icon: string
+	category: string
 	color: string
 }
 
