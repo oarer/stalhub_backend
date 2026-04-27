@@ -42,12 +42,14 @@ export type UsedInItem = {
 	item_id: string
 	icon: string
 	lines: Message
+	color: string
 }
 
 export type BarterItemResult = {
 	amount: number
 	lines: Message
 	icon: string
+	color: string
 }
 
 export type BarterRecipeResult = {

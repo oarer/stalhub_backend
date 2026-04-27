@@ -82,6 +82,7 @@ export const transformOffer = (
 				amount: req.amount,
 				lines: info.name,
 				icon: info.icon,
+				color: info.color
 			}
 		})
 		.filter((i): i is BarterItemResult => i !== null)
@@ -124,6 +125,7 @@ export const collectUsedIn = (
 				item_id: recipe.item,
 				icon: info.icon,
 				lines: info.name,
+				color: info.color
 			})
 		}
 	}
