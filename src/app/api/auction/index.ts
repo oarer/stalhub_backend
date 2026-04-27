@@ -3,7 +3,7 @@ import { Regions } from '@/types/api.type'
 import { createElysia } from '@/utils/elysia'
 import { auctionService } from './auction.service'
 
-export const auctionRoutes = createElysia({ prefix: '/auction' }).group(
+export const auctionRoutes = createElysia().group(
     '/auction',
     (app) =>
         app
