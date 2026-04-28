@@ -1,8 +1,5 @@
 import { cron } from '@elysiajs/cron'
-import type {
-	BarterEntry,
-	BarterRecipe,
-} from '@/types/barter.type'
+import type { BarterEntry, BarterRecipe } from '@/types/barter.type'
 import { createElysia } from '@/utils/elysia'
 import {
 	collectUsedIn,
@@ -11,7 +8,7 @@ import {
 	normalizeTitles,
 	pickBestMatch,
 	resetCache,
-	transformRecipe
+	transformRecipe,
 } from './utils'
 
 export const routeBarter = createElysia()
@@ -27,7 +24,7 @@ export const routeBarter = createElysia()
 		await loadListing()
 		await loadBarter()
 	})
-	.get('/barter/:itemId', async ({ params }) => {
+	.get('/barter/:itemId', async ({ params, status }) => {
 		const { itemId } = params
 
 		const [barterData, listing] = await Promise.all([
@@ -48,12 +45,9 @@ export const routeBarter = createElysia()
 		const usedIn = collectUsedIn(barterData, itemId, listing)
 
 		if (!matched.length) {
-			return {
-				settlement_required_level: '1',
-				settlement_titles: [],
-				used_in: usedIn,
-				recipes: [],
-			}
+			return status(404, {
+				message: 'Item not found',
+			})
 		}
 
 		const best = pickBestMatch(matched)
