@@ -46,6 +46,7 @@ export const routeBarter = createElysia()
 
 		if (!matched.length) {
 			return status(404, {
+				status: 404,
 				message: 'Item not found',
 			})
 		}
