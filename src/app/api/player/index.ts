@@ -8,6 +8,34 @@ import { playerService } from './player.service'
 export const playersRoute = createElysia().group('/player', (app) =>
 	app
 		.get(
+			'/popular',
+			async ({ query }) => {
+				const limit = query.limit ? Number(query.limit) : 10
+				return playerService.getPopularPlayers(limit)
+			},
+			{
+				query: t.Object({
+					limit: t.Optional(t.Numeric()),
+				}),
+				detail: {
+					tags: ['Player'],
+				},
+			}
+		)
+
+		.get(
+			'/recent',
+			async () => {
+				return playerService.getRecentPlayers()
+			},
+			{
+				detail: {
+					tags: ['Player'],
+				},
+			}
+		)
+
+		.get(
 			'/:region/:character',
 			async ({ params }) => {
 				return playerService.get({
