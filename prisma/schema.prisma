@@ -32,3 +32,9 @@ model PopularPlayer {
   views     Int      @default(0)
   updatedAt DateTime @updatedAt
 }
+
+model PlayerBlacklist {
+  id        String   @id @default(cuid())
+  uuid      String   @unique
+  createdAt DateTime @default(now())
+}

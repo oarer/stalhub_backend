@@ -35,8 +35,25 @@ type RecentPlayerDTO = {
 
 const recentPlayersList: RecentPlayerDTO[] = []
 const RECENT_PLAYERS_LIMIT = 10
+const blacklistSet = new Set<string>()
 
 class PlayerService {
+	private async loadBlacklist(): Promise<void> {
+		const entries = await prisma.playerBlacklist.findMany({
+			select: { uuid: true },
+		})
+		blacklistSet.clear()
+		entries.forEach((e) => blacklistSet.add(e.uuid))
+	}
+
+	private isBlacklisted(uuid: string): boolean {
+		return blacklistSet.has(uuid)
+	}
+
+	async init(): Promise<void> {
+		await this.loadBlacklist()
+	}
+
 	async get({ region, character }: PlayerParams): Promise<PlayerResponse> {
 		const { data } = await apiClient.get<PlayerResponse>(
 			`/${region}/character/by-name/${character}/profile`
@@ -135,6 +152,8 @@ class PlayerService {
 		alliance: string,
 		region: string
 	): Promise<void> {
+		if (this.isBlacklisted(uuid)) return
+
 		await prisma.popularPlayer.upsert({
 			where: { uuid },
 			update: { views: { increment: 1 } },
@@ -148,6 +167,8 @@ class PlayerService {
 		alliance: string,
 		region: string
 	): void {
+		if (this.isBlacklisted(uuid)) return
+
 		const existingIndex = recentPlayersList.findIndex(
 			(p) => p.uuid === uuid
 		)
@@ -168,17 +189,56 @@ class PlayerService {
 			take: limit,
 		})
 
-		return players.map((p) => ({
-			uuid: p.uuid,
-			username: p.username,
-			alliance: p.alliance,
-			region: p.region,
-			views: p.views,
-		}))
+		return players
+			.filter((p) => !this.isBlacklisted(p.uuid))
+			.map((p) => ({
+				uuid: p.uuid,
+				username: p.username,
+				alliance: p.alliance,
+				region: p.region,
+				views: p.views,
+			}))
 	}
 
 	async getRecentPlayers(): Promise<RecentPlayerDTO[]> {
-		return [...recentPlayersList]
+		return recentPlayersList.filter((p) => !this.isBlacklisted(p.uuid))
+	}
+
+	async addToBlacklist(
+		uuid: string
+	): Promise<ServiceResponse<{ uuid: string }>> {
+		await prisma.playerBlacklist.create({
+			data: { uuid },
+		})
+		blacklistSet.add(uuid)
+
+		return {
+			success: true,
+			message: 'Player has been added to blacklist',
+			data: { uuid },
+		}
+	}
+
+	async removeFromBlacklist(
+		uuid: string
+	): Promise<ServiceResponse<{ uuid: string }>> {
+		await prisma.playerBlacklist.delete({
+			where: { uuid },
+		})
+		blacklistSet.delete(uuid)
+
+		return {
+			success: true,
+			message: 'Player has been removed from blacklist',
+			data: { uuid },
+		}
+	}
+
+	async getBlacklist(): Promise<{ uuid: string; createdAt: Date }[]> {
+		return prisma.playerBlacklist.findMany({
+			select: { uuid: true, createdAt: true },
+			orderBy: { createdAt: 'desc' },
+		})
 	}
 }
 
