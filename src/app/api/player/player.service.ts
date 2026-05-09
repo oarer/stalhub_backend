@@ -24,6 +24,7 @@ type PopularPlayerDTO = {
 	alliance: string
 	region: string
 	views: number
+	role: PlayerRole | null
 }
 
 type RecentPlayerDTO = {
@@ -31,6 +32,7 @@ type RecentPlayerDTO = {
 	username: string
 	alliance: string
 	region: string
+	role: PlayerRole | null
 }
 
 const recentPlayersList: RecentPlayerDTO[] = []
@@ -69,7 +71,13 @@ class PlayerService {
 			data.alliance,
 			region
 		)
-		this.addRecentPlayer(data.uuid, data.username, data.alliance, region)
+		this.addRecentPlayer(
+			data.uuid,
+			data.username,
+			data.alliance,
+			region,
+			(note?.role as PlayerRole) ?? null
+		)
 
 		return {
 			...data,
@@ -165,7 +173,8 @@ class PlayerService {
 		uuid: string,
 		username: string,
 		alliance: string,
-		region: string
+		region: string,
+		role: PlayerRole | null
 	): void {
 		if (this.isBlacklisted(uuid)) return
 
@@ -176,7 +185,7 @@ class PlayerService {
 			recentPlayersList.splice(existingIndex, 1)
 		}
 
-		recentPlayersList.unshift({ uuid, username, alliance, region })
+		recentPlayersList.unshift({ uuid, username, alliance, region, role })
 
 		if (recentPlayersList.length > RECENT_PLAYERS_LIMIT) {
 			recentPlayersList.pop()
@@ -189,6 +198,12 @@ class PlayerService {
 			take: limit,
 		})
 
+		const uuids = players.map((p) => p.uuid)
+		const notes = await prisma.playerNote.findMany({
+			where: { uuid: { in: uuids } },
+		})
+		const notesByUuid = Object.fromEntries(notes.map((n) => [n.uuid, n]))
+
 		return players
 			.filter((p) => !this.isBlacklisted(p.uuid))
 			.map((p) => ({
@@ -197,6 +212,7 @@ class PlayerService {
 				alliance: p.alliance,
 				region: p.region,
 				views: p.views,
+				role: (notesByUuid[p.uuid]?.role as PlayerRole) ?? null,
 			}))
 	}
 
