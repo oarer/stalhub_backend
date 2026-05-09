@@ -36,7 +36,6 @@ type RecentPlayerDTO = {
 }
 
 const recentPlayersList: RecentPlayerDTO[] = []
-const RECENT_PLAYERS_LIMIT = 10
 const blacklistSet = new Set<string>()
 
 class PlayerService {
@@ -187,7 +186,7 @@ class PlayerService {
 
 		recentPlayersList.unshift({ uuid, username, alliance, region, role })
 
-		if (recentPlayersList.length > RECENT_PLAYERS_LIMIT) {
+		if (recentPlayersList.length > 10) {
 			recentPlayersList.pop()
 		}
 	}
