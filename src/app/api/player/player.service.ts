@@ -1,3 +1,11 @@
+import {
+	playerLookupErrorsTotal,
+	playerLookupsTotal,
+	popularPlayerViewsTotal,
+	recordAppError,
+	setBlacklistCount,
+	setRecentPlayersCount,
+} from '@/app/api/metrics'
 import { apiClient } from '@/app/interceptors/sc.interceptor'
 import { prisma } from '@/lib/prisma'
 import type {
@@ -45,6 +53,7 @@ class PlayerService {
 		})
 		blacklistSet.clear()
 		entries.forEach((e) => blacklistSet.add(e.uuid))
+		setBlacklistCount(blacklistSet.size)
 	}
 
 	private isBlacklisted(uuid: string): boolean {
@@ -56,9 +65,17 @@ class PlayerService {
 	}
 
 	async get({ region, character }: PlayerParams): Promise<PlayerResponse> {
-		const { data } = await apiClient.get<PlayerResponse>(
-			`/${region}/character/by-name/${character}/profile`
-		)
+		let data: PlayerResponse
+		try {
+			;({ data } = await apiClient.get<PlayerResponse>(
+				`/${region}/character/by-name/${character}/profile`
+			))
+			playerLookupsTotal.inc({ region })
+		} catch (err) {
+			playerLookupErrorsTotal.inc({ region })
+			recordAppError('player_lookup')
+			throw err
+		}
 
 		const note = await prisma.playerNote.findUnique({
 			where: { uuid: data.uuid },
@@ -166,6 +183,7 @@ class PlayerService {
 			update: { views: { increment: 1 } },
 			create: { uuid, username, alliance, region, views: 1 },
 		})
+		popularPlayerViewsTotal.inc()
 	}
 
 	private addRecentPlayer(
@@ -189,6 +207,7 @@ class PlayerService {
 		if (recentPlayersList.length > 10) {
 			recentPlayersList.pop()
 		}
+		setRecentPlayersCount(recentPlayersList.length)
 	}
 
 	async getPopularPlayers(limit = 50): Promise<PopularPlayerDTO[]> {
@@ -226,6 +245,7 @@ class PlayerService {
 			data: { uuid },
 		})
 		blacklistSet.add(uuid)
+		setBlacklistCount(blacklistSet.size)
 
 		return {
 			success: true,
@@ -241,6 +261,7 @@ class PlayerService {
 			where: { uuid },
 		})
 		blacklistSet.delete(uuid)
+		setBlacklistCount(blacklistSet.size)
 
 		return {
 			success: true,

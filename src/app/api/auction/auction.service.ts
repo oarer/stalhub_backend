@@ -1,3 +1,4 @@
+import { auctionRequestsTotal } from '@/app/api/metrics'
 import { apiClient } from '@/app/interceptors/sc.interceptor'
 import type { LotsHistoryResponse, LotsResponse } from '@/types/api.type'
 
@@ -15,11 +16,9 @@ export class AuctionService {
 	}): Promise<LotsResponse> {
 		const { data } = await apiClient.get<LotsResponse>(
 			`/${region}/auction/${id}/lots`,
-			{
-				params: { limit, additional },
-			}
+			{ params: { limit, additional } }
 		)
-
+		auctionRequestsTotal.inc({ region, type: 'lots' })
 		return data
 	}
 
@@ -36,11 +35,9 @@ export class AuctionService {
 	}): Promise<LotsHistoryResponse> {
 		const { data } = await apiClient.get<LotsHistoryResponse>(
 			`/${region}/auction/${id}/history`,
-			{
-				params: { limit, additional },
-			}
+			{ params: { limit, additional } }
 		)
-
+		auctionRequestsTotal.inc({ region, type: 'history' })
 		return data
 	}
 }

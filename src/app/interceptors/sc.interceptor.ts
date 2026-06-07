@@ -1,4 +1,9 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
+import {
+	exboApiDuration,
+	exboApiRequestsTotal,
+	recordAppError,
+} from '@/app/api/metrics'
 import { env } from '@/env'
 import type { ApiErrorResponse } from '@/types/api.type'
 
@@ -14,11 +19,20 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
 	config.headers.set('Authorization', `Bearer ${env.EXBO_TOKEN}`)
+	;(config as RetryAxiosRequestConfig & { _startTime?: number })._startTime =
+		Date.now()
 	return config
 })
 
 apiClient.interceptors.response.use(
-	(res) => res,
+	(res) => {
+		const start = (
+			res.config as RetryAxiosRequestConfig & { _startTime?: number }
+		)._startTime
+		if (start) exboApiDuration.observe((Date.now() - start) / 1000)
+		exboApiRequestsTotal.inc({ status: String(res.status) })
+		return res
+	},
 	async (error: unknown) => {
 		if (!axios.isAxiosError<ApiErrorResponse>(error)) {
 			return Promise.reject(error)
@@ -39,6 +53,9 @@ apiClient.interceptors.response.use(
 			message: data?.title ?? error.message ?? 'Unknown error',
 			details: data?.details,
 		}
+
+		exboApiRequestsTotal.inc({ status: String(status) })
+		recordAppError('exbo_api')
 
 		return Promise.reject(normalizedError)
 	}

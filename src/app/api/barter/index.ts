@@ -1,4 +1,5 @@
 import { cron } from '@elysiajs/cron'
+import { barterRequestsTotal } from '@/app/api/metrics'
 import type { BarterEntry, BarterRecipe } from '@/types/barter.type'
 import { createElysia } from '@/utils/elysia'
 import {
@@ -51,6 +52,7 @@ export const routeBarter = createElysia()
 			})
 		}
 
+		barterRequestsTotal.inc()
 		const best = pickBestMatch(matched)
 
 		return {
