@@ -64,7 +64,7 @@ services:
     container_name: StalHub_grafana
     restart: unless-stopped
     ports:
-      - "3006:3006"
+      - "3006:3000"
     volumes:
       - grafana_data:/var/lib/grafana
 
