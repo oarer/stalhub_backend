@@ -67,6 +67,13 @@ services:
       - "3006:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SERVER_ROOT_URL=https://grafana.stalhub.tech
+      - GF_SERVER_DOMAIN=grafana.stalhub.tech
+      - GF_SERVER_SERVE_FROM_SUB_PATH=false
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SECURITY_COOKIE_SAMESITE=lax
 
   node-exporter:
     image: prom/node-exporter:latest
