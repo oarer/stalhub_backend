@@ -3,7 +3,7 @@ services:
     container_name: StalHub_backend
     build: .
     ports:
-      - 8000:3001
+      - "8000:3001"
     env_file:
       - .env
     environment:
@@ -13,9 +13,9 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
-    command: [ "sh", "-c", "bun run db:deploy && ./server" ]
+    command: ["sh", "-c", "bun run db:deploy && ./server"]
     healthcheck:
-      test: [ "CMD", "wget", "-qO-", "http://localhost:3001/health" ]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -23,11 +23,12 @@ services:
   redis:
     image: redis:7-alpine
     container_name: StalHub_redis
+    restart: unless-stopped
     volumes:
       - redis_data:/data
-    command: [ "redis-server", "--appendonly", "yes" ]
+    command: ["redis-server", "--appendonly", "yes"]
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 3s
       timeout: 5s
       retries: 5
@@ -35,7 +36,7 @@ services:
   postgres:
     image: postgres:17.4-alpine
     container_name: StalHub_postgres
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -45,7 +46,7 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -56,6 +57,8 @@ services:
     restart: unless-stopped
     ports:
       - "9090:9090"
+    command:
+      - "--storage.tsdb.retention.time=7d"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
 
@@ -68,12 +71,12 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
     environment:
-      - GF_SERVER_ROOT_URL=https://grafana.stalhub.tech
-      - GF_SERVER_DOMAIN=grafana.stalhub.tech
-      - GF_SERVER_SERVE_FROM_SUB_PATH=false
-      - GF_SECURITY_ALLOW_EMBEDDING=true
-      - GF_AUTH_ANONYMOUS_ENABLED=false
-      - GF_SECURITY_COOKIE_SAMESITE=lax
+      GF_SERVER_ROOT_URL: https://grafana.stalhub.tech
+      GF_SERVER_DOMAIN: grafana.stalhub.tech
+      GF_SERVER_SERVE_FROM_SUB_PATH: "false"
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_COOKIE_SAMESITE: "lax"
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -83,7 +86,7 @@ services:
     volumes:
       - /:/host:ro,rslave
     command:
-      - '--path.rootfs=/host'
+      - "--path.rootfs=/host"
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:latest
@@ -91,6 +94,22 @@ services:
     restart: unless-stopped
     environment:
       DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: StalHub_cadvisor
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
 
 volumes:
   redis_data:
