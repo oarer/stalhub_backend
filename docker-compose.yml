@@ -60,7 +60,7 @@ services:
     command:
       - "--storage.tsdb.retention.time=7d"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus.yml:/prometheus/prometheus.yml
 
   grafana:
     image: grafana/grafana:latest
