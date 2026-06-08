@@ -15,6 +15,8 @@ function normalizeRoute(route: string): string {
 	if (!route) return 'unknown'
 
 	return route
+		.replace(/^(\/player\/[^/]+)\/[^/]+/, '$1/:character')
+		.replace(/^(\/auction\/[^/]+)\/[^/]+/, '$1/:id')
 		.replace(/\/[0-9]+(?=\/|$)/g, '/:id')
 		.replace(
 			/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\/|$)/gi,

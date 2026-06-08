@@ -13,6 +13,7 @@ import type {
 	PlayerResponse,
 	PlayerRole,
 } from '@/types/player.type'
+import * as cache from './cache'
 
 type ServiceResponse<T> = {
 	success: boolean
@@ -65,6 +66,9 @@ class PlayerService {
 	}
 
 	async get({ region, character }: PlayerParams): Promise<PlayerResponse> {
+		const cached = await cache.getPlayer(region, character)
+		if (cached) return cached
+
 		let data: PlayerResponse
 		try {
 			;({ data } = await apiClient.get<PlayerResponse>(
@@ -95,13 +99,16 @@ class PlayerService {
 			(note?.role as PlayerRole) ?? null
 		)
 
-		return {
+		const result: PlayerResponse = {
 			...data,
 			role: {
 				role: (note?.role as PlayerRole) ?? null,
 				description: note?.description ?? null,
 			},
 		}
+
+		await cache.setPlayer(region, character, result)
+		return result
 	}
 
 	async list(role?: PlayerRole) {
