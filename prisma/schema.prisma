@@ -14,6 +14,12 @@ enum Role {
   STALHUB
 }
 
+enum NotificationType {
+  INFO
+  WARN
+  DANGER
+}
+
 model PlayerNote {
   id          String   @id @default(cuid())
   uuid        String   @unique
@@ -37,4 +43,16 @@ model PlayerBlacklist {
   id        String   @id @default(cuid())
   uuid      String   @unique
   createdAt DateTime @default(now())
+}
+
+model Notification {
+  id   Int              @id @default(autoincrement())
+  type NotificationType @default(INFO)
+
+  content String
+
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+
+  @@index([createdAt])
 }
