@@ -3,6 +3,7 @@ import { routeArsenal } from './arsenal'
 import { auctionRoutes } from './auction'
 import { routeBarter } from './barter'
 import { routeHealth } from './health'
+import { routeHideout } from './hideout'
 import { metricsRoute } from './metrics'
 import { notificationRoute } from './notification'
 import { playersRoute } from './player'
@@ -13,5 +14,6 @@ export const api = createElysia()
 	.use(auctionRoutes)
 	.use(playersRoute)
 	.use(routeBarter)
+	.use(routeHideout)
 	.use(metricsRoute)
 	.use(notificationRoute)
