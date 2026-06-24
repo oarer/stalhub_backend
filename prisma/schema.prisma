@@ -12,6 +12,9 @@ enum Role {
   MEDIA
   SCAMMER
   STALHUB
+  SPONSOR
+  HELPER
+  BUGBOUNTY
 }
 
 enum NotificationType {

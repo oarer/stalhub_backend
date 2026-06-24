@@ -5,6 +5,9 @@ export enum PlayerRole {
     SCAMMER = 'SCAMMER',
     MEDIA = 'MEDIA',
     STALHUB ='STALHUB',
+	SPONSOR ='SPONSOR',
+	HELPER ='HELPER',
+	BUGBOUNTY ='BUGBOUNTY',
 }
 
 export interface PlayerResponse {
