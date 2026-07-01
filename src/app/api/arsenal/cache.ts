@@ -9,7 +9,6 @@ const TTL = 60 * 60 * 6
 const STALE_TIME = 60 * 30
 const LOCK_TTL = 60 * 5
 
-
 const acquireLock = async () => {
 	return (
 		(await redis.set(LOCK_KEY, '1', 'NX', 'EX', LOCK_TTL.toString())) ===

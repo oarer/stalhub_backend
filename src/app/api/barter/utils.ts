@@ -81,8 +81,10 @@ export const transformOffer = (
 			return {
 				amount: req.amount,
 				lines: info.name,
-				category: info.icon.replace(/^\/icons/, "").replace(/\.png$/, ""),
-				color: info.color
+				category: info.icon
+					.replace(/^\/icons/, '')
+					.replace(/\.png$/, ''),
+				color: info.color,
 			}
 		})
 		.filter((i): i is BarterItemResult => i !== null)
@@ -123,9 +125,11 @@ export const collectUsedIn = (
 
 			set.set(recipe.item, {
 				item_id: recipe.item,
-				category: info.icon.replace(/^\/icons/, "").replace(/\.png$/, ""),
+				category: info.icon
+					.replace(/^\/icons/, '')
+					.replace(/\.png$/, ''),
 				lines: info.name,
-				color: info.color
+				color: info.color,
 			})
 		}
 	}

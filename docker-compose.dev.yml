@@ -2,7 +2,7 @@ services:
   app:
     build: .
     container_name: StalHub_backend
-    command: "bun run --watch src/index.ts"
+    command: sh -c "bun install && bun run --watch src/index.ts"
     volumes:
       - .:/app
       - /app/node_modules

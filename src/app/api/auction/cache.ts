@@ -3,8 +3,13 @@ import type { LotsHistoryResponse, LotsResponse } from '@/types/api.type'
 
 const TTL = 60 * 5
 
-const key = (type: string, region: string, id: string, limit: string, additional: string) =>
-	`auction:${type}:${region}:${id}:${limit}:${additional}`
+const key = (
+	type: string,
+	region: string,
+	id: string,
+	limit: string,
+	additional: string
+) => `auction:${type}:${region}:${id}:${limit}:${additional}`
 
 export const getLots = async (
 	region: string,
@@ -23,7 +28,12 @@ export const setLots = async (
 	additional: string,
 	value: LotsResponse
 ): Promise<void> => {
-	await redis.set(key('lots', region, id, limit, additional), JSON.stringify(value), 'EX', TTL)
+	await redis.set(
+		key('lots', region, id, limit, additional),
+		JSON.stringify(value),
+		'EX',
+		TTL
+	)
 }
 
 export const getHistory = async (
@@ -43,5 +53,10 @@ export const setHistory = async (
 	additional: string,
 	value: LotsHistoryResponse
 ): Promise<void> => {
-	await redis.set(key('history', region, id, limit, additional), JSON.stringify(value), 'EX', TTL)
+	await redis.set(
+		key('history', region, id, limit, additional),
+		JSON.stringify(value),
+		'EX',
+		TTL
+	)
 }

@@ -114,11 +114,6 @@ export const appInfo = new Gauge({
 	registers: [register],
 })
 
-export function setAppVersion(version: string) {
-	appInfo.reset()
-	appInfo.set({ version }, 1)
-}
-
 export function setBlacklistCount(count: number) {
 	blacklistSize.set(count)
 }

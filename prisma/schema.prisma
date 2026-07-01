@@ -7,7 +7,7 @@ datasource db {
   provider = "postgresql"
 }
 
-enum Role {
+enum PlayerRole {
   EXBO
   MEDIA
   SCAMMER
@@ -23,13 +23,262 @@ enum NotificationType {
   DANGER
 }
 
+enum AvatarSource {
+  DISCORD
+  TELEGRAM
+  EXBO
+}
+
+enum StarTargetType {
+  BUILD
+  ARTICLE
+}
+
+// ================ USER MODEL ===================
+model User {
+  id       String @id
+  username String @default("")
+  name     String @default("")
+
+  sessions Sessions[]
+
+  UserSettings UserSettings?
+
+  joined_at DateTime @default(now())
+
+  notifications Notifications[] @relation("Notifications")
+
+  roles UserRole[]
+
+  // Auth providers
+  DiscordAuth  DiscordAuth?
+  TelegramAuth TelegramAuth?
+  EXBOAuth     EXBOAuth?
+
+  badges UserBadges[]
+
+  builds   Build[]
+  articles Article[]
+  stars    Star[]
+}
+
+model UserBadges {
+  id    Int    @id @default(autoincrement())
+  name  String
+  users User[]
+}
+
+model UserSettings {
+  id             Int          @id @default(autoincrement())
+  User           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String       @unique
+  banned         Boolean      @default(false)
+  public_profile Boolean      @default(false)
+  avatar         AvatarSource @default(DISCORD)
+}
+
+model Sessions {
+  id        Int    @id @default(autoincrement())
+  sessionId String @unique @default("")
+
+  User_Agent String @default("")
+  User       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+
+  last_used_at DateTime @default(now())
+  revoked      Boolean  @default(false)
+}
+
+model Notifications {
+  id         Int      @id @default(autoincrement())
+  users      User[]   @relation("Notifications")
+  content    String   @default("")
+  author     String   @default("Система")
+  type       Int      @default(0)
+  created_at DateTime @default(now())
+}
+
+// ================ RBAC ===================
+model Role {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  description String           @default("")
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@map("role")
+}
+
+model Permission {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  description String           @default("")
+  roles       RolePermission[]
+
+  @@map("permission")
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId Int
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permission")
+}
+
+model UserRole {
+  userId String
+  roleId Int
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_role")
+}
+
+// ================ END RBAC ===================
+
+// =================== AUTH PROVIDERS ===================
+
+model DiscordAuth {
+  id         Int     @id @default(autoincrement())
+  discord_id String  @unique
+  name       String
+  username   String
+  avatar_id  String?
+
+  user   User   @relation(fields: [userid], references: [id], onDelete: Cascade)
+  userid String @unique
+
+  connected_at DateTime @default(now())
+}
+
+model TelegramAuth {
+  id          Int    @id @default(autoincrement())
+  telegram_id String @unique
+
+  name      String
+  login     String?
+  avatar_id String?
+
+  user   User   @relation(fields: [userid], references: [id], onDelete: Cascade)
+  userid String @unique
+
+  connected_at DateTime @default(now())
+}
+
+model EXBOAuth {
+  id Int @id @default(autoincrement())
+
+  exbo_id  String @unique
+  login    String @default("")
+  username String @default("")
+
+  token_blob String
+
+  access_expires_at  DateTime
+  refresh_expires_at DateTime?
+
+  user   User   @relation(fields: [userid], references: [id], onDelete: Cascade)
+  userid String @unique
+
+  connected_at DateTime @default(now())
+  updated_at   DateTime @updatedAt
+}
+
+model EXBOAuthState {
+  id String @id @default(cuid())
+
+  state String @unique
+
+  expires_at DateTime
+
+  created_at DateTime @default(now())
+}
+
+// =============== END OF AUTH PROVIDERS ================
+
+model Build {
+  id          Int    @id @default(autoincrement())
+  external_id String @unique
+
+  title String
+  data  String
+
+  flags        Int     @default(0)
+  accent_color String?
+  tags         String  @default("")
+
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("builds")
+}
+
+model Article {
+  id          Int    @id @default(autoincrement())
+  external_id String @unique
+
+  title   String
+  content String
+
+  flags        Int     @default(0)
+  accent_color String?
+  tags         String  @default("")
+
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId String
+
+  versions ArticleVersion[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("articles")
+}
+
+model ArticleVersion {
+  id      Int    @id @default(autoincrement())
+  version String
+  content String
+
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  articleId Int
+
+  created_at DateTime @default(now())
+
+  @@map("article_versions")
+}
+
+model Star {
+  id         Int            @id @default(autoincrement())
+  targetType StarTargetType
+  targetId   Int
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  created_at DateTime @default(now())
+
+  @@unique([targetType, targetId, userId])
+  @@map("stars")
+}
+
+// ================ END BUILDS/ARTICLES ===================
+
+// ================ END OF USER MODEL ===================
 model PlayerNote {
-  id          String   @id @default(cuid())
-  uuid        String   @unique
-  role        Role     @default(SCAMMER)
+  id          String     @id @default(cuid())
+  uuid        String     @unique
+  role        PlayerRole @default(SCAMMER)
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 model PopularPlayer {
@@ -48,14 +297,4 @@ model PlayerBlacklist {
   createdAt DateTime @default(now())
 }
 
-model Notification {
-  id   Int              @id @default(autoincrement())
-  type NotificationType @default(INFO)
-
-  content String
-
-  createdAt DateTime  @default(now())
-  expiresAt DateTime?
-
-  @@index([createdAt])
-}
+// всё будет хорошо

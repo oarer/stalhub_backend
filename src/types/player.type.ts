@@ -1,13 +1,13 @@
 import type { Regions } from './api.type'
 
 export enum PlayerRole {
-    EXBO = 'EXBO',
-    SCAMMER = 'SCAMMER',
-    MEDIA = 'MEDIA',
-    STALHUB ='STALHUB',
-	SPONSOR ='SPONSOR',
-	HELPER ='HELPER',
-	BUGBOUNTY ='BUGBOUNTY',
+	EXBO = 'EXBO',
+	SCAMMER = 'SCAMMER',
+	MEDIA = 'MEDIA',
+	STALHUB = 'STALHUB',
+	SPONSOR = 'SPONSOR',
+	HELPER = 'HELPER',
+	BUGBOUNTY = 'BUGBOUNTY',
 }
 
 export interface PlayerResponse {

@@ -1,20 +1,25 @@
 import cors from '@elysiajs/cors'
 import { swagger } from '@elysiajs/swagger'
-import { normalizeAndRecordHttpRequest, setAppVersion } from '@/app/api/metrics'
+import { normalizeAndRecordHttpRequest } from '@/app/api/metrics'
 import { createElysia } from '@/utils/elysia'
 import { logger } from '@/utils/logger'
 import { routes } from './app'
 import { env } from './env'
 
-setAppVersion('1.0.50')
-
 export const app = createElysia()
-	.use(swagger())
+	.use(swagger({
+		documentation: {
+			info: {
+				title: 'StalHub Documentation',
+				version: '1.0.0'
+			}
+		}
+	}))
 	.use(cors())
 	.use(logger)
 	.use(routes)
 	.onRequest(({ store }) => {
-		;(store as Record<string, unknown>)._reqStart = Date.now()
+		; (store as Record<string, unknown>)._reqStart = Date.now()
 	})
 	.onAfterHandle(({ request, set, store }) => {
 		const start = (store as Record<string, unknown>)._reqStart as

@@ -71,9 +71,14 @@ class PlayerService {
 
 		let data: PlayerResponse
 		try {
-			;({ data } = await apiClient.get<PlayerResponse>(
+			; ({ data } = await apiClient.get<PlayerResponse>(
 				`/${region}/character/by-name/${character}/profile`
 			))
+
+			if (!data || !data.uuid) {
+				throw new Error('eAPI return null response')
+			}
+
 			playerLookupsTotal.inc({ region })
 		} catch (err) {
 			playerLookupErrorsTotal.inc({ region })
