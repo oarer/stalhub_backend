@@ -1,7 +1,12 @@
 import { t } from 'elysia'
-
+import {
+	checkPermission,
+	fromStore,
+	fromStoreOpt,
+	requireAuth,
+	requireOptionalAuth,
+} from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
-import { checkPermission, fromStore, fromStoreOpt, requireAuth, requireOptionalAuth } from '@/utils/auth.guard'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 import { buildsService } from './builds.service'
 
@@ -28,7 +33,10 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 		.get(
 			'/:id',
 			async ({ params, store }) => {
-				return buildsService.getById(params.id, fromStoreOpt(store).userId)
+				return buildsService.getById(
+					params.id,
+					fromStoreOpt(store).userId
+				)
 			},
 			{
 				beforeHandle: [requireOptionalAuth],
@@ -66,13 +74,24 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 			async ({ params, body, store, set }) => {
 				const { userId } = fromStore(store)
 				const isAdmin = await checkPermission(userId, 'builds:manage')
-				const result = await buildsService.update(Number(params.id), userId, isAdmin, {
-					...(body.title !== undefined && { title: body.title }),
-					...(body.data !== undefined && { data: JSON.stringify(body.data) }),
-					...(body.flags !== undefined && { flags: body.flags }),
-					...(body.accent_color !== undefined && { accent_color: body.accent_color }),
-					...(body.tags !== undefined && { tags: body.tags.join(',') }),
-				})
+				const result = await buildsService.update(
+					Number(params.id),
+					userId,
+					isAdmin,
+					{
+						...(body.title !== undefined && { title: body.title }),
+						...(body.data !== undefined && {
+							data: JSON.stringify(body.data),
+						}),
+						...(body.flags !== undefined && { flags: body.flags }),
+						...(body.accent_color !== undefined && {
+							accent_color: body.accent_color,
+						}),
+						...(body.tags !== undefined && {
+							tags: body.tags.join(','),
+						}),
+					}
+				)
 
 				if (!result) {
 					set.status = 404
@@ -104,7 +123,11 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 			async ({ params, store, set }) => {
 				const { userId } = fromStore(store)
 				const isAdmin = await checkPermission(userId, 'builds:manage')
-				const ok = await buildsService.delete(Number(params.id), userId, isAdmin)
+				const ok = await buildsService.delete(
+					Number(params.id),
+					userId,
+					isAdmin
+				)
 
 				if (!ok) {
 					set.status = 403
@@ -123,7 +146,10 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 		.post(
 			'/:id/star',
 			async ({ params, store }) => {
-				await buildsService.addStar(Number(params.id), fromStore(store).userId)
+				await buildsService.addStar(
+					Number(params.id),
+					fromStore(store).userId
+				)
 				return { success: true }
 			},
 			{
@@ -136,7 +162,10 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 		.delete(
 			'/:id/star',
 			async ({ params, store }) => {
-				await buildsService.removeStar(Number(params.id), fromStore(store).userId)
+				await buildsService.removeStar(
+					Number(params.id),
+					fromStore(store).userId
+				)
 				return { success: true }
 			},
 			{

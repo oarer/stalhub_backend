@@ -1,5 +1,5 @@
-import { prisma } from '@/lib/prisma'
 import { StarTargetType } from 'generated/prisma/client'
+import { prisma } from '@/lib/prisma'
 import { authService } from '@/utils/auth.service'
 
 function parseUserAgent(ua: string) {
@@ -42,7 +42,8 @@ class UsersService {
 		}
 	) {
 		const allowed: Record<string, unknown> = {}
-		if (data.public_profile !== undefined) allowed.public_profile = data.public_profile
+		if (data.public_profile !== undefined)
+			allowed.public_profile = data.public_profile
 		if (data.avatar !== undefined) {
 			const val = data.avatar.toUpperCase()
 			if (!['DISCORD', 'TELEGRAM', 'EXBO'].includes(val)) {
@@ -58,7 +59,7 @@ class UsersService {
 		return prisma.userSettings.upsert({
 			where: { userId },
 			update: allowed,
-			create: { userId, ...allowed } as any,
+			create: { userId, ...allowed },
 		})
 	}
 
@@ -165,54 +166,76 @@ class UsersService {
 			prisma.star.count({ where: { userId } }),
 		])
 
-		const buildIds = stars.filter((s) => s.targetType === StarTargetType.BUILD).map((s) => s.targetId)
-		const articleIds = stars.filter((s) => s.targetType === StarTargetType.ARTICLE).map((s) => s.targetId)
+		const buildIds = stars
+			.filter((s) => s.targetType === StarTargetType.BUILD)
+			.map((s) => s.targetId)
+		const articleIds = stars
+			.filter((s) => s.targetType === StarTargetType.ARTICLE)
+			.map((s) => s.targetId)
 
 		const [builds, articles] = await Promise.all([
 			buildIds.length
 				? prisma.build.findMany({
-					where: { id: { in: buildIds } },
-					include: { author: { select: { id: true, name: true, username: true } } },
-				})
+						where: { id: { in: buildIds } },
+						include: {
+							author: {
+								select: {
+									id: true,
+									name: true,
+									username: true,
+								},
+							},
+						},
+					})
 				: Promise.resolve([]),
 			articleIds.length
 				? prisma.article.findMany({
-					where: { id: { in: articleIds } },
-					include: { author: { select: { id: true, name: true, username: true } } },
-				})
+						where: { id: { in: articleIds } },
+						include: {
+							author: {
+								select: {
+									id: true,
+									name: true,
+									username: true,
+								},
+							},
+						},
+					})
 				: Promise.resolve([]),
 		])
 
 		const buildMap = new Map(builds.map((b) => [b.id, b]))
 		const articleMap = new Map(articles.map((a) => [a.id, a]))
 
-		const data = stars.map((s) => {
-			if (s.targetType === StarTargetType.BUILD) {
-				const b = buildMap.get(s.targetId)
-				return b
-					? {
-						type: 'build' as const,
-						id: b.id,
-						external_id: b.external_id,
-						title: b.title,
-						author: b.author,
-						created_at: b.created_at,
-					}
-					: null
-			}
-
-			const a = articleMap.get(s.targetId)
-			return a
-				? {
-					type: 'article' as const,
-					id: a.id,
-					external_id: a.external_id,
-					title: a.title,
-					author: a.author,
-					created_at: a.created_at,
+		const data = stars
+			.map((s) => {
+				if (s.targetType === StarTargetType.BUILD) {
+					const b = buildMap.get(s.targetId)
+					return b
+						? {
+								type: 'build' as const,
+								id: b.id,
+								external_id: b.external_id,
+								title: b.title,
+								author: b.author,
+								created_at: b.created_at,
+							}
+						: null
 				}
-				: null
-		}).filter(Boolean)
+
+				const a = articleMap.get(s.targetId)
+				return a
+					? {
+							type: 'article' as const,
+							id: a.id,
+							external_id: a.external_id,
+							title: a.title,
+							author: a.author,
+							created_at: a.created_at,
+						}
+					: null
+			})
+			.filter(Boolean)
 
 		return { data, totalCount }
 	}
@@ -238,8 +261,28 @@ class UsersService {
 		const stars_count = await prisma.star.count({
 			where: {
 				OR: [
-					{ targetType: StarTargetType.BUILD, targetId: { in: (await prisma.build.findMany({ where: { authorId: user.id }, select: { id: true } })).map((b) => b.id) } },
-					{ targetType: StarTargetType.ARTICLE, targetId: { in: (await prisma.article.findMany({ where: { authorId: user.id }, select: { id: true } })).map((a) => a.id) } },
+					{
+						targetType: StarTargetType.BUILD,
+						targetId: {
+							in: (
+								await prisma.build.findMany({
+									where: { authorId: user.id },
+									select: { id: true },
+								})
+							).map((b) => b.id),
+						},
+					},
+					{
+						targetType: StarTargetType.ARTICLE,
+						targetId: {
+							in: (
+								await prisma.article.findMany({
+									where: { authorId: user.id },
+									select: { id: true },
+								})
+							).map((a) => a.id),
+						},
+					},
 				],
 			},
 		})

@@ -1,7 +1,12 @@
 import { t } from 'elysia'
-
+import {
+	checkPermission,
+	fromStore,
+	fromStoreOpt,
+	requireAuth,
+	requireOptionalAuth,
+} from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
-import { checkPermission, fromStore, fromStoreOpt, requireAuth, requireOptionalAuth } from '@/utils/auth.guard'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 import { articlesService } from './articles.service'
 
@@ -28,7 +33,10 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 		.get(
 			'/:id',
 			async ({ params, store }) => {
-				return articlesService.getById(params.id, fromStoreOpt(store).userId)
+				return articlesService.getById(
+					params.id,
+					fromStoreOpt(store).userId
+				)
 			},
 			{
 				beforeHandle: [requireOptionalAuth],
@@ -66,13 +74,24 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			async ({ params, body, store, set }) => {
 				const { userId } = fromStore(store)
 				const isAdmin = await checkPermission(userId, 'articles:manage')
-				const result = await articlesService.update(Number(params.id), userId, isAdmin, {
-					...(body.title !== undefined && { title: body.title }),
-					...(body.content !== undefined && { content: body.content }),
-					...(body.flags !== undefined && { flags: body.flags }),
-					...(body.accent_color !== undefined && { accent_color: body.accent_color }),
-					...(body.tags !== undefined && { tags: body.tags.join(',') }),
-				})
+				const result = await articlesService.update(
+					Number(params.id),
+					userId,
+					isAdmin,
+					{
+						...(body.title !== undefined && { title: body.title }),
+						...(body.content !== undefined && {
+							content: body.content,
+						}),
+						...(body.flags !== undefined && { flags: body.flags }),
+						...(body.accent_color !== undefined && {
+							accent_color: body.accent_color,
+						}),
+						...(body.tags !== undefined && {
+							tags: body.tags.join(','),
+						}),
+					}
+				)
 
 				if (!result) {
 					set.status = 404
@@ -104,7 +123,11 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			async ({ params, store, set }) => {
 				const { userId } = fromStore(store)
 				const isAdmin = await checkPermission(userId, 'articles:manage')
-				const ok = await articlesService.delete(Number(params.id), userId, isAdmin)
+				const ok = await articlesService.delete(
+					Number(params.id),
+					userId,
+					isAdmin
+				)
 
 				if (!ok) {
 					set.status = 403
@@ -123,7 +146,9 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 		.get(
 			'/:id/versions',
 			async ({ params, set }) => {
-				const versions = await articlesService.getVersions(Number(params.id))
+				const versions = await articlesService.getVersions(
+					Number(params.id)
+				)
 				if (!versions.length) {
 					set.status = 404
 					return { error: 'Article not found' }
@@ -139,7 +164,9 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 		.get(
 			'/:id/versions/:versionId',
 			async ({ params, set }) => {
-				const version = await articlesService.getVersion(Number(params.versionId))
+				const version = await articlesService.getVersion(
+					Number(params.versionId)
+				)
 				if (!version) {
 					set.status = 404
 					return { error: 'Version not found' }
@@ -155,7 +182,10 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 		.post(
 			'/:id/star',
 			async ({ params, store }) => {
-				await articlesService.addStar(Number(params.id), fromStore(store).userId)
+				await articlesService.addStar(
+					Number(params.id),
+					fromStore(store).userId
+				)
 				return { success: true }
 			},
 			{
@@ -168,7 +198,10 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 		.delete(
 			'/:id/star',
 			async ({ params, store }) => {
-				await articlesService.removeStar(Number(params.id), fromStore(store).userId)
+				await articlesService.removeStar(
+					Number(params.id),
+					fromStore(store).userId
+				)
 				return { success: true }
 			},
 			{

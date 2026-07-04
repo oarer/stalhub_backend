@@ -1,5 +1,5 @@
-import { prisma } from '@/lib/prisma'
 import { StarTargetType } from 'generated/prisma/client'
+import { prisma } from '@/lib/prisma'
 
 function externalId() {
 	return crypto.randomUUID().slice(0, 8)
@@ -13,7 +13,9 @@ class ArticlesService {
 				take,
 				orderBy: { created_at: 'desc' },
 				include: {
-					author: { select: { id: true, name: true, username: true } },
+					author: {
+						select: { id: true, name: true, username: true },
+					},
 				},
 			}),
 			prisma.article.count(),
@@ -43,7 +45,9 @@ class ArticlesService {
 	async getById(id: string, userId?: string) {
 		const num = Number(id)
 		const article = await prisma.article.findFirst({
-			where: isNaN(num) ? { external_id: id } : { OR: [{ external_id: id }, { id: num }] },
+			where: isNaN(num)
+				? { external_id: id }
+				: { OR: [{ external_id: id }, { id: num }] },
 			include: {
 				author: { select: { id: true, name: true, username: true } },
 			},
@@ -87,7 +91,13 @@ class ArticlesService {
 
 	async create(
 		authorId: string,
-		data: { title: string; content: string; flags?: number; accent_color?: string; tags?: string }
+		data: {
+			title: string
+			content: string
+			flags?: number
+			accent_color?: string
+			tags?: string
+		}
 	) {
 		const article = await prisma.article.create({
 			data: {
@@ -132,17 +142,26 @@ class ArticlesService {
 		id: number,
 		authorId: string,
 		isAdmin: boolean,
-		data: { title?: string; content?: string; flags?: number; accent_color?: string; tags?: string; version?: string }
+		data: {
+			title?: string
+			content?: string
+			flags?: number
+			accent_color?: string
+			tags?: string
+			version?: string
+		}
 	) {
 		const existing = await prisma.article.findUnique({ where: { id } })
 		if (!existing) return null
-		if (existing.authorId !== authorId && !isAdmin) return { error: 'Forbidden' }
+		if (existing.authorId !== authorId && !isAdmin)
+			return { error: 'Forbidden' }
 
 		const updateData: Record<string, unknown> = {}
 		if (data.title !== undefined) updateData.title = data.title
 		if (data.content !== undefined) updateData.content = data.content
 		if (data.flags !== undefined) updateData.flags = data.flags
-		if (data.accent_color !== undefined) updateData.accent_color = data.accent_color
+		if (data.accent_color !== undefined)
+			updateData.accent_color = data.accent_color
 		if (data.tags !== undefined) updateData.tags = data.tags
 
 		const article = await prisma.article.update({
@@ -211,14 +230,22 @@ class ArticlesService {
 					userId,
 				},
 			},
-			create: { targetType: StarTargetType.ARTICLE, targetId: articleId, userId },
+			create: {
+				targetType: StarTargetType.ARTICLE,
+				targetId: articleId,
+				userId,
+			},
 			update: {},
 		})
 	}
 
 	async removeStar(articleId: number, userId: string) {
 		await prisma.star.deleteMany({
-			where: { targetType: StarTargetType.ARTICLE, targetId: articleId, userId },
+			where: {
+				targetType: StarTargetType.ARTICLE,
+				targetId: articleId,
+				userId,
+			},
 		})
 	}
 
@@ -231,7 +258,10 @@ class ArticlesService {
 
 		const rows = await prisma.star.groupBy({
 			by: ['targetId'],
-			where: { targetType: StarTargetType.ARTICLE, targetId: { in: ids } },
+			where: {
+				targetType: StarTargetType.ARTICLE,
+				targetId: { in: ids },
+			},
 			_count: { targetId: true },
 		})
 

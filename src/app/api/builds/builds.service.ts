@@ -1,5 +1,5 @@
-import { prisma } from '@/lib/prisma'
 import { StarTargetType } from 'generated/prisma/client'
+import { prisma } from '@/lib/prisma'
 
 function externalId() {
 	return crypto.randomUUID().slice(0, 8)
@@ -13,7 +13,9 @@ class BuildsService {
 				take,
 				orderBy: { created_at: 'desc' },
 				include: {
-					author: { select: { id: true, name: true, username: true } },
+					author: {
+						select: { id: true, name: true, username: true },
+					},
 				},
 			}),
 			prisma.build.count(),
@@ -43,7 +45,9 @@ class BuildsService {
 	async getById(id: string, userId?: string) {
 		const num = Number(id)
 		const build = await prisma.build.findFirst({
-			where: isNaN(num) ? { external_id: id } : { OR: [{ external_id: id }, { id: num }] },
+			where: isNaN(num)
+				? { external_id: id }
+				: { OR: [{ external_id: id }, { id: num }] },
 			include: {
 				author: { select: { id: true, name: true, username: true } },
 			},
@@ -58,7 +62,13 @@ class BuildsService {
 		let is_starred = false
 		if (userId) {
 			const star = await prisma.star.findUnique({
-				where: { targetType_targetId_userId: { targetType: StarTargetType.BUILD, targetId: build.id, userId } },
+				where: {
+					targetType_targetId_userId: {
+						targetType: StarTargetType.BUILD,
+						targetId: build.id,
+						userId,
+					},
+				},
 			})
 			is_starred = !!star
 		}
@@ -79,7 +89,16 @@ class BuildsService {
 		}
 	}
 
-	async create(authorId: string, data: { title: string; data: string; flags?: number; accent_color?: string; tags?: string }) {
+	async create(
+		authorId: string,
+		data: {
+			title: string
+			data: string
+			flags?: number
+			accent_color?: string
+			tags?: string
+		}
+	) {
 		const build = await prisma.build.create({
 			data: {
 				external_id: externalId(),
@@ -115,11 +134,18 @@ class BuildsService {
 		id: number,
 		authorId: string,
 		isAdmin: boolean,
-		data: { title?: string; data?: string; flags?: number; accent_color?: string; tags?: string }
+		data: {
+			title?: string
+			data?: string
+			flags?: number
+			accent_color?: string
+			tags?: string
+		}
 	) {
 		const existing = await prisma.build.findUnique({ where: { id } })
 		if (!existing) return null
-		if (existing.authorId !== authorId && !isAdmin) return { error: 'Forbidden' }
+		if (existing.authorId !== authorId && !isAdmin)
+			return { error: 'Forbidden' }
 
 		const build = await prisma.build.update({
 			where: { id },
@@ -127,7 +153,9 @@ class BuildsService {
 				...(data.title !== undefined && { title: data.title }),
 				...(data.data !== undefined && { data: data.data }),
 				...(data.flags !== undefined && { flags: data.flags }),
-				...(data.accent_color !== undefined && { accent_color: data.accent_color }),
+				...(data.accent_color !== undefined && {
+					accent_color: data.accent_color,
+				}),
 				...(data.tags !== undefined && { tags: data.tags }),
 			},
 			include: {
@@ -164,15 +192,29 @@ class BuildsService {
 
 	async addStar(buildId: number, userId: string) {
 		await prisma.star.upsert({
-			where: { targetType_targetId_userId: { targetType: StarTargetType.BUILD, targetId: buildId, userId } },
-			create: { targetType: StarTargetType.BUILD, targetId: buildId, userId },
+			where: {
+				targetType_targetId_userId: {
+					targetType: StarTargetType.BUILD,
+					targetId: buildId,
+					userId,
+				},
+			},
+			create: {
+				targetType: StarTargetType.BUILD,
+				targetId: buildId,
+				userId,
+			},
 			update: {},
 		})
 	}
 
 	async removeStar(buildId: number, userId: string) {
 		await prisma.star.deleteMany({
-			where: { targetType: StarTargetType.BUILD, targetId: buildId, userId },
+			where: {
+				targetType: StarTargetType.BUILD,
+				targetId: buildId,
+				userId,
+			},
 		})
 	}
 

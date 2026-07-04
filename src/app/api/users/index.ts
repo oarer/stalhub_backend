@@ -1,7 +1,11 @@
 import { t } from 'elysia'
-
+import {
+	fromStore,
+	fromStoreOpt,
+	requireAuth,
+	requireOptionalAuth,
+} from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
-import { fromStore, fromStoreOpt, requireAuth, requireOptionalAuth } from '@/utils/auth.guard'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 import { usersService } from './users.service'
 
@@ -10,9 +14,18 @@ const cookieSchema = t.Cookie({
 	access_token: t.Optional(t.String()),
 })
 
-async function requireRefreshAuth({ cookie: { refresh_token }, jwt, set, store }: any) {
+async function requireRefreshAuth({
+	cookie: { refresh_token },
+	jwt,
+	set,
+	store,
+}: any) {
 	const payload = await jwt.verify(refresh_token?.value)
-	if (!payload || typeof payload.sub !== 'string' || typeof payload.sid !== 'string') {
+	if (
+		!payload ||
+		typeof payload.sub !== 'string' ||
+		typeof payload.sid !== 'string'
+	) {
 		set.status = 401
 		return { error: 'Unauthorized' }
 	}
@@ -37,7 +50,10 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.patch(
 			'/@me',
 			async ({ body, store, set }) => {
-				const result = await usersService.updateSettings(fromStore(store).userId, body)
+				const result = await usersService.updateSettings(
+					fromStore(store).userId,
+					body
+				)
 				if ('error' in result) {
 					set.status = 400
 					return result
@@ -117,7 +133,10 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.delete(
 			'/@me/sessions/:id',
 			async ({ params, store }) => {
-				await usersService.revokeSessionById(params.id, fromStore(store).userId)
+				await usersService.revokeSessionById(
+					params.id,
+					fromStore(store).userId
+				)
 				return { success: true }
 			},
 			{
@@ -130,7 +149,9 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.get(
 			'/@me/settings',
 			async ({ store, set }) => {
-				const data = await usersService.getSettings(fromStore(store).userId)
+				const data = await usersService.getSettings(
+					fromStore(store).userId
+				)
 				if (!data) {
 					set.status = 404
 					return { error: 'User not found' }
@@ -148,7 +169,11 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			async ({ store, query }) => {
 				const take = query.take ?? 24
 				const page = query.page ?? 0
-				return usersService.getStars(fromStore(store).userId, take, page)
+				return usersService.getStars(
+					fromStore(store).userId,
+					take,
+					page
+				)
 			},
 			{
 				beforeHandle: [requireAuth],
@@ -165,7 +190,11 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			async ({ store, query }) => {
 				const take = query.take ?? 5
 				const page = query.page ?? 0
-				return usersService.getNotifications(fromStore(store).userId, take, page)
+				return usersService.getNotifications(
+					fromStore(store).userId,
+					take,
+					page
+				)
 			},
 			{
 				beforeHandle: [requireAuth],
@@ -180,7 +209,10 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.get(
 			'/:username',
 			async ({ params, store, set }) => {
-				const data = await usersService.getPublicProfile(params.username, fromStoreOpt(store).userId)
+				const data = await usersService.getPublicProfile(
+					params.username,
+					fromStoreOpt(store).userId
+				)
 				if (!data) {
 					set.status = 404
 					return { error: 'User not found' }

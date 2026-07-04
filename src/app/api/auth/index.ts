@@ -1,14 +1,13 @@
 import { t } from 'elysia'
-
-import { createElysia } from '@/utils/elysia'
 import { authService } from '@/utils/auth.service'
+import { createElysia } from '@/utils/elysia'
 import { accessCookie, jwtPlugin, refreshCookie } from '@/utils/jwt.plugin'
 import { discordAuth } from './providers/discord'
 import { exboAuth } from './providers/exbo'
 import { telegramAuth } from './providers/telegram'
 
 const cookieSchema = t.Cookie({
-	refresh_token: t.Optional(t.String()),
+	refresh_token: t.String(),
 	access_token: t.Optional(t.String()),
 })
 
@@ -22,11 +21,6 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 		.post(
 			'/refresh',
 			async ({ cookie: { refresh_token, access_token }, jwt, set }) => {
-				if (!refresh_token?.value) {
-					set.status = 401
-					return { error: 'Missing refresh token' }
-				}
-
 				const payload = await jwt.verify(refresh_token.value)
 
 				if (
@@ -39,7 +33,9 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 					return { error: 'Invalid refresh token' }
 				}
 
-				const session = await authService.getSessionWithRoles(payload.sid)
+				const session = await authService.getSessionWithRoles(
+					payload.sid
+				)
 
 				if (!session || session.revoked) {
 					refresh_token.remove()
@@ -81,7 +77,6 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 				detail: {
 					tags: ['Auth'],
 				},
-			},
+			}
 		)
-
 )
