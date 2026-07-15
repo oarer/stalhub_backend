@@ -34,6 +34,13 @@ enum StarTargetType {
   ARTICLE
 }
 
+enum ArticleStatus {
+  PENDING
+  REVIEW
+  DENIED
+  BANNED
+}
+
 // ================ USER MODEL ===================
 model User {
   id       String @id
@@ -221,8 +228,10 @@ model Build {
 }
 
 model Article {
-  id          Int    @id @default(autoincrement())
-  external_id String @unique
+  id          Int           @id @default(autoincrement())
+  external_id String        @unique
+  status      ArticleStatus @default(PENDING)
+  status_reason String?
 
   title   String
   content String

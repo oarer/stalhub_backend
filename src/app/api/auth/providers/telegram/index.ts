@@ -1,10 +1,10 @@
+import { t } from 'elysia'
 import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
 import { fromStore, requireAuth } from '@/utils/auth.guard'
 import { createSession } from '@/utils/auth.service'
 import { createElysia } from '@/utils/elysia'
 import { accessCookie, jwtPlugin, refreshCookie } from '@/utils/jwt.plugin'
-import { t } from 'elysia'
 
 const TELEGRAM_ISS = 'https://oauth.telegram.org'
 
@@ -174,7 +174,6 @@ export const telegramAuth = createElysia()
 					jwt,
 					set,
 				}) => {
-
 					const stored = stateStore.get(state)
 					if (!stored || stored.expiresAt < Date.now()) {
 						set.status = 403
@@ -326,7 +325,6 @@ export const telegramAuth = createElysia()
 					jwt,
 					set,
 				}) => {
-
 					const user = await validateIdToken(id_token)
 					if (!user) {
 						set.status = 403

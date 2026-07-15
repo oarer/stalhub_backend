@@ -1,4 +1,4 @@
-import { StarTargetType } from 'generated/prisma/client'
+import { ArticleStatus, StarTargetType } from 'generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 
 function externalId() {
@@ -28,6 +28,8 @@ class ArticlesService {
 			data: rows.map((a) => ({
 				id: a.id,
 				external_id: a.external_id,
+				status: a.status,
+				status_reason: a.status_reason,
 				title: a.title,
 				content: a.content,
 				flags: a.flags,
@@ -76,6 +78,8 @@ class ArticlesService {
 		return {
 			id: article.id,
 			external_id: article.external_id,
+			status: article.status,
+			status_reason: article.status_reason,
 			title: article.title,
 			content: article.content,
 			flags: article.flags,
@@ -125,6 +129,8 @@ class ArticlesService {
 		return {
 			id: article.id,
 			external_id: article.external_id,
+			status: article.status,
+			status_reason: article.status_reason,
 			title: article.title,
 			content: article.content,
 			flags: article.flags,
@@ -189,6 +195,8 @@ class ArticlesService {
 		return {
 			id: article.id,
 			external_id: article.external_id,
+			status: article.status,
+			status_reason: article.status_reason,
 			title: article.title,
 			content: article.content,
 			flags: article.flags,
@@ -198,6 +206,50 @@ class ArticlesService {
 			stars_count,
 			created_at: article.created_at,
 			updated_at: article.updated_at,
+		}
+	}
+
+	async setStatus(
+		id: number,
+		status: ArticleStatus,
+		status_reason?: string | null
+	) {
+		const article = await prisma.article.findUnique({ where: { id } })
+		if (!article) return null
+
+		const updateData: Record<string, unknown> = { status }
+		if (status === ArticleStatus.DENIED || status === ArticleStatus.BANNED) {
+			updateData.status_reason = status_reason ?? null
+		} else {
+			updateData.status_reason = null
+		}
+
+		const updated = await prisma.article.update({
+			where: { id },
+			data: updateData,
+			include: {
+				author: { select: { id: true, name: true, username: true } },
+			},
+		})
+
+		const stars_count = await prisma.star.count({
+			where: { targetType: StarTargetType.ARTICLE, targetId: updated.id },
+		})
+
+		return {
+			id: updated.id,
+			external_id: updated.external_id,
+			status: updated.status,
+			status_reason: updated.status_reason,
+			title: updated.title,
+			content: updated.content,
+			flags: updated.flags,
+			accent_color: updated.accent_color,
+			tags: updated.tags ? updated.tags.split(',').filter(Boolean) : [],
+			author: updated.author,
+			stars_count,
+			created_at: updated.created_at,
+			updated_at: updated.updated_at,
 		}
 	}
 

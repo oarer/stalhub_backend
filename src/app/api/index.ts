@@ -6,6 +6,7 @@ import { auctionRoutes } from './auction'
 import { authRoutes } from './auth'
 import { routeBarter } from './barter'
 import { buildsRoutes } from './builds'
+import { exboRoutes } from './exbo'
 import { routeHealth } from './health'
 import { routeHideout } from './hideout'
 import { metricsRoute } from './metrics'
@@ -24,4 +25,5 @@ export const api = createElysia()
 	.use(usersRoutes)
 	.use(buildsRoutes)
 	.use(articlesRoutes)
+	.use(exboRoutes)
 	.use(adminRoutes)

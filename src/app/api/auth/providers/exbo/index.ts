@@ -1,3 +1,4 @@
+import { t } from 'elysia'
 import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
 import { fromStore, requireAuth } from '@/utils/auth.guard'
@@ -5,7 +6,6 @@ import { createSession } from '@/utils/auth.service'
 import { createElysia } from '@/utils/elysia'
 import { accessCookie, jwtPlugin, refreshCookie } from '@/utils/jwt.plugin'
 import { consumeLinkState, createLinkState } from '@/utils/link.state'
-import { t } from 'elysia'
 
 export const exboAuth = createElysia()
 	.use(jwtPlugin)

@@ -1,3 +1,4 @@
+import { ArticleStatus } from 'generated/prisma/client'
 import { t } from 'elysia'
 import {
 	checkPermission,
@@ -139,6 +140,40 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
+				detail: { tags: ['Articles'] },
+			}
+		)
+
+		.patch(
+			'/:id/status',
+			async ({ params, body, store, set }) => {
+				const { userId } = fromStore(store)
+				const isAdmin = await checkPermission(userId, 'articles:manage')
+				if (!isAdmin) {
+					set.status = 403
+					return { error: 'Forbidden' }
+				}
+
+				const result = await articlesService.setStatus(
+					Number(params.id),
+					body.status,
+					body.reason
+				)
+
+				if (!result) {
+					set.status = 404
+					return { error: 'Not found' }
+				}
+
+				return result
+			},
+			{
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+				body: t.Object({
+					status: t.Enum(ArticleStatus),
+					reason: t.Optional(t.String()),
+				}),
 				detail: { tags: ['Articles'] },
 			}
 		)
