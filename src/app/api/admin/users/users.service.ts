@@ -4,12 +4,27 @@ class AdminUserService {
 	async list(take: number, page: number, search?: string) {
 		const where = search
 			? {
-				OR: [
-					{ id: { contains: search, mode: 'insensitive' as const } },
-					{ username: { contains: search, mode: 'insensitive' as const } },
-					{ name: { contains: search, mode: 'insensitive' as const } },
-				],
-			}
+					OR: [
+						{
+							id: {
+								contains: search,
+								mode: 'insensitive' as const,
+							},
+						},
+						{
+							username: {
+								contains: search,
+								mode: 'insensitive' as const,
+							},
+						},
+						{
+							name: {
+								contains: search,
+								mode: 'insensitive' as const,
+							},
+						},
+					],
+				}
 			: {}
 
 		const [data, totalCount] = await Promise.all([
@@ -23,7 +38,13 @@ class AdminUserService {
 					username: true,
 					name: true,
 					joined_at: true,
-					_count: { select: { sessions: true, builds: true, articles: true } },
+					_count: {
+						select: {
+							sessions: true,
+							builds: true,
+							articles: true,
+						},
+					},
 				},
 			}),
 			prisma.user.count({ where }),
@@ -42,9 +63,22 @@ class AdminUserService {
 				EXBOAuth: true,
 				badges: true,
 				roles: {
-					include: { role: { include: { permissions: { include: { permission: true } } } } },
+					include: {
+						role: {
+							include: {
+								permissions: { include: { permission: true } },
+							},
+						},
+					},
 				},
-				_count: { select: { sessions: true, builds: true, articles: true, stars: true } },
+				_count: {
+					select: {
+						sessions: true,
+						builds: true,
+						articles: true,
+						stars: true,
+					},
+				},
 			},
 		})
 
@@ -142,6 +176,49 @@ class AdminUserService {
 		})
 
 		return this.getUserRoles(userId)
+	}
+
+	async ban(userId: string, reason?: string, expiresAt?: Date) {
+		const existing = await prisma.user.findUnique({ where: { id: userId } })
+		if (!existing) return null
+
+		await prisma.userSettings.upsert({
+			where: { userId },
+			update: {
+				banned: true,
+				ban_reason: reason ?? null,
+				ban_expires_at: expiresAt ?? null,
+			},
+			create: {
+				userId,
+				banned: true,
+				ban_reason: reason ?? null,
+				ban_expires_at: expiresAt ?? null,
+			},
+		})
+
+		await prisma.sessions.updateMany({
+			where: { userId },
+			data: { revoked: true },
+		})
+
+		return this.get(userId)
+	}
+
+	async unban(userId: string) {
+		const existing = await prisma.user.findUnique({ where: { id: userId } })
+		if (!existing) return null
+
+		await prisma.userSettings.update({
+			where: { userId },
+			data: {
+				banned: false,
+				ban_reason: null,
+				ban_expires_at: null,
+			},
+		})
+
+		return this.get(userId)
 	}
 }
 

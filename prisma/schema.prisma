@@ -79,7 +79,11 @@ model UserSettings {
   id             Int          @id @default(autoincrement())
   User           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId         String       @unique
+  
   banned         Boolean      @default(false)
+  ban_reason     String?
+  ban_expires_at DateTime?
+
   public_profile Boolean      @default(false)
   avatar         AvatarSource @default(DISCORD)
 }

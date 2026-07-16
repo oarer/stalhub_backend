@@ -1,5 +1,22 @@
+import type { Prisma } from 'generated/prisma/client'
 import { prisma } from '@/lib/prisma'
-import { Prisma } from 'generated/prisma/client'
+
+export async function assignDefaultRole(userId: string) {
+	const role = await prisma.role.upsert({
+		where: { name: 'user' },
+		update: {},
+		create: {
+			name: 'user',
+			description: 'Default user role',
+		},
+	})
+
+	await prisma.userRole.upsert({
+		where: { userId_roleId: { userId, roleId: role.id } },
+		update: {},
+		create: { userId, roleId: role.id },
+	})
+}
 
 export async function createSession(userId: string, userAgent: string) {
 	const sessionId = crypto.randomUUID()
@@ -70,7 +87,9 @@ class AuthService {
 		return session
 	}
 
-	async getSessionWithRoles(sessionId: string): Promise<SessionWithRoles | null> {
+	async getSessionWithRoles(
+		sessionId: string
+	): Promise<SessionWithRoles | null> {
 		const session = await prisma.sessions.findUnique({
 			where: { sessionId },
 			include: {
@@ -105,26 +124,26 @@ class AuthService {
 
 			discord: u.DiscordAuth
 				? {
-					id: u.DiscordAuth.discord_id,
-					name: u.DiscordAuth.name,
-					username: u.DiscordAuth.username,
-				}
+						id: u.DiscordAuth.discord_id,
+						name: u.DiscordAuth.name,
+						username: u.DiscordAuth.username,
+					}
 				: null,
 
 			telegram: u.TelegramAuth
 				? {
-					id: u.TelegramAuth.telegram_id,
-					name: u.TelegramAuth.name,
-					username: u.TelegramAuth.login,
-				}
+						id: u.TelegramAuth.telegram_id,
+						name: u.TelegramAuth.name,
+						username: u.TelegramAuth.login,
+					}
 				: null,
 
 			exbo: u.EXBOAuth
 				? {
-					id: u.EXBOAuth.exbo_id,
-					login: u.EXBOAuth.login,
-					username: u.EXBOAuth.username,
-				}
+						id: u.EXBOAuth.exbo_id,
+						login: u.EXBOAuth.login,
+						username: u.EXBOAuth.username,
+					}
 				: null,
 		}
 	}

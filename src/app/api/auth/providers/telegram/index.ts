@@ -2,7 +2,7 @@ import { t } from 'elysia'
 import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
 import { fromStore, requireAuth } from '@/utils/auth.guard'
-import { createSession } from '@/utils/auth.service'
+import { assignDefaultRole, createSession } from '@/utils/auth.service'
 import { createElysia } from '@/utils/elysia'
 import { accessCookie, jwtPlugin, refreshCookie } from '@/utils/jwt.plugin'
 
@@ -267,6 +267,7 @@ export const telegramAuth = createElysia()
 							},
 						})
 						userId = created.id
+						await assignDefaultRole(userId)
 					}
 
 					const userData = await prisma.user.findUnique({
@@ -355,6 +356,7 @@ export const telegramAuth = createElysia()
 							},
 						})
 						userId = created.id
+						await assignDefaultRole(userId)
 					}
 
 					const userData = await prisma.user.findUnique({

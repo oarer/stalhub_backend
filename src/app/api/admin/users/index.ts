@@ -1,8 +1,8 @@
 import { t } from 'elysia'
 
 import { checkPermission, requireAuth } from '@/utils/auth.guard'
-import { adminUserService } from './users.service'
 import { createElysia } from '@/utils/elysia'
+import { adminUserService } from './users.service'
 
 async function requireAdmin({ store, set }: any) {
 	const ok = await checkPermission(store.authUserId as string, 'user:manage')
@@ -52,7 +52,10 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.patch(
 			'/:userId',
 			async ({ params, body }) => {
-				const result = await adminUserService.update(params.userId, body)
+				const result = await adminUserService.update(
+					params.userId,
+					body
+				)
 				if (!result) return { error: 'User not found' }
 				if ('error' in result) return result
 				return result
@@ -110,7 +113,9 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.get(
 			'/:userId/roles',
 			async ({ params, set }) => {
-				const result = await adminUserService.getUserRoles(params.userId)
+				const result = await adminUserService.getUserRoles(
+					params.userId
+				)
 				if (!result) {
 					set.status = 404
 					return { error: 'User not found' }
@@ -127,7 +132,10 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.post(
 			'/:userId/roles',
 			async ({ params, body }) => {
-				const result = await adminUserService.assignRole(params.userId, body.roleId)
+				const result = await adminUserService.assignRole(
+					params.userId,
+					body.roleId
+				)
 				if (!result) return { error: 'User or Role not found' }
 				return result
 			},
@@ -144,13 +152,57 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.delete(
 			'/:userId/roles/:roleId',
 			async ({ params }) => {
-				const result = await adminUserService.unassignRole(params.userId, Number(params.roleId))
+				const result = await adminUserService.unassignRole(
+					params.userId,
+					Number(params.roleId)
+				)
 				if (!result) return { error: 'User not found' }
 				return result
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ userId: t.String(), roleId: t.String() }),
+				detail: { tags: ['Admin'] },
+			}
+		)
+
+		.post(
+			'/:userId/ban',
+			async ({ params, body }) => {
+				const expiresAt = body.expires_in
+					? new Date(Date.now() + body.expires_in * 1000)
+					: undefined
+				const result = await adminUserService.ban(
+					params.userId,
+					body.reason,
+					expiresAt
+				)
+				if (!result) return { error: 'User not found' }
+				return result
+			},
+			{
+				beforeHandle: [requireAuth, requireAdmin],
+				params: t.Object({ userId: t.String() }),
+				body: t.Object({
+					reason: t.Optional(t.String()),
+					expires_in: t.Optional(
+						t.Numeric({ description: 'Ban duration in seconds' })
+					),
+				}),
+				detail: { tags: ['Admin'] },
+			}
+		)
+
+		.delete(
+			'/:userId/ban',
+			async ({ params }) => {
+				const result = await adminUserService.unban(params.userId)
+				if (!result) return { error: 'User not found' }
+				return result
+			},
+			{
+				beforeHandle: [requireAuth, requireAdmin],
+				params: t.Object({ userId: t.String() }),
 				detail: { tags: ['Admin'] },
 			}
 		)
