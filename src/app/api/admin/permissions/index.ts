@@ -1,34 +1,32 @@
 import { t } from 'elysia'
 
-import { checkPermission, requireAuth } from '@/utils/auth.guard'
-import { permissionService } from './permissions.service'
+import { requireAdmin, requireAuth } from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
-
-async function requireAdmin({ store, set }: any) {
-	const ok = await checkPermission(store.authUserId as string, 'rbac:manage')
-	if (!ok) {
-		set.status = 403
-		return { error: 'Forbidden' }
-	}
-}
+import { jwtPlugin } from '@/utils/jwt.plugin'
+import { permissionService } from './permissions.service'
 
 export const permissionsRoutes = createElysia().group('/permissions', (app) =>
 	app
-
-		.get(
-			'',
-			async () => permissionService.list(),
-			{ beforeHandle: [requireAuth, requireAdmin], detail: { tags: ['Admin'] } }
-		)
+		.use(jwtPlugin)
+		.get('', async () => permissionService.list(), {
+			beforeHandle: [requireAuth, requireAdmin],
+			detail: { tags: ['Admin'] },
+		})
 
 		.post(
 			'',
-			async ({ body }) => permissionService.create(body.name, body.description),
+			async ({ body }) =>
+				permissionService.create(
+					body.name,
+					body.description,
+					body.roleId
+				),
 			{
 				beforeHandle: [requireAuth, requireAdmin],
 				body: t.Object({
 					name: t.String({ error: 'name is required' }),
 					description: t.Optional(t.String()),
+					roleId: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Admin'] },
 			}
@@ -37,7 +35,10 @@ export const permissionsRoutes = createElysia().group('/permissions', (app) =>
 		.patch(
 			'/:id',
 			async ({ params, body }) => {
-				const result = await permissionService.update(Number(params.id), body)
+				const result = await permissionService.update(
+					Number(params.id),
+					body
+				)
 				if (!result) return { error: 'Not found' }
 				return result
 			},
@@ -47,6 +48,7 @@ export const permissionsRoutes = createElysia().group('/permissions', (app) =>
 				body: t.Object({
 					name: t.Optional(t.String()),
 					description: t.Optional(t.String()),
+					roleId: t.Optional(t.Nullable(t.Numeric())),
 				}),
 				detail: { tags: ['Admin'] },
 			}

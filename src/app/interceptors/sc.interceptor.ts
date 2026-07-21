@@ -9,6 +9,7 @@ import type { ApiErrorResponse } from '@/types/api.type'
 
 type RetryAxiosRequestConfig = InternalAxiosRequestConfig & {
 	_retry?: boolean
+	_skipAuth?: boolean
 }
 
 export const apiClient = axios.create({
@@ -18,9 +19,13 @@ export const apiClient = axios.create({
 })
 
 apiClient.interceptors.request.use((config) => {
-	config.headers.set('Authorization', `Bearer ${env.EXBO_TOKEN}`)
-	;(config as RetryAxiosRequestConfig & { _startTime?: number })._startTime =
-		Date.now()
+	const retryConfig = config as RetryAxiosRequestConfig & {
+		_startTime?: number
+	}
+	if (!retryConfig._skipAuth) {
+		config.headers.set('Authorization', `Bearer ${env.EXBO_TOKEN}`)
+	}
+	retryConfig._startTime = Date.now()
 	return config
 })
 

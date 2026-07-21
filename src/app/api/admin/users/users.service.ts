@@ -1,16 +1,30 @@
 import { prisma } from '@/lib/prisma'
 
 class AdminUserService {
+	async getUserMaxRank(userId: number): Promise<number> {
+		const user = await prisma.user.findUnique({
+			where: { id: userId },
+			include: { roles: { select: { rank: true } } },
+		})
+		if (!user || user.roles.length === 0) return 0
+		return Math.max(...user.roles.map((r) => r.rank))
+	}
+
+	async canManageUser(
+		actorUserId: number,
+		targetUserId: number
+	): Promise<boolean> {
+		const [actorRank, targetRank] = await Promise.all([
+			this.getUserMaxRank(actorUserId),
+			this.getUserMaxRank(targetUserId),
+		])
+		return actorRank > targetRank
+	}
+
 	async list(take: number, page: number, search?: string) {
 		const where = search
 			? {
 					OR: [
-						{
-							id: {
-								contains: search,
-								mode: 'insensitive' as const,
-							},
-						},
 						{
 							username: {
 								contains: search,
@@ -38,6 +52,8 @@ class AdminUserService {
 					username: true,
 					name: true,
 					joined_at: true,
+					roles: true,
+					sessions: true,
 					_count: {
 						select: {
 							sessions: true,
@@ -53,7 +69,7 @@ class AdminUserService {
 		return { data, totalCount }
 	}
 
-	async get(userId: string) {
+	async get(userId: number) {
 		const user = await prisma.user.findUnique({
 			where: { id: userId },
 			include: {
@@ -64,11 +80,7 @@ class AdminUserService {
 				badges: true,
 				roles: {
 					include: {
-						role: {
-							include: {
-								permissions: { include: { permission: true } },
-							},
-						},
+						permissions: { select: { id: true, name: true } },
 					},
 				},
 				_count: {
@@ -86,7 +98,7 @@ class AdminUserService {
 		return user
 	}
 
-	async update(userId: string, data: { username?: string; name?: string }) {
+	async update(userId: number, data: { username?: string; name?: string }) {
 		const existing = await prisma.user.findUnique({ where: { id: userId } })
 		if (!existing) return null
 
@@ -106,7 +118,7 @@ class AdminUserService {
 		})
 	}
 
-	async remove(userId: string) {
+	async remove(userId: number) {
 		const existing = await prisma.user.findUnique({ where: { id: userId } })
 		if (!existing) return false
 
@@ -114,7 +126,7 @@ class AdminUserService {
 		return true
 	}
 
-	async getSessions(userId: string) {
+	async getSessions(userId: number) {
 		return prisma.sessions.findMany({
 			where: { userId },
 			orderBy: { last_used_at: 'desc' },
@@ -122,6 +134,7 @@ class AdminUserService {
 				id: true,
 				sessionId: true,
 				User_Agent: true,
+				ip: true,
 				last_used_at: true,
 				revoked: true,
 			},
@@ -135,25 +148,18 @@ class AdminUserService {
 		})
 	}
 
-	async getUserRoles(userId: string) {
+	async getUserRoles(userId: number) {
 		const user = await prisma.user.findUnique({
 			where: { id: userId },
-			include: {
-				roles: {
-					include: { role: true },
-				},
-			},
+			include: { roles: true },
 		})
 
 		if (!user) return null
 
-		return {
-			userID: user.id,
-			roles: user.roles.map((ur) => ur.role),
-		}
+		return user?.roles ?? null
 	}
 
-	async assignRole(userId: string, roleId: number) {
+	async assignRole(userId: number, roleId: number) {
 		const [user, role] = await Promise.all([
 			prisma.user.findUnique({ where: { id: userId } }),
 			prisma.role.findUnique({ where: { id: roleId } }),
@@ -161,24 +167,24 @@ class AdminUserService {
 
 		if (!user || !role) return null
 
-		await prisma.userRole.upsert({
-			where: { userId_roleId: { userId, roleId } },
-			create: { userId, roleId },
-			update: {},
+		await prisma.user.update({
+			where: { id: userId },
+			data: { roles: { connect: { id: roleId } } },
 		})
 
 		return this.getUserRoles(userId)
 	}
 
-	async unassignRole(userId: string, roleId: number) {
-		await prisma.userRole.deleteMany({
-			where: { userId, roleId },
+	async unassignRole(userId: number, roleId: number) {
+		await prisma.user.update({
+			where: { id: userId },
+			data: { roles: { disconnect: { id: roleId } } },
 		})
 
 		return this.getUserRoles(userId)
 	}
 
-	async ban(userId: string, reason?: string, expiresAt?: Date) {
+	async ban(userId: number, reason?: string, expiresAt?: Date) {
 		const existing = await prisma.user.findUnique({ where: { id: userId } })
 		if (!existing) return null
 
@@ -205,7 +211,7 @@ class AdminUserService {
 		return this.get(userId)
 	}
 
-	async unban(userId: string) {
+	async unban(userId: number) {
 		const existing = await prisma.user.findUnique({ where: { id: userId } })
 		if (!existing) return null
 

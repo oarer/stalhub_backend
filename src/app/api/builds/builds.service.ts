@@ -42,7 +42,7 @@ class BuildsService {
 		}
 	}
 
-	async getById(id: string, userId?: string) {
+	async getById(id: string, userId?: number) {
 		const num = Number(id)
 		const build = await prisma.build.findFirst({
 			where: isNaN(num)
@@ -90,7 +90,7 @@ class BuildsService {
 	}
 
 	async create(
-		authorId: string,
+		authorId: number,
 		data: {
 			title: string
 			data: string
@@ -132,7 +132,7 @@ class BuildsService {
 
 	async update(
 		id: number,
-		authorId: string,
+		authorId: number,
 		isAdmin: boolean,
 		data: {
 			title?: string
@@ -182,7 +182,7 @@ class BuildsService {
 		}
 	}
 
-	async delete(id: number, authorId: string, isAdmin: boolean) {
+	async delete(id: number, authorId: number, isAdmin: boolean) {
 		const existing = await prisma.build.findUnique({ where: { id } })
 		if (!existing) return false
 		if (existing.authorId !== authorId && !isAdmin) return false
@@ -190,7 +190,7 @@ class BuildsService {
 		return true
 	}
 
-	async addStar(buildId: number, userId: string) {
+	async addStar(buildId: number, userId: number) {
 		await prisma.star.upsert({
 			where: {
 				targetType_targetId_userId: {
@@ -208,7 +208,7 @@ class BuildsService {
 		})
 	}
 
-	async removeStar(buildId: number, userId: string) {
+	async removeStar(buildId: number, userId: number) {
 		await prisma.star.deleteMany({
 			where: {
 				targetType: StarTargetType.BUILD,

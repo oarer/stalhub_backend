@@ -43,9 +43,9 @@ enum ArticleStatus {
 
 // ================ USER MODEL ===================
 model User {
-  id       String @id
-  username String @default("")
-  name     String @default("")
+  id       Int    @id @default(autoincrement())
+  username String @unique @default("")
+  name     String @default("") // display name
 
   sessions Sessions[]
 
@@ -55,7 +55,7 @@ model User {
 
   notifications Notifications[] @relation("Notifications")
 
-  roles UserRole[]
+  roles Role[]
 
   // Auth providers
   DiscordAuth  DiscordAuth?
@@ -76,16 +76,16 @@ model UserBadges {
 }
 
 model UserSettings {
-  id             Int          @id @default(autoincrement())
-  User           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId         String       @unique
-  
-  banned         Boolean      @default(false)
+  id     Int  @id @default(autoincrement())
+  User   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int  @unique
+
+  banned         Boolean   @default(false)
   ban_reason     String?
   ban_expires_at DateTime?
 
   public_profile Boolean      @default(false)
-  avatar         AvatarSource @default(DISCORD)
+  avatar         AvatarSource?
 }
 
 model Sessions {
@@ -93,8 +93,9 @@ model Sessions {
   sessionId String @unique @default("")
 
   User_Agent String @default("")
+  ip         String @default("")
   User       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     String
+  userId     Int
 
   last_used_at DateTime @default(now())
   revoked      Boolean  @default(false)
@@ -111,42 +112,25 @@ model Notifications {
 
 // ================ RBAC ===================
 model Role {
-  id          Int              @id @default(autoincrement())
-  name        String           @unique
-  description String           @default("")
-  permissions RolePermission[]
-  users       UserRole[]
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  description String       @default("")
+  rank        Int          @default(0)
+
+  users       User[]
+  permissions Permission[]
 
   @@map("role")
 }
 
 model Permission {
-  id          Int              @id @default(autoincrement())
-  name        String           @unique
-  description String           @default("")
-  roles       RolePermission[]
+  id          Int    @id @default(autoincrement())
+  name        String @unique
+  description String @default("")
+
+  roles Role[]
 
   @@map("permission")
-}
-
-model RolePermission {
-  roleId       Int
-  permissionId Int
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@id([roleId, permissionId])
-  @@map("role_permission")
-}
-
-model UserRole {
-  userId String
-  roleId Int
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
-
-  @@id([userId, roleId])
-  @@map("user_role")
 }
 
 // ================ END RBAC ===================
@@ -160,8 +144,8 @@ model DiscordAuth {
   username   String
   avatar_id  String?
 
-  user   User   @relation(fields: [userid], references: [id], onDelete: Cascade)
-  userid String @unique
+  user   User @relation(fields: [userid], references: [id], onDelete: Cascade)
+  userid Int  @unique
 
   connected_at DateTime @default(now())
 }
@@ -174,8 +158,8 @@ model TelegramAuth {
   login     String?
   avatar_id String?
 
-  user   User   @relation(fields: [userid], references: [id], onDelete: Cascade)
-  userid String @unique
+  user   User @relation(fields: [userid], references: [id], onDelete: Cascade)
+  userid Int  @unique
 
   connected_at DateTime @default(now())
 }
@@ -192,8 +176,8 @@ model EXBOAuth {
   access_expires_at  DateTime
   refresh_expires_at DateTime?
 
-  user   User   @relation(fields: [userid], references: [id], onDelete: Cascade)
-  userid String @unique
+  user   User @relation(fields: [userid], references: [id], onDelete: Cascade)
+  userid Int  @unique
 
   connected_at DateTime @default(now())
   updated_at   DateTime @updatedAt
@@ -222,8 +206,8 @@ model Build {
   accent_color String?
   tags         String  @default("")
 
-  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId String
+  author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId Int
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -232,9 +216,9 @@ model Build {
 }
 
 model Article {
-  id          Int           @id @default(autoincrement())
-  external_id String        @unique
-  status      ArticleStatus @default(PENDING)
+  id            Int           @id @default(autoincrement())
+  external_id   String        @unique
+  status        ArticleStatus @default(PENDING)
   status_reason String?
 
   title   String
@@ -244,8 +228,8 @@ model Article {
   accent_color String?
   tags         String  @default("")
 
-  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId String
+  author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId Int
 
   versions ArticleVersion[]
 
@@ -273,8 +257,8 @@ model Star {
   targetType StarTargetType
   targetId   Int
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
 
   created_at DateTime @default(now())
 

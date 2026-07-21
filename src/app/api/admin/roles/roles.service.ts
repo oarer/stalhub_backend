@@ -5,19 +5,23 @@ class RoleService {
 		return prisma.role.findMany({
 			orderBy: { id: 'asc' },
 			include: {
-				permissions: {
-					include: { permission: { select: { id: true, name: true } } },
-				},
+				permissions: { select: { id: true, name: true } },
 				_count: { select: { users: true } },
 			},
 		})
 	}
 
-	async create(name: string, description?: string) {
-		return prisma.role.create({ data: { name, description: description ?? '' } })
+	async create(name: string, description?: string, rank?: number) {
+		return prisma.role.create({
+			data: {
+				name,
+				description: description ?? '',
+				...(rank !== undefined && { rank }),
+			},
+		})
 	}
 
-	async update(id: number, data: { name?: string; description?: string }) {
+	async update(id: number, data: { name?: string; description?: string; rank?: number }) {
 		const existing = await prisma.role.findUnique({ where: { id } })
 		if (!existing) return null
 
@@ -26,6 +30,7 @@ class RoleService {
 			data: {
 				...(data.name !== undefined && { name: data.name }),
 				...(data.description !== undefined && { description: data.description }),
+				...(data.rank !== undefined && { rank: data.rank }),
 			},
 		})
 	}
@@ -42,17 +47,14 @@ class RoleService {
 		const role = await prisma.role.findUnique({ where: { id: roleId } })
 		if (!role) return null
 
-		const existing = await prisma.rolePermission.findMany({
-			where: { roleId, permissionId: { in: permissionIds } },
+		await prisma.role.update({
+			where: { id: roleId },
+			data: {
+				permissions: {
+					connect: permissionIds.map((id) => ({ id })),
+				},
+			},
 		})
-		const existingIds = new Set(existing.map((rp) => rp.permissionId))
-		const toAdd = permissionIds.filter((pid) => !existingIds.has(pid))
-
-		if (toAdd.length) {
-			await prisma.rolePermission.createMany({
-				data: toAdd.map((permissionId) => ({ roleId, permissionId })),
-			})
-		}
 
 		return this.list().then((roles) => roles.find((r) => r.id === roleId))
 	}
@@ -61,8 +63,13 @@ class RoleService {
 		const role = await prisma.role.findUnique({ where: { id: roleId } })
 		if (!role) return null
 
-		await prisma.rolePermission.deleteMany({
-			where: { roleId, permissionId: { in: permissionIds } },
+		await prisma.role.update({
+			where: { id: roleId },
+			data: {
+				permissions: {
+					disconnect: permissionIds.map((id) => ({ id })),
+				},
+			},
 		})
 
 		return this.list().then((roles) => roles.find((r) => r.id === roleId))

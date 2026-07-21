@@ -1,34 +1,28 @@
 import { t } from 'elysia'
 
-import { checkPermission, requireAuth } from '@/utils/auth.guard'
-import { roleService } from './roles.service'
+import { requireAdmin, requireAuth } from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
-
-async function requireAdmin({ store, set }: any) {
-	const ok = await checkPermission(store.authUserId as string, 'rbac:manage')
-	if (!ok) {
-		set.status = 403
-		return { error: 'Forbidden' }
-	}
-}
+import { jwtPlugin } from '@/utils/jwt.plugin'
+import { roleService } from './roles.service'
 
 export const rolesRoutes = createElysia().group('/roles', (app) =>
 	app
-
-		.get(
-			'',
-			async () => roleService.list(),
-			{ beforeHandle: [requireAuth, requireAdmin], detail: { tags: ['Admin'] } }
-		)
+		.use(jwtPlugin)
+		.get('', async () => roleService.list(), {
+			beforeHandle: [requireAuth, requireAdmin],
+			detail: { tags: ['Admin'] },
+		})
 
 		.post(
 			'',
-			async ({ body }) => roleService.create(body.name, body.description),
+			async ({ body }) =>
+				roleService.create(body.name, body.description, body.rank),
 			{
 				beforeHandle: [requireAuth, requireAdmin],
 				body: t.Object({
 					name: t.String({ error: 'name is required' }),
 					description: t.Optional(t.String()),
+					rank: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Admin'] },
 			}
@@ -47,6 +41,7 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 				body: t.Object({
 					name: t.Optional(t.String()),
 					description: t.Optional(t.String()),
+					rank: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Admin'] },
 			}
@@ -69,7 +64,10 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 		.post(
 			'/:id/permissions',
 			async ({ params, body }) => {
-				const result = await roleService.addPermissions(Number(params.id), body.permissionIds)
+				const result = await roleService.addPermissions(
+					Number(params.id),
+					body.permissionIds
+				)
 				if (!result) return { error: 'Role not found' }
 				return result
 			},
@@ -77,7 +75,9 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
-					permissionIds: t.Array(t.Numeric(), { error: 'permissionIds is required' }),
+					permissionIds: t.Array(t.Numeric(), {
+						error: 'permissionIds is required',
+					}),
 				}),
 				detail: { tags: ['Admin'] },
 			}
@@ -86,7 +86,10 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 		.delete(
 			'/:id/permissions',
 			async ({ params, body }) => {
-				const result = await roleService.removePermissions(Number(params.id), body.permissionIds)
+				const result = await roleService.removePermissions(
+					Number(params.id),
+					body.permissionIds
+				)
 				if (!result) return { error: 'Role not found' }
 				return result
 			},
@@ -94,7 +97,9 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
-					permissionIds: t.Array(t.Numeric(), { error: 'permissionIds is required' }),
+					permissionIds: t.Array(t.Numeric(), {
+						error: 'permissionIds is required',
+					}),
 				}),
 				detail: { tags: ['Admin'] },
 			}

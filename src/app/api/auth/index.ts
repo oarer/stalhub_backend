@@ -23,30 +23,30 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 			async ({ cookie: { refresh_token, access_token }, jwt, set }) => {
 				const payload = await jwt.verify(refresh_token.value)
 
-				if (
-					!payload ||
-					typeof payload.sub !== 'string' ||
-					typeof payload.sid !== 'string'
-				) {
-					refresh_token.remove()
-					set.status = 401
-					return { error: 'Invalid refresh token' }
-				}
+			if (
+				!payload ||
+				typeof payload.sub !== 'string' ||
+				typeof payload.sid !== 'string'
+			) {
+				refresh_token.remove()
+				set.status = 401
+				return { error: 'Invalid refresh token' }
+			}
 
-				const session = await authService.getSessionWithRoles(
-					payload.sid
-				)
+			const session = await authService.getSessionWithRoles(
+				payload.sid
+			)
 
-				if (!session || session.revoked) {
-					refresh_token.remove()
-					set.status = 401
-					return { error: 'Session revoked or expired' }
-				}
+			if (!session || session.revoked) {
+				refresh_token.remove()
+				set.status = 401
+				return { error: 'Session revoked or expired' }
+			}
 
-				const roles = session.User.roles.map((r) => r.role.name)
+			const roles = session.User.roles.map((r) => r.name)
 
-				const accessToken = await jwt.sign({
-					sub: payload.sub,
+			const accessToken = await jwt.sign({
+				sub: payload.sub,
 					sid: payload.sid,
 					name: session.User.name,
 					username: session.User.username,

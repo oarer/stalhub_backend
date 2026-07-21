@@ -119,13 +119,12 @@ export const discordAuth = createElysia()
 						where: { discord_id: discordUser.id },
 					})
 
-					let userId: string
+					let userId: number
 					if (existing) {
 						userId = existing.userid
 					} else {
 						const user = await prisma.user.create({
 							data: {
-								id: crypto.randomUUID(),
 								username: discordUser.username,
 								name:
 									discordUser.global_name ??
@@ -148,16 +147,18 @@ export const discordAuth = createElysia()
 
 					const user = await prisma.user.findUnique({
 						where: { id: userId },
-						include: { roles: { include: { role: true } } },
+						include: { roles: true },
 					})
-					const roles = user?.roles.map((r) => r.role.name) ?? []
+					const roles = user?.roles.map((r) => r.name) ?? []
 					const ua =
 						(headers as Record<string, string | undefined>)[
 							'user-agent'
 						] ?? ''
-					const session = await createSession(userId, ua)
+					const h = headers as Record<string, string | undefined>
+					const ip = (h['x-forwarded-for']?.split(',')[0]?.trim() ?? h['x-real-ip'] ?? '')
+					const session = await createSession(userId, ua, ip)
 					const accessToken = await jwt.sign({
-						sub: userId,
+						sub: String(userId),
 						sid: session.sessionId,
 						name: user?.name ?? '',
 						username: user?.username ?? '',
@@ -165,7 +166,7 @@ export const discordAuth = createElysia()
 						exp: Math.floor(Date.now() / 1000) + 5 * 60,
 					})
 					const refreshToken = await jwt.sign({
-						sub: userId,
+						sub: String(userId),
 						sid: session.sessionId,
 						exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
 					})

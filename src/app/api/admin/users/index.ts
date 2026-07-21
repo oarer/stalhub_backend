@@ -1,24 +1,22 @@
 import { t } from 'elysia'
 
-import { checkPermission, requireAuth } from '@/utils/auth.guard'
+import {
+	fromStore,
+	requireAdmin,
+	requireAuth,
+} from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
+import { jwtPlugin } from '@/utils/jwt.plugin'
 import { adminUserService } from './users.service'
-
-async function requireAdmin({ store, set }: any) {
-	const ok = await checkPermission(store.authUserId as string, 'user:manage')
-	if (!ok) {
-		set.status = 403
-		return { error: 'Forbidden' }
-	}
-}
 
 export const usersRoutes = createElysia().group('/users', (app) =>
 	app
+		.use(jwtPlugin)
 		.get(
 			'',
 			async ({ query }) => {
 				const take = query.take ?? 24
-				const page = query.page ?? 0
+				const page = (query.page ?? 1) - 1
 				return adminUserService.list(take, page, query.search)
 			},
 			{
@@ -35,7 +33,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.get(
 			'/:userId',
 			async ({ params, set }) => {
-				const result = await adminUserService.get(params.userId)
+				const result = await adminUserService.get(Number(params.userId))
 				if (!result) {
 					set.status = 404
 					return { error: 'User not found' }
@@ -44,25 +42,33 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ userId: t.String() }),
+				params: t.Object({ userId: t.Numeric() }),
 				detail: { tags: ['Admin'] },
 			}
 		)
 
 		.patch(
 			'/:userId',
-			async ({ params, body }) => {
-				const result = await adminUserService.update(
-					params.userId,
-					body
+			async ({ store, params, body, set }) => {
+				const targetId = Number(params.userId)
+				const canManage = await adminUserService.canManageUser(
+					fromStore(store).userId,
+					targetId
 				)
+				if (!canManage) {
+					set.status = 403
+					return {
+						error: 'Cannot modify user with equal or higher rank',
+					}
+				}
+				const result = await adminUserService.update(targetId, body)
 				if (!result) return { error: 'User not found' }
 				if ('error' in result) return result
 				return result
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ userId: t.String() }),
+				params: t.Object({ userId: t.Numeric() }),
 				body: t.Object({
 					username: t.Optional(t.String()),
 					name: t.Optional(t.String()),
@@ -73,14 +79,25 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 
 		.delete(
 			'/:userId',
-			async ({ params }) => {
-				const ok = await adminUserService.remove(params.userId)
+			async ({ store, params, set }) => {
+				const targetId = Number(params.userId)
+				const canManage = await adminUserService.canManageUser(
+					fromStore(store).userId,
+					targetId
+				)
+				if (!canManage) {
+					set.status = 403
+					return {
+						error: 'Cannot modify user with equal or higher rank',
+					}
+				}
+				const ok = await adminUserService.remove(targetId)
 				if (!ok) return { error: 'User not found' }
 				return { success: true }
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ userId: t.String() }),
+				params: t.Object({ userId: t.Numeric() }),
 				detail: { tags: ['Admin'] },
 			}
 		)
@@ -88,24 +105,38 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.get(
 			'/:userId/sessions',
 			async ({ params }) => {
-				return adminUserService.getSessions(params.userId)
+				return adminUserService.getSessions(Number(params.userId))
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ userId: t.String() }),
+				params: t.Object({ userId: t.Numeric() }),
 				detail: { tags: ['Admin'] },
 			}
 		)
 
 		.post(
 			'/:userId/sessions/:sessionId/revoke',
-			async ({ params }) => {
+			async ({ store, params, set }) => {
+				const targetId = Number(params.userId)
+				const canManage = await adminUserService.canManageUser(
+					fromStore(store).userId,
+					targetId
+				)
+				if (!canManage) {
+					set.status = 403
+					return {
+						error: 'Cannot modify user with equal or higher rank',
+					}
+				}
 				await adminUserService.revokeSession(params.sessionId)
 				return { success: true }
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ userId: t.String(), sessionId: t.String() }),
+				params: t.Object({
+					userId: t.Numeric(),
+					sessionId: t.String(),
+				}),
 				detail: { tags: ['Admin'] },
 			}
 		)
@@ -114,7 +145,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			'/:userId/roles',
 			async ({ params, set }) => {
 				const result = await adminUserService.getUserRoles(
-					params.userId
+					Number(params.userId)
 				)
 				if (!result) {
 					set.status = 404
@@ -124,16 +155,27 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ userId: t.String() }),
+				params: t.Object({ userId: t.Numeric() }),
 				detail: { tags: ['Admin'] },
 			}
 		)
 
 		.post(
 			'/:userId/roles',
-			async ({ params, body }) => {
+			async ({ store, params, body, set }) => {
+				const targetId = Number(params.userId)
+				const canManage = await adminUserService.canManageUser(
+					fromStore(store).userId,
+					targetId
+				)
+				if (!canManage) {
+					set.status = 403
+					return {
+						error: 'Cannot modify user with equal or higher rank',
+					}
+				}
 				const result = await adminUserService.assignRole(
-					params.userId,
+					targetId,
 					body.roleId
 				)
 				if (!result) return { error: 'User or Role not found' }
@@ -141,7 +183,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ userId: t.String() }),
+				params: t.Object({ userId: t.Numeric() }),
 				body: t.Object({
 					roleId: t.Numeric({ error: 'roleId is required' }),
 				}),
@@ -151,9 +193,20 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 
 		.delete(
 			'/:userId/roles/:roleId',
-			async ({ params }) => {
+			async ({ store, params, set }) => {
+				const targetId = Number(params.userId)
+				const canManage = await adminUserService.canManageUser(
+					fromStore(store).userId,
+					targetId
+				)
+				if (!canManage) {
+					set.status = 403
+					return {
+						error: 'Cannot modify user with equal or higher rank',
+					}
+				}
 				const result = await adminUserService.unassignRole(
-					params.userId,
+					targetId,
 					Number(params.roleId)
 				)
 				if (!result) return { error: 'User not found' }
@@ -161,19 +214,30 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ userId: t.String(), roleId: t.String() }),
+				params: t.Object({ userId: t.Numeric(), roleId: t.String() }),
 				detail: { tags: ['Admin'] },
 			}
 		)
 
 		.post(
 			'/:userId/ban',
-			async ({ params, body }) => {
+			async ({ store, params, body, set }) => {
+				const targetId = Number(params.userId)
+				const canManage = await adminUserService.canManageUser(
+					fromStore(store).userId,
+					targetId
+				)
+				if (!canManage) {
+					set.status = 403
+					return {
+						error: 'Cannot modify user with equal or higher rank',
+					}
+				}
 				const expiresAt = body.expires_in
 					? new Date(Date.now() + body.expires_in * 1000)
 					: undefined
 				const result = await adminUserService.ban(
-					params.userId,
+					targetId,
 					body.reason,
 					expiresAt
 				)
@@ -182,7 +246,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ userId: t.String() }),
+				params: t.Object({ userId: t.Numeric() }),
 				body: t.Object({
 					reason: t.Optional(t.String()),
 					expires_in: t.Optional(
@@ -195,14 +259,25 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 
 		.delete(
 			'/:userId/ban',
-			async ({ params }) => {
-				const result = await adminUserService.unban(params.userId)
+			async ({ store, params, set }) => {
+				const targetId = Number(params.userId)
+				const canManage = await adminUserService.canManageUser(
+					fromStore(store).userId,
+					targetId
+				)
+				if (!canManage) {
+					set.status = 403
+					return {
+						error: 'Cannot modify user with equal or higher rank',
+					}
+				}
+				const result = await adminUserService.unban(targetId)
 				if (!result) return { error: 'User not found' }
 				return result
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ userId: t.String() }),
+				params: t.Object({ userId: t.Numeric() }),
 				detail: { tags: ['Admin'] },
 			}
 		)

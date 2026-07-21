@@ -106,13 +106,13 @@ async function validateIdToken(idToken: string) {
 
 const stateStore = new Map<
 	string,
-	{ verifier: string; expiresAt: number; userId?: string }
+	{ verifier: string; expiresAt: number; userId?: number }
 >()
 
 export function storeTelegramState(
 	state: string,
 	verifier: string,
-	userId?: string
+	userId?: number
 ) {
 	stateStore.set(state, {
 		verifier,
@@ -247,13 +247,12 @@ export const telegramAuth = createElysia()
 						where: { telegram_id: user.id },
 					})
 
-					let userId: string
+					let userId: number
 					if (existing) {
 						userId = existing.userid
 					} else {
 						const created = await prisma.user.create({
 							data: {
-								id: crypto.randomUUID(),
 								username: user.username,
 								name: user.name,
 								TelegramAuth: {
@@ -272,17 +271,19 @@ export const telegramAuth = createElysia()
 
 					const userData = await prisma.user.findUnique({
 						where: { id: userId },
-						include: { roles: { include: { role: true } } },
+						include: { roles: true },
 					})
 					const roleNames =
-						userData?.roles.map((r) => r.role.name) ?? []
+						userData?.roles.map((r) => r.name) ?? []
 					const ua =
 						(headers as Record<string, string | undefined>)[
 							'user-agent'
 						] ?? ''
-					const session = await createSession(userId, ua)
+					const h = headers as Record<string, string | undefined>
+					const ip = (h['x-forwarded-for']?.split(',')[0]?.trim() ?? h['x-real-ip'] ?? '')
+					const session = await createSession(userId, ua, ip)
 					const accessToken = await jwt.sign({
-						sub: userId,
+						sub: String(userId),
 						sid: session.sessionId,
 						name: userData?.name ?? '',
 						username: userData?.username ?? '',
@@ -290,7 +291,7 @@ export const telegramAuth = createElysia()
 						exp: Math.floor(Date.now() / 1000) + 5 * 60,
 					})
 					const refreshToken = await jwt.sign({
-						sub: userId,
+						sub: String(userId),
 						sid: session.sessionId,
 						exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
 					})
@@ -336,13 +337,12 @@ export const telegramAuth = createElysia()
 						where: { telegram_id: user.id },
 					})
 
-					let userId: string
+					let userId: number
 					if (existing) {
 						userId = existing.userid
 					} else {
 						const created = await prisma.user.create({
 							data: {
-								id: crypto.randomUUID(),
 								username: user.username,
 								name: user.name,
 								TelegramAuth: {
@@ -361,17 +361,19 @@ export const telegramAuth = createElysia()
 
 					const userData = await prisma.user.findUnique({
 						where: { id: userId },
-						include: { roles: { include: { role: true } } },
+						include: { roles: true },
 					})
 					const roleNames =
-						userData?.roles.map((r) => r.role.name) ?? []
+						userData?.roles.map((r) => r.name) ?? []
 					const ua =
 						(headers as Record<string, string | undefined>)[
 							'user-agent'
 						] ?? ''
-					const session = await createSession(userId, ua)
+					const h = headers as Record<string, string | undefined>
+					const ip = (h['x-forwarded-for']?.split(',')[0]?.trim() ?? h['x-real-ip'] ?? '')
+					const session = await createSession(userId, ua, ip)
 					const accessToken = await jwt.sign({
-						sub: userId,
+						sub: String(userId),
 						sid: session.sessionId,
 						name: userData?.name ?? '',
 						username: userData?.username ?? '',
@@ -379,7 +381,7 @@ export const telegramAuth = createElysia()
 						exp: Math.floor(Date.now() / 1000) + 5 * 60,
 					})
 					const refreshToken = await jwt.sign({
-						sub: userId,
+						sub: String(userId),
 						sid: session.sessionId,
 						exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
 					})

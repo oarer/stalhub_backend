@@ -29,7 +29,7 @@ async function requireRefreshAuth({
 		set.status = 401
 		return { error: 'Unauthorized' }
 	}
-	store.authUserId = payload.sub
+	store.authUserId = Number(payload.sub)
 	store.authSessionId = payload.sid
 }
 

@@ -1,7 +1,7 @@
 import type { Prisma } from 'generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 
-export async function assignDefaultRole(userId: string) {
+export async function assignDefaultRole(userId: number) {
 	const role = await prisma.role.upsert({
 		where: { name: 'user' },
 		update: {},
@@ -11,14 +11,13 @@ export async function assignDefaultRole(userId: string) {
 		},
 	})
 
-	await prisma.userRole.upsert({
-		where: { userId_roleId: { userId, roleId: role.id } },
-		update: {},
-		create: { userId, roleId: role.id },
+	await prisma.user.update({
+		where: { id: userId },
+		data: { roles: { connect: { id: role.id } } },
 	})
 }
 
-export async function createSession(userId: string, userAgent: string) {
+export async function createSession(userId: number, userAgent: string, ip: string) {
 	const sessionId = crypto.randomUUID()
 
 	const session = await prisma.sessions.create({
@@ -26,6 +25,7 @@ export async function createSession(userId: string, userAgent: string) {
 			sessionId,
 			userId,
 			User_Agent: userAgent.slice(0, 500),
+			ip: ip.slice(0, 45),
 		},
 	})
 
@@ -41,6 +41,7 @@ export type SessionWithFullUser = Prisma.SessionsGetPayload<{
 				DiscordAuth: true
 				TelegramAuth: true
 				EXBOAuth: true
+				roles: true
 			}
 		}
 	}
@@ -50,11 +51,7 @@ export type SessionWithRoles = Prisma.SessionsGetPayload<{
 	include: {
 		User: {
 			include: {
-				roles: {
-					include: {
-						role: true
-					}
-				}
+				roles: true
 			}
 		}
 	}
@@ -72,6 +69,7 @@ class AuthService {
 						DiscordAuth: true,
 						TelegramAuth: true,
 						EXBOAuth: true,
+						roles: true,
 					},
 				},
 			},
@@ -95,11 +93,7 @@ class AuthService {
 			include: {
 				User: {
 					include: {
-						roles: {
-							include: {
-								role: true,
-							},
-						},
+						roles: true,
 					},
 				},
 			},
@@ -121,30 +115,33 @@ class AuthService {
 
 			settings: u.UserSettings ?? null,
 			badges: u.badges ?? [],
+			roles: u.roles,
 
-			discord: u.DiscordAuth
-				? {
-						id: u.DiscordAuth.discord_id,
-						name: u.DiscordAuth.name,
-						username: u.DiscordAuth.username,
-					}
-				: null,
+			providers: {
+				discord: u.DiscordAuth
+					? {
+							id: u.DiscordAuth.discord_id,
+							name: u.DiscordAuth.name,
+							username: u.DiscordAuth.username,
+						}
+					: null,
 
-			telegram: u.TelegramAuth
-				? {
-						id: u.TelegramAuth.telegram_id,
-						name: u.TelegramAuth.name,
-						username: u.TelegramAuth.login,
-					}
-				: null,
+				telegram: u.TelegramAuth
+					? {
+							id: u.TelegramAuth.telegram_id,
+							name: u.TelegramAuth.name,
+							username: u.TelegramAuth.login,
+						}
+					: null,
 
-			exbo: u.EXBOAuth
-				? {
-						id: u.EXBOAuth.exbo_id,
-						login: u.EXBOAuth.login,
-						username: u.EXBOAuth.username,
-					}
-				: null,
+				exbo: u.EXBOAuth
+					? {
+							id: u.EXBOAuth.exbo_id,
+							login: u.EXBOAuth.login,
+							username: u.EXBOAuth.username,
+						}
+					: null,
+			},
 		}
 	}
 
@@ -155,7 +152,7 @@ class AuthService {
 		})
 	}
 
-	async deleteUserSessions(userId: string) {
+	async deleteUserSessions(userId: number) {
 		await prisma.sessions.deleteMany({
 			where: { userId },
 		})

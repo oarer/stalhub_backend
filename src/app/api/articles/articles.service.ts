@@ -44,7 +44,7 @@ class ArticlesService {
 		}
 	}
 
-	async getById(id: string, userId?: string) {
+	async getById(id: string, userId?: number) {
 		const num = Number(id)
 		const article = await prisma.article.findFirst({
 			where: isNaN(num)
@@ -94,7 +94,7 @@ class ArticlesService {
 	}
 
 	async create(
-		authorId: string,
+		authorId: number,
 		data: {
 			title: string
 			content: string
@@ -146,7 +146,7 @@ class ArticlesService {
 
 	async update(
 		id: number,
-		authorId: string,
+		authorId: number,
 		isAdmin: boolean,
 		data: {
 			title?: string
@@ -253,7 +253,7 @@ class ArticlesService {
 		}
 	}
 
-	async delete(id: number, authorId: string, isAdmin: boolean) {
+	async delete(id: number, authorId: number, isAdmin: boolean) {
 		const existing = await prisma.article.findUnique({ where: { id } })
 		if (!existing) return false
 		if (existing.authorId !== authorId && !isAdmin) return false
@@ -273,7 +273,7 @@ class ArticlesService {
 		return prisma.articleVersion.findUnique({ where: { id } })
 	}
 
-	async addStar(articleId: number, userId: string) {
+	async addStar(articleId: number, userId: number) {
 		await prisma.star.upsert({
 			where: {
 				targetType_targetId_userId: {
@@ -291,7 +291,7 @@ class ArticlesService {
 		})
 	}
 
-	async removeStar(articleId: number, userId: string) {
+	async removeStar(articleId: number, userId: number) {
 		await prisma.star.deleteMany({
 			where: {
 				targetType: StarTargetType.ARTICLE,

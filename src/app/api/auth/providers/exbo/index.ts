@@ -178,7 +178,7 @@ export const exboAuth = createElysia()
 						where: { exbo_id: exboUser.uuid },
 					})
 
-					let userId: string
+					let userId: number
 					if (existing) {
 						userId = existing.userid
 						await prisma.eXBOAuth.update({
@@ -200,7 +200,6 @@ export const exboAuth = createElysia()
 					} else {
 						const user = await prisma.user.create({
 							data: {
-								id: crypto.randomUUID(),
 								username: exboUser.login,
 								name: exboUser.display_login,
 								EXBOAuth: {
@@ -231,17 +230,19 @@ export const exboAuth = createElysia()
 
 					const userData = await prisma.user.findUnique({
 						where: { id: userId },
-						include: { roles: { include: { role: true } } },
+						include: { roles: true },
 					})
 					const roleNames =
-						userData?.roles.map((r) => r.role.name) ?? []
+						userData?.roles.map((r) => r.name) ?? []
 					const ua =
 						(headers as Record<string, string | undefined>)[
 							'user-agent'
 						] ?? ''
-					const session = await createSession(userId, ua)
+					const h = headers as Record<string, string | undefined>
+					const ip = (h['x-forwarded-for']?.split(',')[0]?.trim() ?? h['x-real-ip'] ?? '')
+					const session = await createSession(userId, ua, ip)
 					const accessToken = await jwt.sign({
-						sub: userId,
+						sub: String(userId),
 						sid: session.sessionId,
 						name: userData?.name ?? '',
 						username: userData?.username ?? '',
@@ -249,7 +250,7 @@ export const exboAuth = createElysia()
 						exp: Math.floor(Date.now() / 1000) + 5 * 60,
 					})
 					const refreshToken = await jwt.sign({
-						sub: userId,
+						sub: String(userId),
 						sid: session.sessionId,
 						exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
 					})

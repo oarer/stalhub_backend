@@ -14,7 +14,7 @@ interface AuthContext {
 }
 
 export async function checkPermission(
-	userId: string,
+	userId: number,
 	permission: string
 ): Promise<boolean> {
 	const user = await prisma.user.findUnique({
@@ -22,11 +22,7 @@ export async function checkPermission(
 		include: {
 			roles: {
 				include: {
-					role: {
-						include: {
-							permissions: { include: { permission: true } },
-						},
-					},
+					permissions: { select: { name: true } },
 				},
 			},
 		},
@@ -35,20 +31,21 @@ export async function checkPermission(
 	if (!user) return false
 
 	return user.roles.some((r) =>
-		r.role.permissions.some((p) => p.permission.name === permission)
+		r.permissions.some((p) => p.name === permission)
 	)
 }
 
 export function fromStore(store: Record<string, unknown>) {
 	return {
-		userId: store.authUserId as string,
+		userId: store.authUserId as number,
 		sessionId: store.authSessionId as string,
 	}
 }
 
+// requireOptionalAuth
 export function fromStoreOpt(store: Record<string, unknown>) {
 	return {
-		userId: store.authUserId as string | undefined,
+		userId: store.authUserId as number | undefined,
 		sessionId: store.authSessionId as string | undefined,
 	}
 }
@@ -62,7 +59,7 @@ async function findSession(sessionId: string) {
 }
 
 async function isUserBanned(
-	userId: string
+	userId: number
 ): Promise<{ banned: boolean; reason?: string | null }> {
 	const settings = await prisma.userSettings.findUnique({
 		where: { userId },
@@ -82,6 +79,14 @@ async function isUserBanned(
 	return { banned: true, reason: settings.ban_reason }
 }
 
+export async function requireAdmin({ store, set }: AuthContext) {
+	const ok = await checkPermission(store.authUserId as number, 'user:manage')
+	if (!ok) {
+		set.status = 403
+		return { error: 'Forbidden' }
+	}
+}
+
 export async function requireAuth({
 	cookie: { access_token },
 	jwt,
@@ -97,19 +102,20 @@ export async function requireAuth({
 		set.status = 401
 		return { error: 'Unauthorized' }
 	}
+	const userId = Number(payload.sub)
 	const valid = await findSession(payload.sid)
 	if (!valid) {
 		set.status = 401
 		return { error: 'Session expired' }
 	}
 
-	const ban = await isUserBanned(payload.sub)
+	const ban = await isUserBanned(userId)
 	if (ban.banned) {
 		set.status = 403
 		return { error: 'Account banned', reason: ban.reason }
 	}
 
-	store.authUserId = payload.sub
+	store.authUserId = userId
 	store.authSessionId = payload.sid
 }
 
@@ -121,6 +127,6 @@ export async function requireOptionalAuth({
 	if (!access_token?.value) return
 	const payload = await jwt.verify(access_token.value)
 	if (payload && typeof payload.sub === 'string') {
-		store.authUserId = payload.sub
+		store.authUserId = Number(payload.sub)
 	}
 }

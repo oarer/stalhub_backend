@@ -1,5 +1,5 @@
-import { ArticleStatus } from 'generated/prisma/client'
 import { t } from 'elysia'
+import { ArticleStatus } from 'generated/prisma/client'
 import {
 	checkPermission,
 	fromStore,
@@ -19,7 +19,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			'',
 			async ({ query }) => {
 				const take = query.take ?? 24
-				const page = query.page ?? 0
+				const page = (query.page ?? 1) - 1
 				return articlesService.list(take, page)
 			},
 			{

@@ -34,7 +34,7 @@ class UsersService {
 	}
 
 	async updateSettings(
-		userId: string,
+		userId: number,
 		data: {
 			profile_theme?: number
 			public_profile?: boolean
@@ -67,11 +67,11 @@ class UsersService {
 		await authService.revokeSession(sessionId)
 	}
 
-	async deleteAccount(userId: string) {
+	async deleteAccount(userId: number) {
 		await prisma.user.delete({ where: { id: userId } })
 	}
 
-	async getSessions(userId: string, currentSessionId: string) {
+	async getSessions(userId: number, currentSessionId: string) {
 		const sessions = await prisma.sessions.findMany({
 			where: { userId, revoked: false },
 			orderBy: { last_used_at: 'desc' },
@@ -86,11 +86,12 @@ class UsersService {
 				is_mobile: info.isMobile,
 				browser: info.browser,
 				browser_version: info.browserVersion,
+				ip: s.ip,
 			}
 		})
 	}
 
-	async revokeAllSessions(userId: string, currentSessionId: string) {
+	async revokeAllSessions(userId: number, currentSessionId: string) {
 		await prisma.sessions.updateMany({
 			where: {
 				userId,
@@ -101,14 +102,14 @@ class UsersService {
 		})
 	}
 
-	async revokeSessionById(id: number, userId: string) {
+	async revokeSessionById(id: number, userId: number) {
 		await prisma.sessions.updateMany({
 			where: { id, userId, revoked: false },
 			data: { revoked: true },
 		})
 	}
 
-	async getSettings(userId: string) {
+	async getSettings(userId: number) {
 		const user = await prisma.user.findUnique({
 			where: { id: userId },
 			include: {
@@ -139,7 +140,7 @@ class UsersService {
 		}
 	}
 
-	async getNotifications(userId: string, take: number, page: number) {
+	async getNotifications(userId: number, take: number, page: number) {
 		const [data, totalCount] = await Promise.all([
 			prisma.notifications.findMany({
 				where: { users: { some: { id: userId } } },
@@ -155,7 +156,7 @@ class UsersService {
 		return { data, totalCount }
 	}
 
-	async getStars(userId: string, take: number, page: number) {
+	async getStars(userId: number, take: number, page: number) {
 		const [stars, totalCount] = await Promise.all([
 			prisma.star.findMany({
 				where: { userId },
@@ -240,7 +241,7 @@ class UsersService {
 		return { data, totalCount }
 	}
 
-	async getPublicProfile(username: string, currentUserId?: string) {
+	async getPublicProfile(username: string, currentUserId?: number) {
 		const user = await prisma.user.findFirst({
 			where: { username },
 			include: {
