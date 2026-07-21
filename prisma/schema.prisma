@@ -26,12 +26,17 @@ enum NotificationType {
 enum AvatarSource {
   DISCORD
   TELEGRAM
-  EXBO
 }
 
 enum StarTargetType {
   BUILD
   ARTICLE
+}
+
+enum BgVariant {
+  COLOR
+  AVATAR
+  NONE
 }
 
 enum ArticleStatus {
@@ -84,8 +89,11 @@ model UserSettings {
   ban_reason     String?
   ban_expires_at DateTime?
 
-  public_profile Boolean      @default(false)
-  avatar         AvatarSource?
+  bg_color   String        @default("#171717")
+  bg_variant BgVariant     @default(NONE)
+  avatar     AvatarSource?
+
+  public_profile Boolean @default(false)
 }
 
 model Sessions {
@@ -112,10 +120,10 @@ model Notifications {
 
 // ================ RBAC ===================
 model Role {
-  id          Int          @id @default(autoincrement())
-  name        String       @unique
-  description String       @default("")
-  rank        Int          @default(0)
+  id          Int    @id @default(autoincrement())
+  name        String @unique
+  description String @default("")
+  rank        Int    @default(0)
 
   users       User[]
   permissions Permission[]
