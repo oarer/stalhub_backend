@@ -1,4 +1,5 @@
 import { t } from 'elysia'
+import { AvatarSource, BgVariant } from 'generated/prisma/enums'
 import {
 	fromStore,
 	fromStoreOpt,
@@ -7,6 +8,7 @@ import {
 } from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
+import { avatarRoutes } from './avatar'
 import { usersService } from './users.service'
 
 const cookieSchema = t.Cookie({
@@ -36,6 +38,7 @@ async function requireRefreshAuth({
 export const usersRoutes = createElysia().group('/users', (app) =>
 	app
 		.use(jwtPlugin)
+		.use(avatarRoutes)
 		.get(
 			'/@me',
 			async ({ store }) => {
@@ -64,12 +67,16 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 				beforeHandle: [requireAuth],
 				body: t.Object({
 					public_profile: t.Optional(t.Boolean()),
-					avatar: t.Optional(t.String()),
+					avatar: t.Optional(t.Enum(AvatarSource)),
+					name: t.Optional(t.String()),
+					bg_variant: t.Optional(t.Enum(BgVariant)),
+					bg_color: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Users'] },
 			}
 		)
 
+		// logout
 		.delete(
 			'/@me',
 			async ({ cookie: { refresh_token, access_token }, store }) => {

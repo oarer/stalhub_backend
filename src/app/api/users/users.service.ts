@@ -1,4 +1,8 @@
-import { StarTargetType } from 'generated/prisma/client'
+import {
+	type AvatarSource,
+	type BgVariant,
+	StarTargetType,
+} from 'generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 import { authService } from '@/utils/auth.service'
 
@@ -36,30 +40,24 @@ class UsersService {
 	async updateSettings(
 		userId: number,
 		data: {
-			profile_theme?: number
 			public_profile?: boolean
-			avatar?: string
+			avatar?: AvatarSource
+			name?: string
+			bg_variant?: BgVariant
+			bg_color?: string
 		}
 	) {
-		const allowed: Record<string, unknown> = {}
-		if (data.public_profile !== undefined)
-			allowed.public_profile = data.public_profile
-		if (data.avatar !== undefined) {
-			const val = data.avatar.toUpperCase()
-			if (!['DISCORD', 'TELEGRAM', 'EXBO'].includes(val)) {
-				return { error: 'Invalid avatar source' }
-			}
-			allowed.avatar = val
-		}
-
-		if (Object.keys(allowed).length === 0) {
+		if (Object.keys(data).length === 0) {
 			return { error: 'No valid fields to update' }
 		}
 
 		return prisma.userSettings.upsert({
 			where: { userId },
-			update: allowed,
-			create: { userId, ...allowed },
+			update: data,
+			create: {
+				userId,
+				...data,
+			},
 		})
 	}
 

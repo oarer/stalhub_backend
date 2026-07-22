@@ -3,6 +3,9 @@ services:
     build: .
     container_name: StalHub_backend
     command: sh -c "bun install && bun run --watch src/index.ts"
+    # for proxy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - .:/app
       - /app/node_modules
