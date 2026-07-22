@@ -200,8 +200,8 @@ export const exboAuth = createElysia()
 					} else {
 						const user = await prisma.user.create({
 							data: {
-								username: exboUser.login,
-								name: exboUser.display_login,
+								username: exboUser.display_login,
+								name: exboUser.login,
 								EXBOAuth: {
 									create: {
 										exbo_id: exboUser.uuid,
