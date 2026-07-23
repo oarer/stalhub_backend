@@ -41,6 +41,7 @@ enum BgVariant {
 
 enum ArticleStatus {
   PENDING
+  APPROVED
   REVIEW
   DENIED
   BANNED
@@ -210,8 +211,8 @@ model Build {
   title String
   data  String
 
-  flags        Int     @default(0)
-  tags         String  @default("")
+  flags Int    @default(0)
+  tags  String @default("")
 
   author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId Int
@@ -231,8 +232,8 @@ model Article {
   title   String
   content String
 
-  flags        Int     @default(0)
-  tags         String  @default("")
+  flags Int    @default(0)
+  tags  String @default("")
 
   author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId Int
