@@ -52,7 +52,6 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 					title: body.title,
 					data: JSON.stringify(body.data),
 					flags: body.flags,
-					accent_color: body.accent_color,
 					tags: body.tags?.join(','),
 				})
 			},
@@ -62,7 +61,6 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 					title: t.String({ error: 'title is required' }),
 					data: t.Any(),
 					flags: t.Optional(t.Numeric()),
-					accent_color: t.Optional(t.String()),
 					tags: t.Optional(t.Array(t.String())),
 				}),
 				detail: { tags: ['Builds'] },
@@ -84,9 +82,6 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 							data: JSON.stringify(body.data),
 						}),
 						...(body.flags !== undefined && { flags: body.flags }),
-						...(body.accent_color !== undefined && {
-							accent_color: body.accent_color,
-						}),
 						...(body.tags !== undefined && {
 							tags: body.tags.join(','),
 						}),
@@ -111,7 +106,6 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 					title: t.Optional(t.String()),
 					data: t.Optional(t.Any()),
 					flags: t.Optional(t.Numeric()),
-					accent_color: t.Optional(t.String()),
 					tags: t.Optional(t.Array(t.String())),
 				}),
 				detail: { tags: ['Builds'] },

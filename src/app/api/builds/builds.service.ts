@@ -31,7 +31,6 @@ class BuildsService {
 				title: b.title,
 				data: JSON.parse(b.data),
 				flags: b.flags,
-				accent_color: b.accent_color,
 				tags: b.tags ? b.tags.split(',').filter(Boolean) : [],
 				author: b.author,
 				stars_count: starCounts.get(b.id) ?? 0,
@@ -79,7 +78,6 @@ class BuildsService {
 			title: build.title,
 			data: JSON.parse(build.data),
 			flags: build.flags,
-			accent_color: build.accent_color,
 			tags: build.tags ? build.tags.split(',').filter(Boolean) : [],
 			author: build.author,
 			stars_count,
@@ -95,7 +93,6 @@ class BuildsService {
 			title: string
 			data: string
 			flags?: number
-			accent_color?: string
 			tags?: string
 		}
 	) {
@@ -105,7 +102,6 @@ class BuildsService {
 				title: data.title,
 				data: data.data,
 				flags: data.flags ?? 0,
-				accent_color: data.accent_color,
 				tags: data.tags ?? '',
 				authorId,
 			},
@@ -120,7 +116,6 @@ class BuildsService {
 			title: build.title,
 			data: JSON.parse(build.data),
 			flags: build.flags,
-			accent_color: build.accent_color,
 			tags: build.tags ? build.tags.split(',').filter(Boolean) : [],
 			author: build.author,
 			stars_count: 0,
@@ -138,7 +133,6 @@ class BuildsService {
 			title?: string
 			data?: string
 			flags?: number
-			accent_color?: string
 			tags?: string
 		}
 	) {
@@ -153,9 +147,6 @@ class BuildsService {
 				...(data.title !== undefined && { title: data.title }),
 				...(data.data !== undefined && { data: data.data }),
 				...(data.flags !== undefined && { flags: data.flags }),
-				...(data.accent_color !== undefined && {
-					accent_color: data.accent_color,
-				}),
 				...(data.tags !== undefined && { tags: data.tags }),
 			},
 			include: {
@@ -173,7 +164,6 @@ class BuildsService {
 			title: build.title,
 			data: JSON.parse(build.data),
 			flags: build.flags,
-			accent_color: build.accent_color,
 			tags: build.tags ? build.tags.split(',').filter(Boolean) : [],
 			author: build.author,
 			stars_count,

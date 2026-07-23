@@ -211,7 +211,6 @@ model Build {
   data  String
 
   flags        Int     @default(0)
-  accent_color String?
   tags         String  @default("")
 
   author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -233,7 +232,6 @@ model Article {
   content String
 
   flags        Int     @default(0)
-  accent_color String?
   tags         String  @default("")
 
   author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)

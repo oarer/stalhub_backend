@@ -33,7 +33,6 @@ class ArticlesService {
 				title: a.title,
 				content: a.content,
 				flags: a.flags,
-				accent_color: a.accent_color,
 				tags: a.tags ? a.tags.split(',').filter(Boolean) : [],
 				author: a.author,
 				stars_count: starCounts.get(a.id) ?? 0,
@@ -83,7 +82,6 @@ class ArticlesService {
 			title: article.title,
 			content: article.content,
 			flags: article.flags,
-			accent_color: article.accent_color,
 			tags: article.tags ? article.tags.split(',').filter(Boolean) : [],
 			author: article.author,
 			stars_count,
@@ -99,7 +97,7 @@ class ArticlesService {
 			title: string
 			content: string
 			flags?: number
-			accent_color?: string
+
 			tags?: string
 		}
 	) {
@@ -109,7 +107,6 @@ class ArticlesService {
 				title: data.title,
 				content: data.content,
 				flags: data.flags ?? 0,
-				accent_color: data.accent_color,
 				tags: data.tags ?? '',
 				authorId,
 			},
@@ -134,7 +131,6 @@ class ArticlesService {
 			title: article.title,
 			content: article.content,
 			flags: article.flags,
-			accent_color: article.accent_color,
 			tags: article.tags ? article.tags.split(',').filter(Boolean) : [],
 			author: article.author,
 			stars_count: 0,
@@ -152,7 +148,6 @@ class ArticlesService {
 			title?: string
 			content?: string
 			flags?: number
-			accent_color?: string
 			tags?: string
 			version?: string
 		}
@@ -166,8 +161,6 @@ class ArticlesService {
 		if (data.title !== undefined) updateData.title = data.title
 		if (data.content !== undefined) updateData.content = data.content
 		if (data.flags !== undefined) updateData.flags = data.flags
-		if (data.accent_color !== undefined)
-			updateData.accent_color = data.accent_color
 		if (data.tags !== undefined) updateData.tags = data.tags
 
 		const article = await prisma.article.update({
@@ -200,12 +193,50 @@ class ArticlesService {
 			title: article.title,
 			content: article.content,
 			flags: article.flags,
-			accent_color: article.accent_color,
+
 			tags: article.tags ? article.tags.split(',').filter(Boolean) : [],
 			author: article.author,
 			stars_count,
 			created_at: article.created_at,
 			updated_at: article.updated_at,
+		}
+	}
+
+	async submitForReview(id: number, authorId: number) {
+		const article = await prisma.article.findUnique({ where: { id } })
+		if (!article) return null
+		if (article.authorId !== authorId) return { error: 'Forbidden' }
+
+		const newStatus =
+			article.status === ArticleStatus.REVIEW
+				? ArticleStatus.PENDING
+				: ArticleStatus.REVIEW
+
+		const updated = await prisma.article.update({
+			where: { id },
+			data: { status: newStatus, status_reason: null },
+			include: {
+				author: { select: { id: true, name: true, username: true } },
+			},
+		})
+
+		const stars_count = await prisma.star.count({
+			where: { targetType: StarTargetType.ARTICLE, targetId: updated.id },
+		})
+
+		return {
+			id: updated.id,
+			external_id: updated.external_id,
+			status: updated.status,
+			status_reason: updated.status_reason,
+			title: updated.title,
+			content: updated.content,
+			flags: updated.flags,
+			tags: updated.tags ? updated.tags.split(',').filter(Boolean) : [],
+			author: updated.author,
+			stars_count,
+			created_at: updated.created_at,
+			updated_at: updated.updated_at,
 		}
 	}
 
@@ -218,7 +249,10 @@ class ArticlesService {
 		if (!article) return null
 
 		const updateData: Record<string, unknown> = { status }
-		if (status === ArticleStatus.DENIED || status === ArticleStatus.BANNED) {
+		if (
+			status === ArticleStatus.DENIED ||
+			status === ArticleStatus.BANNED
+		) {
 			updateData.status_reason = status_reason ?? null
 		} else {
 			updateData.status_reason = null
@@ -244,7 +278,6 @@ class ArticlesService {
 			title: updated.title,
 			content: updated.content,
 			flags: updated.flags,
-			accent_color: updated.accent_color,
 			tags: updated.tags ? updated.tags.split(',').filter(Boolean) : [],
 			author: updated.author,
 			stars_count,

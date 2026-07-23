@@ -53,7 +53,6 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					title: body.title,
 					content: body.content,
 					flags: body.flags,
-					accent_color: body.accent_color,
 					tags: body.tags?.join(','),
 				})
 			},
@@ -63,7 +62,6 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					title: t.String({ error: 'title is required' }),
 					content: t.String({ error: 'content is required' }),
 					flags: t.Optional(t.Numeric()),
-					accent_color: t.Optional(t.String()),
 					tags: t.Optional(t.Array(t.String())),
 				}),
 				detail: { tags: ['Articles'] },
@@ -85,9 +83,6 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 							content: body.content,
 						}),
 						...(body.flags !== undefined && { flags: body.flags }),
-						...(body.accent_color !== undefined && {
-							accent_color: body.accent_color,
-						}),
 						...(body.tags !== undefined && {
 							tags: body.tags.join(','),
 						}),
@@ -112,7 +107,6 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					title: t.Optional(t.String()),
 					content: t.Optional(t.String()),
 					flags: t.Optional(t.Numeric()),
-					accent_color: t.Optional(t.String()),
 					tags: t.Optional(t.Array(t.String())),
 				}),
 				detail: { tags: ['Articles'] },
@@ -174,6 +168,33 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					status: t.Enum(ArticleStatus),
 					reason: t.Optional(t.String()),
 				}),
+				detail: { tags: ['Articles'] },
+			}
+		)
+
+		.post(
+			'/:id/submit',
+			async ({ params, store, set }) => {
+				const { userId } = fromStore(store)
+				const result = await articlesService.submitForReview(
+					Number(params.id),
+					userId
+				)
+
+				if (!result) {
+					set.status = 404
+					return { error: 'Not found' }
+				}
+				if ('error' in result) {
+					set.status = 403
+					return result
+				}
+
+				return result
+			},
+			{
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Articles'] },
 			}
 		)
