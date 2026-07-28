@@ -47,6 +47,13 @@ enum ArticleStatus {
   BANNED
 }
 
+enum ArticleType {
+  QUEST
+  GUIDE
+  OTHER
+  STALHUB
+}
+
 // ================ USER MODEL ===================
 model User {
   id       Int    @id @default(autoincrement())
@@ -73,11 +80,15 @@ model User {
   builds   Build[]
   articles Article[]
   stars    Star[]
+  comments ArticleComment[]
 }
 
 model UserBadges {
-  id    Int    @id @default(autoincrement())
+  id    Int     @id @default(autoincrement())
   name  String
+  icon  String?
+  image String?
+  color String  @default("#0ea5e9")
   users User[]
 }
 
@@ -113,9 +124,12 @@ model Sessions {
 model Notifications {
   id         Int      @id @default(autoincrement())
   users      User[]   @relation("Notifications")
+  title      String   @default("")
   content    String   @default("")
   author     String   @default("Система")
   type       Int      @default(0)
+  read       Boolean  @default(false)
+  link       String?
   created_at DateTime @default(now())
 }
 
@@ -228,9 +242,13 @@ model Article {
   external_id   String        @unique
   status        ArticleStatus @default(PENDING)
   status_reason String?
+  type          ArticleType   @default(OTHER)
 
-  title   String
-  content String
+  title      String
+  content    String
+  image_url  String?
+
+  rewards Json?
 
   flags Int    @default(0)
   tags  String @default("")
@@ -238,7 +256,8 @@ model Article {
   author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId Int
 
-  versions ArticleVersion[]
+  versions     ArticleVersion[]
+  comments     ArticleComment[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -257,6 +276,26 @@ model ArticleVersion {
   created_at DateTime @default(now())
 
   @@map("article_versions")
+}
+
+model ArticleComment {
+  id        Int    @id @default(autoincrement())
+  content   String
+
+  author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId Int
+
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  articleId Int
+
+  parent   ArticleComment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId Int?
+  replies  ArticleComment[] @relation("CommentReplies")
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("article_comments")
 }
 
 model Star {

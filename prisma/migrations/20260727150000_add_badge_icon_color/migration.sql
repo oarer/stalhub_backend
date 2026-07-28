@@ -1,0 +1,2 @@
+ALTER TABLE "UserBadges" ADD COLUMN "icon" TEXT NOT NULL DEFAULT 'lucide:badge';
+ALTER TABLE "UserBadges" ADD COLUMN "color" TEXT NOT NULL DEFAULT '#0ea5e9';

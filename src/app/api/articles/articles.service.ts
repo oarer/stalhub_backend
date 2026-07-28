@@ -1,14 +1,26 @@
-import { ArticleStatus, StarTargetType } from 'generated/prisma/client'
+import type { Prisma } from 'generated/prisma/client'
+import {
+	ArticleStatus,
+	ArticleType,
+	StarTargetType,
+} from 'generated/prisma/client'
 import { prisma } from '@/lib/prisma'
-
-function externalId() {
-	return crypto.randomUUID().slice(0, 8)
-}
+import { generateSlug } from '@/utils/slug'
 
 class ArticlesService {
-	async list(take: number, page: number) {
+	async list(take: number, page: number, opts?: { all?: boolean; authorId?: number }) {
+		const where: Prisma.ArticleWhereInput = {}
+		if (opts?.all) {
+			// без фильтра
+		} else if (opts?.authorId) {
+			where.authorId = opts.authorId
+		} else {
+			where.status = ArticleStatus.APPROVED
+		}
+
 		const [rows, totalCount] = await Promise.all([
 			prisma.article.findMany({
+				where,
 				skip: page * take,
 				take,
 				orderBy: { created_at: 'desc' },
@@ -18,7 +30,7 @@ class ArticlesService {
 					},
 				},
 			}),
-			prisma.article.count(),
+			prisma.article.count({ where }),
 		])
 
 		const ids = rows.map((r) => r.id)
@@ -30,8 +42,11 @@ class ArticlesService {
 				external_id: a.external_id,
 				status: a.status,
 				status_reason: a.status_reason,
+				type: a.type,
 				title: a.title,
 				content: a.content,
+				image_url: a.image_url,
+				rewards: a.type === ArticleType.QUEST ? a.rewards : null,
 				flags: a.flags,
 				tags: a.tags ? a.tags.split(',').filter(Boolean) : [],
 				author: a.author,
@@ -79,8 +94,12 @@ class ArticlesService {
 			external_id: article.external_id,
 			status: article.status,
 			status_reason: article.status_reason,
+			type: article.type,
 			title: article.title,
 			content: article.content,
+			image_url: article.image_url,
+			rewards:
+				article.type === ArticleType.QUEST ? article.rewards : null,
 			flags: article.flags,
 			tags: article.tags ? article.tags.split(',').filter(Boolean) : [],
 			author: article.author,
@@ -96,16 +115,27 @@ class ArticlesService {
 		data: {
 			title: string
 			content: string
+			type?: string
+			rewards?: unknown
 			flags?: number
-
 			tags?: string
+			image_url?: string
 		}
 	) {
+		const articleType = (data.type as ArticleType) ?? ArticleType.OTHER
+
 		const article = await prisma.article.create({
 			data: {
-				external_id: externalId(),
+				external_id: generateSlug(data.title),
 				title: data.title,
 				content: data.content,
+				type: articleType,
+				image_url: data.image_url ?? undefined,
+				rewards:
+					articleType === ArticleType.QUEST &&
+					data.rewards !== undefined
+						? (data.rewards as Prisma.InputJsonValue)
+						: undefined,
 				flags: data.flags ?? 0,
 				tags: data.tags ?? '',
 				authorId,
@@ -128,8 +158,12 @@ class ArticlesService {
 			external_id: article.external_id,
 			status: article.status,
 			status_reason: article.status_reason,
+			type: article.type,
 			title: article.title,
 			content: article.content,
+			image_url: article.image_url,
+			rewards:
+				article.type === ArticleType.QUEST ? article.rewards : null,
 			flags: article.flags,
 			tags: article.tags ? article.tags.split(',').filter(Boolean) : [],
 			author: article.author,
@@ -147,8 +181,11 @@ class ArticlesService {
 		data: {
 			title?: string
 			content?: string
+			type?: string
+			rewards?: unknown
 			flags?: number
 			tags?: string
+			image_url?: string | null
 			version?: string
 		}
 	) {
@@ -157,11 +194,20 @@ class ArticlesService {
 		if (existing.authorId !== authorId && !isAdmin)
 			return { error: 'Forbidden' }
 
+		const resolvedType = (data.type as ArticleType) ?? existing.type
+
 		const updateData: Record<string, unknown> = {}
 		if (data.title !== undefined) updateData.title = data.title
 		if (data.content !== undefined) updateData.content = data.content
+		if (data.type !== undefined) updateData.type = data.type
+		if (data.rewards !== undefined) {
+			if (resolvedType === ArticleType.QUEST) {
+				updateData.rewards = data.rewards
+			}
+		}
 		if (data.flags !== undefined) updateData.flags = data.flags
 		if (data.tags !== undefined) updateData.tags = data.tags
+		if (data.image_url !== undefined) updateData.image_url = data.image_url
 
 		const article = await prisma.article.update({
 			where: { id },
@@ -190,8 +236,12 @@ class ArticlesService {
 			external_id: article.external_id,
 			status: article.status,
 			status_reason: article.status_reason,
+			type: article.type,
 			title: article.title,
 			content: article.content,
+			image_url: article.image_url,
+			rewards:
+				article.type === ArticleType.QUEST ? article.rewards : null,
 			flags: article.flags,
 
 			tags: article.tags ? article.tags.split(',').filter(Boolean) : [],
@@ -229,8 +279,12 @@ class ArticlesService {
 			external_id: updated.external_id,
 			status: updated.status,
 			status_reason: updated.status_reason,
+			type: updated.type,
 			title: updated.title,
 			content: updated.content,
+			image_url: updated.image_url,
+			rewards:
+				updated.type === ArticleType.QUEST ? updated.rewards : null,
 			flags: updated.flags,
 			tags: updated.tags ? updated.tags.split(',').filter(Boolean) : [],
 			author: updated.author,
@@ -275,8 +329,12 @@ class ArticlesService {
 			external_id: updated.external_id,
 			status: updated.status,
 			status_reason: updated.status_reason,
+			type: updated.type,
 			title: updated.title,
 			content: updated.content,
+			image_url: updated.image_url,
+			rewards:
+				updated.type === ArticleType.QUEST ? updated.rewards : null,
 			flags: updated.flags,
 			tags: updated.tags ? updated.tags.split(',').filter(Boolean) : [],
 			author: updated.author,

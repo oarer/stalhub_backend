@@ -154,6 +154,63 @@ class UsersService {
 		return { data, totalCount }
 	}
 
+	async getUnreadCount(userId: number) {
+		return prisma.notifications.count({
+			where: {
+				users: { some: { id: userId } },
+				read: false,
+			},
+		})
+	}
+
+	async markRead(userId: number, notificationId: number) {
+		const notification = await prisma.notifications.findFirst({
+			where: {
+				id: notificationId,
+				users: { some: { id: userId } },
+			},
+		})
+		if (!notification) return false
+
+		await prisma.notifications.update({
+			where: { id: notificationId },
+			data: { read: true },
+		})
+		return true
+	}
+
+	async markAllRead(userId: number) {
+		const notifications = await prisma.notifications.findMany({
+			where: {
+				users: { some: { id: userId } },
+				read: false,
+			},
+			select: { id: true },
+		})
+
+		await prisma.notifications.updateMany({
+			where: { id: { in: notifications.map((n) => n.id) } },
+			data: { read: true },
+		})
+
+		return true
+	}
+
+	async deleteNotification(userId: number, notificationId: number) {
+		const notification = await prisma.notifications.findFirst({
+			where: {
+				id: notificationId,
+				users: { some: { id: userId } },
+			},
+		})
+		if (!notification) return false
+
+		await prisma.notifications.delete({
+			where: { id: notificationId },
+		})
+		return true
+	}
+
 	async getStars(userId: number, take: number, page: number) {
 		const [stars, totalCount] = await Promise.all([
 			prisma.star.findMany({

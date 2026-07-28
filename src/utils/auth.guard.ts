@@ -58,27 +58,41 @@ async function findSession(sessionId: string) {
 	return session !== null && !session.revoked
 }
 
-async function isUserBanned(
-	userId: number
-): Promise<{ banned: boolean; reason?: string | null }> {
+async function isUserBanned(userId: number) {
 	const settings = await prisma.userSettings.findUnique({
 		where: { userId },
-		select: { banned: true, ban_reason: true, ban_expires_at: true },
+		select: {
+			banned: true,
+			ban_reason: true,
+			ban_expires_at: true,
+		},
 	})
 
-	if (!settings || !settings.banned) return { banned: false }
+	if (!settings || !settings.banned) {
+		return { banned: false }
+	}
 
 	if (settings.ban_expires_at && settings.ban_expires_at < new Date()) {
 		await prisma.userSettings.update({
 			where: { userId },
-			data: { banned: false, ban_reason: null, ban_expires_at: null },
+			data: {
+				banned: false,
+				ban_reason: null,
+				ban_expires_at: null,
+			},
 		})
+
 		return { banned: false }
 	}
 
-	return { banned: true, reason: settings.ban_reason }
+	return {
+		banned: true,
+		reason: settings.ban_reason,
+		expire_in: settings.ban_expires_at
+			? settings.ban_expires_at.getTime() - Date.now()
+			: null,
+	}
 }
-
 export async function requireAdmin({ store, set }: AuthContext) {
 	const ok = await checkPermission(store.authUserId as number, 'user:manage')
 	if (!ok) {
@@ -112,7 +126,11 @@ export async function requireAuth({
 	const ban = await isUserBanned(userId)
 	if (ban.banned) {
 		set.status = 403
-		return { error: 'Account banned', reason: ban.reason }
+		return {
+			error: 'Account banned',
+			reason: ban.reason,
+			expire_in: ban.expire_in,
+		}
 	}
 
 	store.authUserId = userId

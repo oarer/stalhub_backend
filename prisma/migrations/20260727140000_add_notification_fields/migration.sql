@@ -1,0 +1,3 @@
+ALTER TABLE "Notifications" ADD COLUMN "title" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "Notifications" ADD COLUMN "read" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Notifications" ADD COLUMN "link" TEXT;

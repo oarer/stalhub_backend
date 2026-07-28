@@ -175,7 +175,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			'/@me/stars',
 			async ({ store, query }) => {
 				const take = query.take ?? 24
-				const page = query.page ?? 0
+				const page = (query.page ?? 1) - 1
 				return usersService.getStars(
 					fromStore(store).userId,
 					take,
@@ -209,6 +209,69 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
 				}),
+				detail: { tags: ['Users'] },
+			}
+		)
+
+		.get(
+			'/@me/notifications/unread',
+			async ({ store }) => {
+				return usersService.getUnreadCount(fromStore(store).userId)
+			},
+			{
+				beforeHandle: [requireAuth],
+				detail: { tags: ['Users'] },
+			}
+		)
+
+		.patch(
+			'/@me/notifications/:id/read',
+			async ({ params, store, set }) => {
+				const ok = await usersService.markRead(
+					fromStore(store).userId,
+					Number(params.id)
+				)
+				if (!ok) {
+					set.status = 404
+					return { error: 'Notification not found' }
+				}
+				return { success: true }
+			},
+			{
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+				detail: { tags: ['Users'] },
+			}
+		)
+
+		.post(
+			'/@me/notifications/read-all',
+			async ({ store }) => {
+				await usersService.markAllRead(fromStore(store).userId)
+				return { success: true }
+			},
+			{
+				beforeHandle: [requireAuth],
+				detail: { tags: ['Users'] },
+			}
+		)
+
+		.delete(
+			'/@me/notifications/:id',
+			async ({ params, store, set }) => {
+				const ok = await usersService.deleteNotification(
+					fromStore(store).userId,
+					Number(params.id)
+				)
+				if (!ok) {
+					set.status = 404
+					return { error: 'Notification not found' }
+				}
+				return { success: true }
+			},
+			{
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Users'] },
 			}
 		)

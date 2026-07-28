@@ -1,4 +1,5 @@
 import { t } from 'elysia'
+import type { BuildData } from '@/types/build.type'
 import {
 	checkPermission,
 	fromStore,
@@ -6,6 +7,7 @@ import {
 	requireAuth,
 	requireOptionalAuth,
 } from '@/utils/auth.guard'
+import { validateBuildData } from '@/utils/build.validation'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 import { buildsService } from './builds.service'
@@ -18,7 +20,7 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 			'',
 			async ({ query }) => {
 				const take = query.take ?? 24
-				const page = query.page ?? 0
+				const page = (query.page ?? 1) - 1
 				return buildsService.list(take, page)
 			},
 			{
@@ -47,10 +49,16 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 
 		.post(
 			'',
-			async ({ body, store }) => {
+			async ({ body, store, set }) => {
+				const validation = validateBuildData(body.data)
+				if (!validation.ok) {
+					set.status = 422
+					return { error: validation.error }
+				}
+
 				return buildsService.create(fromStore(store).userId, {
 					title: body.title,
-					data: JSON.stringify(body.data),
+					data: validation.data,
 					flags: body.flags,
 					tags: body.tags?.join(','),
 				})
@@ -58,7 +66,10 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 			{
 				beforeHandle: [requireAuth],
 				body: t.Object({
-					title: t.String({ error: 'title is required' }),
+					title: t.String({
+						error: 'title is required',
+						maxLength: 200,
+					}),
 					data: t.Any(),
 					flags: t.Optional(t.Numeric()),
 					tags: t.Optional(t.Array(t.String())),
@@ -72,14 +83,25 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 			async ({ params, body, store, set }) => {
 				const { userId } = fromStore(store)
 				const isAdmin = await checkPermission(userId, 'builds:manage')
+
+				let validatedData: BuildData | undefined
+				if (body.data !== undefined) {
+					const validation = validateBuildData(body.data)
+					if (!validation.ok) {
+						set.status = 422
+						return { error: validation.error }
+					}
+					validatedData = validation.data
+				}
+
 				const result = await buildsService.update(
 					Number(params.id),
 					userId,
 					isAdmin,
 					{
 						...(body.title !== undefined && { title: body.title }),
-						...(body.data !== undefined && {
-							data: JSON.stringify(body.data),
+						...(validatedData !== undefined && {
+							data: validatedData,
 						}),
 						...(body.flags !== undefined && { flags: body.flags }),
 						...(body.tags !== undefined && {
@@ -103,7 +125,7 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
-					title: t.Optional(t.String()),
+					title: t.Optional(t.String({ maxLength: 200 })),
 					data: t.Optional(t.Any()),
 					flags: t.Optional(t.Numeric()),
 					tags: t.Optional(t.Array(t.String())),

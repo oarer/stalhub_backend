@@ -1,9 +1,30 @@
 import { StarTargetType } from 'generated/prisma/client'
 import { prisma } from '@/lib/prisma'
+import type { BuildData } from '@/types/build.type'
 
 function externalId() {
 	return crypto.randomUUID().slice(0, 8)
 }
+
+function compress(data: BuildData): string {
+	const compressed = Bun.deflateSync(
+		new TextEncoder().encode(JSON.stringify(data))
+	)
+
+	return 'v1:' + Buffer.from(compressed).toString('base64')
+}
+
+function decompress(raw: string): BuildData {
+	if (raw.startsWith('v1:')) {
+		const b64 = raw.slice(3)
+		const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
+		const json = Bun.inflateSync(bytes)
+		return JSON.parse(new TextDecoder().decode(json))
+	}
+	return JSON.parse(raw)
+}
+
+const MAX_BUILD_SIZE = 50_000
 
 class BuildsService {
 	async list(take: number, page: number) {
@@ -29,7 +50,7 @@ class BuildsService {
 				id: b.id,
 				external_id: b.external_id,
 				title: b.title,
-				data: JSON.parse(b.data),
+				data: decompress(b.data),
 				flags: b.flags,
 				tags: b.tags ? b.tags.split(',').filter(Boolean) : [],
 				author: b.author,
@@ -76,7 +97,7 @@ class BuildsService {
 			id: build.id,
 			external_id: build.external_id,
 			title: build.title,
-			data: JSON.parse(build.data),
+			data: decompress(build.data),
 			flags: build.flags,
 			tags: build.tags ? build.tags.split(',').filter(Boolean) : [],
 			author: build.author,
@@ -91,16 +112,21 @@ class BuildsService {
 		authorId: number,
 		data: {
 			title: string
-			data: string
+			data: BuildData
 			flags?: number
 			tags?: string
 		}
 	) {
+		const compressed = compress(data.data)
+		if (compressed.length > MAX_BUILD_SIZE) {
+			return { error: 'Build data exceeds maximum size' }
+		}
+
 		const build = await prisma.build.create({
 			data: {
 				external_id: externalId(),
 				title: data.title,
-				data: data.data,
+				data: compressed,
 				flags: data.flags ?? 0,
 				tags: data.tags ?? '',
 				authorId,
@@ -114,7 +140,7 @@ class BuildsService {
 			id: build.id,
 			external_id: build.external_id,
 			title: build.title,
-			data: JSON.parse(build.data),
+			data: decompress(build.data),
 			flags: build.flags,
 			tags: build.tags ? build.tags.split(',').filter(Boolean) : [],
 			author: build.author,
@@ -131,7 +157,7 @@ class BuildsService {
 		isAdmin: boolean,
 		data: {
 			title?: string
-			data?: string
+			data?: BuildData
 			flags?: number
 			tags?: string
 		}
@@ -141,14 +167,21 @@ class BuildsService {
 		if (existing.authorId !== authorId && !isAdmin)
 			return { error: 'Forbidden' }
 
+		const updateData: Record<string, unknown> = {}
+		if (data.title !== undefined) updateData.title = data.title
+		if (data.data !== undefined) {
+			const compressed = compress(data.data)
+			if (compressed.length > MAX_BUILD_SIZE) {
+				return { error: 'Build data exceeds maximum size' }
+			}
+			updateData.data = compressed
+		}
+		if (data.flags !== undefined) updateData.flags = data.flags
+		if (data.tags !== undefined) updateData.tags = data.tags
+
 		const build = await prisma.build.update({
 			where: { id },
-			data: {
-				...(data.title !== undefined && { title: data.title }),
-				...(data.data !== undefined && { data: data.data }),
-				...(data.flags !== undefined && { flags: data.flags }),
-				...(data.tags !== undefined && { tags: data.tags }),
-			},
+			data: updateData,
 			include: {
 				author: { select: { id: true, name: true, username: true } },
 			},
@@ -162,7 +195,7 @@ class BuildsService {
 			id: build.id,
 			external_id: build.external_id,
 			title: build.title,
-			data: JSON.parse(build.data),
+			data: decompress(build.data),
 			flags: build.flags,
 			tags: build.tags ? build.tags.split(',').filter(Boolean) : [],
 			author: build.author,

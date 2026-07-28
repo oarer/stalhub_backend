@@ -1,10 +1,6 @@
 import { t } from 'elysia'
 
-import {
-	fromStore,
-	requireAdmin,
-	requireAuth,
-} from '@/utils/auth.guard'
+import { fromStore, requireAdmin, requireAuth } from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 import { adminUserService } from './users.service'
