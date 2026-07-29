@@ -11,6 +11,10 @@ import { jwtPlugin } from '@/utils/jwt.plugin'
 import { avatarRoutes } from './avatar'
 import { usersService } from './users.service'
 
+/*
+	HUGE thanks to AndcoolSystems (GitHub: @Andcool-Systems) for the API reference <3
+*/
+
 const cookieSchema = t.Cookie({
 	refresh_token: t.Optional(t.String()),
 	access_token: t.Optional(t.String()),
