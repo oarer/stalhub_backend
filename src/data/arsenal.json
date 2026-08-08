@@ -10,7 +10,8 @@
 		"drop": true,
 		"reputation": 5,
 		"currentPrice": 3000,
-		"weight": 0.3
+		"weight": 0.3,
+		"limit": 200
 	},
 	{
 		"name": {
@@ -23,6 +24,7 @@
 		"drop": true,
 		"reputation": 18,
 		"weight": 0.7,
+		"limit": 55,
 		"id": "z3wgm"
 	},
 	{
@@ -36,6 +38,7 @@
 		"drop": true,
 		"reputation": 2,
 		"weight": 0.5,
+		"limit": 500,
 		"id": "w39k3"
 	},
 	{
@@ -49,6 +52,7 @@
 		"drop": true,
 		"reputation": 2,
 		"weight": 0.3,
+		"limit": 500,
 		"id": "55ymq"
 	},
 	{
@@ -62,6 +66,7 @@
 		"drop": true,
 		"reputation": 95,
 		"weight": 2.5,
+		"limit": 10,
 		"id": "55olq"
 	},
 	{
@@ -75,6 +80,7 @@
 		"drop": true,
 		"reputation": 12,
 		"weight": 0.5,
+		"limit": 85,
 		"id": "y4g93"
 	},
 	{
@@ -88,7 +94,8 @@
 		"drop": true,
 		"reputation": 65,
 		"currentPrice": 60000,
-		"weight": 0.2
+		"weight": 0.2,
+		"limit": 15
 	},
 	{
 		"name": {
@@ -101,6 +108,7 @@
 		"drop": true,
 		"reputation": 1,
 		"weight": 0.2,
+		"limit": 1000,
 		"id": "z3k1m"
 	},
 	{
@@ -114,6 +122,7 @@
 		"drop": true,
 		"reputation": 9,
 		"weight": 0.5,
+		"limit": 110,
 		"id": "wjlzz"
 	},
 	{
@@ -127,6 +136,7 @@
 		"drop": true,
 		"reputation": 4,
 		"weight": 0,
+		"limit": 250,
 		"id": "dm6l2"
 	},
 	{
@@ -140,7 +150,8 @@
 		"drop": true,
 		"reputation": 9,
 		"currentPrice": 6000,
-		"weight": 6
+		"weight": 6,
+		"limit": 110
 	},
 	{
 		"name": {
@@ -153,6 +164,7 @@
 		"drop": true,
 		"reputation": 150,
 		"weight": 1.6,
+		"limit": 8,
 		"id": "l0ryo"
 	},
 	{
@@ -166,6 +178,7 @@
 		"drop": true,
 		"reputation": 1000,
 		"weight": 3,
+		"limit": 1,
 		"id": "rjvwy"
 	},
 	{
@@ -179,6 +192,7 @@
 		"drop": true,
 		"reputation": 15,
 		"weight": 0.4,
+		"limit": 70,
 		"id": "krpnp"
 	},
 	{
@@ -192,6 +206,7 @@
 		"drop": true,
 		"reputation": 15,
 		"weight": 1,
+		"limit": 70,
 		"id": "knpzj"
 	},
 	{
@@ -205,6 +220,7 @@
 		"drop": true,
 		"reputation": 10,
 		"weight": 0.3,
+		"limit": 100,
 		"id": "9d3gy"
 	},
 	{
@@ -218,6 +234,7 @@
 		"drop": true,
 		"reputation": 6,
 		"weight": 2,
+		"limit": 170,
 		"id": "007oy"
 	},
 	{
@@ -231,6 +248,7 @@
 		"drop": true,
 		"reputation": 20,
 		"weight": 0.3,
+		"limit": 50,
 		"id": "y4n40"
 	},
 	{
@@ -244,6 +262,7 @@
 		"drop": true,
 		"reputation": 11,
 		"weight": 0.4,
+		"limit": 90,
 		"id": "gn1nn"
 	},
 	{
@@ -257,6 +276,7 @@
 		"drop": false,
 		"reputation": 150,
 		"weight": 0.2,
+		"limit": 8,
 		"id": "y4y33"
 	},
 	{
@@ -270,7 +290,8 @@
 		"drop": true,
 		"reputation": 55,
 		"currentPrice": 40000,
-		"weight": 0.3
+		"weight": 0.3,
+		"limit": 20
 	},
 	{
 		"name": {
@@ -283,7 +304,8 @@
 		"drop": true,
 		"reputation": 6,
 		"currentPrice": 2000,
-		"weight": 3
+		"weight": 3,
+		"limit": 170
 	},
 	{
 		"name": {
@@ -296,6 +318,7 @@
 		"drop": true,
 		"reputation": 3,
 		"weight": 0.4,
+		"limit": 335,
 		"id": "y4gr3"
 	},
 	{
@@ -309,6 +332,7 @@
 		"drop": true,
 		"reputation": 2,
 		"weight": 0.4,
+		"limit": 500,
 		"id": "gnk55"
 	},
 	{
@@ -322,20 +346,8 @@
 		"drop": false,
 		"reputation": 85,
 		"weight": 0.05,
+		"limit": 10,
 		"id": "z3ogm"
-	},
-	{
-		"name": {
-			"ru": "Набор компонентов брони",
-			"en": "Pack of Armor Components",
-			"es": "Pack de componentes de armadura",
-			"fr": "Lot de composants d'armure",
-			"ko": "방어구 부품 팩"
-		},
-		"drop": false,
-		"reputation": 2,
-		"currentPrice": 2500,
-		"weight": 0.2
 	},
 	{
 		"name": {
@@ -348,6 +360,7 @@
 		"drop": false,
 		"reputation": 90,
 		"weight": 0.2,
+		"limit": 10,
 		"id": "gnpr5"
 	},
 	{
@@ -361,6 +374,7 @@
 		"drop": true,
 		"reputation": 35,
 		"weight": 0.4,
+		"limit": 30,
 		"id": "j0q0l"
 	},
 	{
@@ -374,6 +388,7 @@
 		"drop": false,
 		"reputation": 800,
 		"weight": 0.3,
+		"limit": 1,
 		"id": "4k3qo"
 	},
 	{
@@ -387,6 +402,7 @@
 		"drop": false,
 		"reputation": 175,
 		"weight": 0.25,
+		"limit": 5,
 		"id": "1rl61"
 	},
 	{
@@ -400,6 +416,7 @@
 		"drop": true,
 		"reputation": 12,
 		"weight": 10,
+		"limit": 85,
 		"id": "771lj"
 	},
 	{
@@ -411,9 +428,10 @@
 			"ko": "조준 시스템"
 		},
 		"drop": true,
-		"reputation": 16,
+		"reputation": 35,
 		"currentPrice": 25000,
-		"weight": 0.4
+		"weight": 0.4,
+		"limit": 30
 	},
 	{
 		"name": {
@@ -426,6 +444,7 @@
 		"drop": false,
 		"reputation": 45,
 		"weight": 0.2,
+		"limit": 25,
 		"id": "dr61j"
 	},
 	{
@@ -439,6 +458,7 @@
 		"drop": false,
 		"reputation": 50,
 		"weight": 3,
+		"limit": 20,
 		"id": "gn975"
 	},
 	{
@@ -452,6 +472,7 @@
 		"drop": false,
 		"reputation": 12,
 		"weight": 0.05,
+		"limit": 85,
 		"id": "z30my"
 	},
 	{
@@ -465,7 +486,8 @@
 		"drop": true,
 		"reputation": 1,
 		"currentPrice": 2000,
-		"weight": 1
+		"weight": 1,
+		"limit": 1000
 	},
 	{
 		"name": {
@@ -478,6 +500,7 @@
 		"drop": true,
 		"reputation": 1,
 		"weight": 2.5,
+		"limit": 1000,
 		"id": "drym2"
 	},
 	{
@@ -491,6 +514,7 @@
 		"drop": false,
 		"reputation": 45,
 		"weight": 0.2,
+		"limit": 25,
 		"id": "y409k"
 	},
 	{
@@ -503,8 +527,9 @@
 		},
 		"drop": true,
 		"reputation": 10,
-		"weight": 0.4,
 		"currentPrice": 30000,
+		"weight": 0.4,
+		"limit": 100,
 		"id": "9d10q"
 	},
 	{
@@ -518,6 +543,7 @@
 		"drop": false,
 		"reputation": 45,
 		"weight": 0.2,
+		"limit": 25,
 		"id": "4k5gr"
 	},
 	{
@@ -531,6 +557,7 @@
 		"drop": false,
 		"reputation": 1000,
 		"weight": 0.45,
+		"limit": 1,
 		"id": "w3zj3"
 	},
 	{
@@ -544,6 +571,7 @@
 		"drop": false,
 		"reputation": 7,
 		"weight": 0.15,
+		"limit": 145,
 		"id": "9dk7y"
 	},
 	{
@@ -557,6 +585,7 @@
 		"drop": false,
 		"reputation": 9,
 		"weight": 0.05,
+		"limit": 110,
 		"id": "gn976"
 	},
 	{
@@ -570,7 +599,8 @@
 		"drop": true,
 		"reputation": 6,
 		"currentPrice": 15000,
-		"weight": 0.4
+		"weight": 0.4,
+		"limit": 170
 	},
 	{
 		"name": {
@@ -583,19 +613,120 @@
 		"drop": true,
 		"reputation": 3,
 		"currentPrice": 2000,
-		"weight": 2
+		"weight": 2,
+		"limit": 335
 	},
 	{
 		"name": {
-			"ru": "Набор компонентов оружия",
-			"en": "Pack of Weapon Components",
-			"es": "Caja de raciones común",
-			"fr": "Paquet de composants d'armes",
-			"ko": "무기 부품 팩"
+			"ru": "Ящик с ресурсами (Ветеран)",
+			"en": "Resource Box (Veteran)",
+			"es": "Caja de recursos (Veterano)",
+			"fr": "Caisse de ressources (Vétéran)",
+			"ko": "자원 상자 (베테랑)"
 		},
-		"drop": false,
+		"reputation": 150,
+		"weight": 7.5
+	},
+	{
+		"name": {
+			"ru": "Ящик с ресурсами (Сталкер)",
+			"en": "Resource Box (Stalker)",
+			"es": "Caja de recursos (Stalker)",
+			"fr": "Caisse de ressources (Stalker)",
+			"ko": "자원 상자 (스토커)"
+		},
+		"reputation": 150,
+		"weight": 7.7
+	},
+	{
+		"name": {
+			"ru": "Продвинутые запчасти",
+			"en": "Advanced Spare Parts",
+			"es": "Piezas de recambio avanzadas",
+			"fr": "Pièces détachées avancées",
+			"ko": "고급 예비 부품"
+		},
+		"reputation": 50,
+		"weight": 0.1
+	},
+	{
+		"name": {
+			"ru": "Продвинутые инструменты",
+			"en": "Advanced Tools",
+			"es": "Herramientas avanzadas",
+			"fr": "Outils avancés",
+			"ko": "고급 도구"
+		},
+		"reputation": 50,
+		"weight": 0.01
+	},
+	{
+		"name": {
+			"ru": "Стандартные запчасти",
+			"en": "Standard Spare Parts",
+			"es": "Piezas de recambio estándar",
+			"fr": "Pièces détachées standard",
+			"ko": "표준 예비 부품"
+		},
+		"reputation": 10,
+		"weight": 0.1
+	},
+	{
+		"name": {
+			"ru": "Стандартные инструменты",
+			"en": "Standard Tools",
+			"es": "Herramientas estándar",
+			"fr": "Outils standard",
+			"ko": "표준 도구"
+		},
+		"reputation": 10,
+		"weight": 0.01
+	},
+	{
+		"name": {
+			"ru": "Ящик с ресурсами (ветеран, чужой)",
+			"en": "Resource Box (Veteran, Foreign)",
+			"es": "Caja de recursos (Veterano, extranjero)",
+			"fr": "Caisse de ressources (Vétéran, étranger)",
+			"ko": "자원 상자 (베테랑, 외국산)"
+		},
+		"reputation": 37,
+		"weight": 7.6
+	},
+	{
+		"name": {
+			"ru": "Голова сильной бестии",
+			"en": "Head of a Strong Beast",
+			"es": "Cabeza de bestia fuerte",
+			"fr": "Tête de Bête Forte",
+			"ko": "강력한 짐승의 머리"
+		},
+		"reputation": 35,
+		"weight": 6,
+		"limit": 30
+	},
+	{
+		"name": {
+			"ru": "Набор компонентов оружия (Мастер)",
+			"en": "Pack of Weapon Components (Master)",
+			"es": "Pack de componentes de armas (Maestro)",
+			"fr": "Lot de composants d'armes (Maître)",
+			"ko": "무기 부품 팩 (마스터)"
+		},
 		"reputation": 6,
-		"currentPrice": 35000,
-		"weight": 0.2
+		"weight": 0.2,
+		"limit": 170
+	},
+	{
+		"name": {
+			"ru": "Набор компонентов брони (Мастер)",
+			"en": "Pack of Armor Components (Master)",
+			"es": "Pack de componentes de armadura (Maestro)",
+			"fr": "Lot de composants d'armure (Maître)",
+			"ko": "방어구 부품 팩 (마스터)"
+		},
+		"reputation": 2,
+		"weight": 0.2,
+		"limit": 500
 	}
 ]
