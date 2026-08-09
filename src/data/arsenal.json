@@ -9,7 +9,7 @@
 		},
 		"drop": true,
 		"reputation": 5,
-		"currentPrice": 3000,
+		"id": "4kodo",
 		"weight": 0.3,
 		"limit": 200
 	},
@@ -93,7 +93,7 @@
 		},
 		"drop": true,
 		"reputation": 65,
-		"currentPrice": 60000,
+		"id": "olpl5",
 		"weight": 0.2,
 		"limit": 15
 	},
@@ -149,7 +149,7 @@
 		},
 		"drop": true,
 		"reputation": 9,
-		"currentPrice": 6000,
+		"id": "nkw42",
 		"weight": 6,
 		"limit": 110
 	},
@@ -289,7 +289,7 @@
 		},
 		"drop": true,
 		"reputation": 55,
-		"currentPrice": 40000,
+		"id": "vn3n7",
 		"weight": 0.3,
 		"limit": 20
 	},
@@ -429,7 +429,7 @@
 		},
 		"drop": true,
 		"reputation": 35,
-		"currentPrice": 25000,
+		"id": "q0q04",
 		"weight": 0.4,
 		"limit": 30
 	},
@@ -485,7 +485,7 @@
 		},
 		"drop": true,
 		"reputation": 1,
-		"currentPrice": 2000,
+		"id": "mrq02",
 		"weight": 1,
 		"limit": 1000
 	},
@@ -612,7 +612,7 @@
 		},
 		"drop": true,
 		"reputation": 3,
-		"currentPrice": 2000,
+		"id": "olpkm",
 		"weight": 2,
 		"limit": 335
 	},
@@ -625,6 +625,7 @@
 			"ko": "자원 상자 (베테랑)"
 		},
 		"reputation": 150,
+		"drop": true,
 		"weight": 7.5
 	},
 	{
@@ -636,7 +637,8 @@
 			"ko": "자원 상자 (스토커)"
 		},
 		"reputation": 150,
-		"weight": 7.7
+		"weight": 7.7,
+		"drop": false
 	},
 	{
 		"name": {
@@ -647,7 +649,9 @@
 			"ko": "고급 예비 부품"
 		},
 		"reputation": 50,
-		"weight": 0.1
+		"weight": 0.1,
+		"id": "y3nmw",
+		"drop": false
 	},
 	{
 		"name": {
@@ -658,7 +662,9 @@
 			"ko": "고급 도구"
 		},
 		"reputation": 50,
-		"weight": 0.01
+		"weight": 0.01,
+		"id": "4q7pl",
+		"drop": false
 	},
 	{
 		"name": {
@@ -669,7 +675,9 @@
 			"ko": "표준 예비 부품"
 		},
 		"reputation": 10,
-		"weight": 0.1
+		"weight": 0.1,
+		"id": "l0og1",
+		"drop": false
 	},
 	{
 		"name": {
@@ -680,7 +688,9 @@
 			"ko": "표준 도구"
 		},
 		"reputation": 10,
-		"weight": 0.01
+		"weight": 0.01,
+		"id": "qjqw9",
+		"drop": false
 	},
 	{
 		"name": {
@@ -691,6 +701,7 @@
 			"ko": "자원 상자 (베테랑, 외국산)"
 		},
 		"reputation": 37,
+		"drop": true,
 		"weight": 7.6
 	},
 	{
@@ -703,7 +714,9 @@
 		},
 		"reputation": 35,
 		"weight": 6,
-		"limit": 30
+		"id": "qjqn4",
+		"limit": 30,
+		"drop": true
 	},
 	{
 		"name": {
@@ -715,7 +728,8 @@
 		},
 		"reputation": 6,
 		"weight": 0.2,
-		"limit": 170
+		"limit": 170,
+		"drop": false
 	},
 	{
 		"name": {
@@ -727,6 +741,7 @@
 		},
 		"reputation": 2,
 		"weight": 0.2,
-		"limit": 500
+		"limit": 500,
+		"drop": false
 	}
 ]
