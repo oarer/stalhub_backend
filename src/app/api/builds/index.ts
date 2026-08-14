@@ -21,12 +21,33 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 			async ({ query }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
-				return buildsService.list(take, page)
+				const tags = query.tags
+					? query.tags
+							.split(',')
+							.map((t) => t.trim())
+							.filter(Boolean)
+					: undefined
+				return buildsService.list(take, page, {
+					tags,
+					sort: query.sort ?? 'newest',
+					priceMin: query.priceMin,
+					priceMax: query.priceMax,
+				})
 			},
 			{
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
+					tags: t.Optional(t.String()),
+					sort: t.Optional(
+						t.Union([
+							t.Literal('newest'),
+							t.Literal('stars'),
+							t.Literal('price'),
+						])
+					),
+					priceMin: t.Optional(t.Numeric()),
+					priceMax: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Builds'] },
 			}

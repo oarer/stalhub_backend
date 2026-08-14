@@ -1,6 +1,19 @@
-import { StarTargetType } from 'generated/prisma/client'
+import { StarTargetType, type Prisma } from 'generated/prisma/client'
+import { getRegionCache } from '@/app/api/artifacts/cache'
+import { resolveArtifactPrice } from '@/app/api/artifacts/pricing'
 import { prisma } from '@/lib/prisma'
+import type { ArtifactAggregate } from '@/types/artifacts.type'
 import type { BuildData } from '@/types/build.type'
+
+const authorInclude = {
+	author: {
+		select: {
+			id: true,
+			name: true,
+			username: true,
+		},
+	},
+} satisfies Prisma.BuildInclude
 
 function externalId() {
 	return crypto.randomUUID().slice(0, 8)
@@ -26,24 +39,152 @@ export function decompress(raw: string): BuildData {
 
 const MAX_BUILD_SIZE = 50_000
 
+const PRICE_REGION = 'RU'
+
+const artQualityToQualityIndex: Record<string, number> = {
+	ART_QUALITY_COMMON: 0,
+	ART_QUALITY_UNCOMMON: 1,
+	ART_QUALITY_SPECIAL: 2,
+	ART_QUALITY_RARE: 3,
+	ART_QUALITY_EXCLUSIVE: 4,
+	ART_QUALITY_LEGENDARY: 5,
+	ART_QUALITY_UNIQUE: 6,
+}
+
+const priceCache = new Map<
+	number,
+	{ price: number; buildUpdatedAt: Date; aggregateUpdatedAt: string }
+>()
+
+const PRICE_CACHE_MAX = 3000
+
+function cachedBuildPrice(
+	build: { id: number; data: string; updated_at: Date },
+	aggregate: ArtifactAggregate | null
+): number {
+	if (!aggregate) return 0
+
+	const cached = priceCache.get(build.id)
+	if (
+		cached &&
+		cached.buildUpdatedAt.getTime() === build.updated_at.getTime() &&
+		cached.aggregateUpdatedAt === aggregate.updatedAt
+	) {
+		return cached.price
+	}
+
+	const data = decompress(build.data)
+	let total = 0
+
+	for (const art of data.arts ?? []) {
+		const qlt = artQualityToQualityIndex[art.qualityClass]
+		if (qlt == null) continue
+
+		const resolved = resolveArtifactPrice(
+			aggregate,
+			art.itemId,
+			qlt,
+			art.potential ?? 0
+		)
+		if (resolved.price != null) total += resolved.price
+	}
+
+	if (priceCache.size >= PRICE_CACHE_MAX) priceCache.clear()
+	priceCache.set(build.id, {
+		price: total,
+		buildUpdatedAt: build.updated_at,
+		aggregateUpdatedAt: aggregate.updatedAt,
+	})
+
+	return total
+}
+
 class BuildsService {
-	async list(take: number, page: number) {
-		const [rows, totalCount] = await Promise.all([
-			prisma.build.findMany({
-				skip: page * take,
-				take,
+	async list(
+		take: number,
+		page: number,
+		opts: {
+			tags?: string[]
+			sort?: 'newest' | 'stars' | 'price'
+			priceMin?: number
+			priceMax?: number
+		} = {}
+	) {
+		const tags = opts.tags ?? []
+		const sort = opts.sort ?? 'newest'
+		const priceMin = opts.priceMin
+		const priceMax = opts.priceMax
+
+		const where = tags.length
+			? {
+					OR: tags.map((tag) => ({
+						tags: { contains: tag },
+					})),
+				}
+			: undefined
+
+		const hasPriceFilter = priceMin != null || priceMax != null
+		const needsFullScan =
+			sort === 'price' || sort === 'stars' || hasPriceFilter
+
+		const aggregate = await getRegionCache(PRICE_REGION)
+
+		let rows: Array<
+			Prisma.BuildGetPayload<{ include: typeof authorInclude }>
+		>
+		let totalCount: number
+		let starCounts = new Map<number, number>()
+
+		if (needsFullScan) {
+			const all = await prisma.build.findMany({
+				where,
 				orderBy: { created_at: 'desc' },
-				include: {
-					author: {
-						select: { id: true, name: true, username: true },
-					},
-				},
-			}),
-			prisma.build.count(),
-		])
+				include: authorInclude,
+			})
+
+			starCounts = await this.starCounts(all.map((r) => r.id))
+
+			let priced = all.map((row) => ({
+				row,
+				price: cachedBuildPrice(row, aggregate),
+				stars: starCounts.get(row.id) ?? 0,
+			}))
+
+			if (priceMin != null)
+				priced = priced.filter((entry) => entry.price >= priceMin)
+			if (priceMax != null)
+				priced = priced.filter((entry) => entry.price <= priceMax)
+
+			if (sort === 'price') priced.sort((a, b) => b.price - a.price)
+			else if (sort === 'stars')
+				priced.sort(
+					(a, b) =>
+						b.stars - a.stars ||
+						a.row.created_at.getTime() - b.row.created_at.getTime()
+				)
+
+			totalCount = priced.length
+			rows = priced
+				.slice(page * take, page * take + take)
+				.map((entry) => entry.row)
+		} else {
+			;[rows, totalCount] = await Promise.all([
+				prisma.build.findMany({
+					where,
+					skip: page * take,
+					take,
+					orderBy: { created_at: 'desc' },
+					include: authorInclude,
+				}),
+				prisma.build.count({ where }),
+			])
+			starCounts = await this.starCounts(rows.map((r) => r.id))
+		}
 
 		const ids = rows.map((r) => r.id)
-		const starCounts = await this.starCounts(ids)
+		const pageStarCounts = needsFullScan
+			? new Map(ids.map((id) => [id, starCounts.get(id) ?? 0]))
+			: starCounts
 
 		return {
 			data: rows.map((b) => ({
@@ -53,8 +194,9 @@ class BuildsService {
 				data: decompress(b.data),
 				flags: b.flags,
 				tags: b.tags ? b.tags.split(',').filter(Boolean) : [],
+				price: aggregate ? cachedBuildPrice(b, aggregate) : null,
 				author: b.author,
-				stars_count: starCounts.get(b.id) ?? 0,
+				stars_count: pageStarCounts.get(b.id) ?? 0,
 				created_at: b.created_at,
 				updated_at: b.updated_at,
 			})),
