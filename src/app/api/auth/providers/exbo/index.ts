@@ -1,11 +1,16 @@
 import { t } from 'elysia'
+import { clanService } from '@/app/api/clan/services/clan'
 import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
+import { Regions } from '@/types/api.type'
 import { fromStore, requireAuth } from '@/utils/auth.guard'
 import { assignDefaultRole, createSession } from '@/utils/auth.service'
+import { decryptSecretJson, encryptSecret } from '@/utils/crypto'
 import { createElysia } from '@/utils/elysia'
 import { accessCookie, jwtPlugin, refreshCookie } from '@/utils/jwt.plugin'
 import { consumeLinkState, createLinkState } from '@/utils/link.state'
+
+const REGION_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
 
 export const exboAuth = createElysia()
 	.use(jwtPlugin)
@@ -42,7 +47,7 @@ export const exboAuth = createElysia()
 			.get(
 				'/callback',
 				async ({
-					query: { code, state },
+					query: { code, state, region },
 					headers,
 					cookie: { refresh_token, access_token },
 					jwt,
@@ -133,12 +138,14 @@ export const exboAuth = createElysia()
 						login: string
 					}
 
-					const tokenBlob = Buffer.from(
+					const tokenBlob = encryptSecret(
 						JSON.stringify({
 							access_token: tokenData.access_token,
 							refresh_token: tokenData.refresh_token,
 						})
-					).toString('base64')
+					)
+
+					const selectedRegion = region ?? null
 
 					if (linkUserId) {
 						const existing = await prisma.eXBOAuth.findUnique({
@@ -157,6 +164,7 @@ export const exboAuth = createElysia()
 								login: exboUser.login,
 								username: exboUser.display_login,
 								token_blob: tokenBlob,
+								region: selectedRegion,
 								access_expires_at: new Date(
 									Date.now() + tokenData.expires_in * 1000
 								),
@@ -170,6 +178,17 @@ export const exboAuth = createElysia()
 								userid: linkUserId,
 							},
 						})
+						try {
+							if (selectedRegion) {
+								await clanService.detectFromExboCharacters(
+									linkUserId,
+									selectedRegion,
+									tokenData.access_token
+								)
+							}
+						} catch {
+							// no block
+						}
 
 						return { success: true, linked: true }
 					}
@@ -208,6 +227,7 @@ export const exboAuth = createElysia()
 										login: exboUser.login,
 										username: exboUser.display_login,
 										token_blob: tokenBlob,
+										region: selectedRegion,
 										access_expires_at: new Date(
 											Date.now() +
 												tokenData.expires_in * 1000
@@ -227,19 +247,33 @@ export const exboAuth = createElysia()
 						userId = user.id
 						await assignDefaultRole(userId)
 					}
+					try {
+						const detectRegion = existing?.region ?? selectedRegion
+						if (detectRegion) {
+							await clanService.detectFromExboCharacters(
+								userId,
+								detectRegion,
+								tokenData.access_token
+							)
+						}
+					} catch {
+						// no block
+					}
 
 					const userData = await prisma.user.findUnique({
 						where: { id: userId },
 						include: { roles: true },
 					})
-					const roleNames =
-						userData?.roles.map((r) => r.name) ?? []
+					const roleNames = userData?.roles.map((r) => r.name) ?? []
 					const ua =
 						(headers as Record<string, string | undefined>)[
 							'user-agent'
 						] ?? ''
 					const h = headers as Record<string, string | undefined>
-					const ip = (h['x-forwarded-for']?.split(',')[0]?.trim() ?? h['x-real-ip'] ?? '')
+					const ip =
+						h['x-forwarded-for']?.split(',')[0]?.trim() ??
+						h['x-real-ip'] ??
+						''
 					const session = await createSession(userId, ua, ip)
 					const accessToken = await jwt.sign({
 						sub: String(userId),
@@ -270,6 +304,7 @@ export const exboAuth = createElysia()
 					query: t.Object({
 						code: t.String(),
 						state: t.String(),
+						region: t.Optional(t.Enum(Regions)),
 					}),
 					detail: {
 						tags: ['Auth: Exbo'],
@@ -322,6 +357,116 @@ export const exboAuth = createElysia()
 				},
 				{
 					beforeHandle: [requireAuth],
+					detail: { tags: ['Auth: Exbo'] },
+				}
+			)
+
+			.get(
+				'/region',
+				async ({ store, set }) => {
+					const { userId } = fromStore(store)
+					const auth = await prisma.eXBOAuth.findUnique({
+						where: { userid: userId },
+					})
+					if (!auth) {
+						set.status = 404
+						return { error: 'EXBO account is not linked' }
+					}
+					const canChangeAt = auth.region_changed_at
+						? new Date(
+								auth.region_changed_at.getTime() +
+									REGION_COOLDOWN_MS
+							)
+						: null
+					return {
+						region: auth.region,
+						region_changed_at: auth.region_changed_at,
+						can_change_at: canChangeAt,
+						retry_after: canChangeAt
+							? Math.max(
+									0,
+									Math.ceil(
+										(canChangeAt.getTime() - Date.now()) /
+											1000
+									)
+								)
+							: 0,
+					}
+				},
+				{
+					beforeHandle: [requireAuth],
+					detail: { tags: ['Auth: Exbo'] },
+				}
+			)
+
+			.patch(
+				'/region',
+				async ({ body, store, set }) => {
+					const { userId } = fromStore(store)
+					const auth = await prisma.eXBOAuth.findUnique({
+						where: { userid: userId },
+					})
+					if (!auth) {
+						set.status = 404
+						return { error: 'EXBO account is not linked' }
+					}
+
+					if (auth.region === body.region) {
+						return { success: true, region: auth.region }
+					}
+
+					if (auth.region_changed_at) {
+						const nextAllowed =
+							auth.region_changed_at.getTime() +
+							REGION_COOLDOWN_MS
+						if (Date.now() < nextAllowed) {
+							const canChangeAt = new Date(nextAllowed)
+							set.status = 429
+							return {
+								error: 'Region can be changed once every 7 days',
+								region: auth.region,
+								can_change_at: canChangeAt,
+								retry_after: Math.ceil(
+									(nextAllowed - Date.now()) / 1000
+								),
+							}
+						}
+					}
+
+					const updated = await prisma.eXBOAuth.update({
+						where: { id: auth.id },
+						data: {
+							region: body.region,
+							region_changed_at: new Date(),
+						},
+					})
+
+					try {
+						if (updated.region) {
+							const { access_token } = decryptSecretJson<{
+								access_token: string
+							}>(updated.token_blob)
+							if (access_token) {
+								await clanService.detectFromExboCharacters(
+									userId,
+									updated.region,
+									access_token
+								)
+							}
+						}
+					} catch {
+						// no block
+					}
+
+					return {
+						success: true,
+						region: updated.region,
+						region_changed_at: updated.region_changed_at,
+					}
+				},
+				{
+					beforeHandle: [requireAuth],
+					body: t.Object({ region: t.Enum(Regions) }),
 					detail: { tags: ['Auth: Exbo'] },
 				}
 			)

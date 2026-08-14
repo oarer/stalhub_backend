@@ -25,12 +25,15 @@ class AdminNotificationService {
 		return { sent: users.length, notification }
 	}
 
-	async sendToUser(userId: number, data: {
-		title: string
-		content: string
-		type?: number
-		link?: string
-	}) {
+	async sendToUser(
+		userId: number,
+		data: {
+			title: string
+			content: string
+			type?: number
+			link?: string
+		}
+	) {
 		const user = await prisma.user.findUnique({ where: { id: userId } })
 		if (!user) return null
 
@@ -48,12 +51,15 @@ class AdminNotificationService {
 		return { sent: 1, notification }
 	}
 
-	async sendToUsers(userIds: number[], data: {
-		title: string
-		content: string
-		type?: number
-		link?: string
-	}) {
+	async sendToUsers(
+		userIds: number[],
+		data: {
+			title: string
+			content: string
+			type?: number
+			link?: string
+		}
+	) {
 		const notification = await prisma.notifications.create({
 			data: {
 				title: data.title,

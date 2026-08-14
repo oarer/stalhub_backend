@@ -14,7 +14,7 @@ function compress(data: BuildData): string {
 	return 'v1:' + Buffer.from(compressed).toString('base64')
 }
 
-function decompress(raw: string): BuildData {
+export function decompress(raw: string): BuildData {
 	if (raw.startsWith('v1:')) {
 		const b64 = raw.slice(3)
 		const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))

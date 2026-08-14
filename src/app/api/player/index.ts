@@ -96,10 +96,14 @@ export const playersRoute = createElysia()
 			.get(
 				'/:region/:character',
 				async ({ params }) => {
-					return playerService.get({
+					const profile = await playerService.get({
 						region: params.region,
 						character: params.character,
 					})
+					const clan_history = await playerService.getClanHistory({
+						playerName: profile.username,
+					})
+					return { ...profile, clan_history }
 				},
 				{
 					params: t.Object({
@@ -123,81 +127,6 @@ export const playersRoute = createElysia()
 						role: t.Enum(PlayerRole, {
 							error: 'Property role is missing',
 						}),
-					}),
-					detail: {
-						tags: ['Player'],
-					},
-				}
-			)
-			//! TODO пиздец костыли, но после авторизации нормально сделаю
-			.post(
-				'',
-				async ({ body: { uuid, description, role } }) => {
-					return playerService.create({ uuid, description, role })
-				},
-				{
-					beforeHandle: async ({ headers, set }) => {
-						if (headers.authorization !== `Bearer ${env.TOKEN}`) {
-							set.status = 401
-							return { error: 'Unauthorized' }
-						}
-					},
-					body: t.Object({
-						uuid: t.String({ error: 'Property uuid is missing' }),
-						description: t.String({
-							error: 'Property description is missing',
-						}),
-						role: t.Enum(PlayerRole, {
-							error: 'Property role is missing',
-						}),
-					}),
-					detail: {
-						tags: ['Player'],
-					},
-				}
-			)
-
-			.patch(
-				'',
-				async ({ body: { uuid, description, role } }) => {
-					return playerService.patch({ uuid, description, role })
-				},
-				{
-					beforeHandle: async ({ headers, set }) => {
-						if (headers.authorization !== `Bearer ${env.TOKEN}`) {
-							set.status = 401
-							return { error: 'Unauthorized' }
-						}
-					},
-					body: t.Object({
-						uuid: t.String({ error: 'Property uuid is missing' }),
-						description: t.Optional(t.String()),
-						role: t.Optional(
-							t.Enum(PlayerRole, {
-								error: 'Property role is missing',
-							})
-						),
-					}),
-					detail: {
-						tags: ['Player'],
-					},
-				}
-			)
-
-			.delete(
-				'',
-				async ({ body: { uuid } }) => {
-					return playerService.delete(uuid)
-				},
-				{
-					beforeHandle: async ({ headers, set }) => {
-						if (headers.authorization !== `Bearer ${env.TOKEN}`) {
-							set.status = 401
-							return { error: 'Unauthorized' }
-						}
-					},
-					body: t.Object({
-						uuid: t.String({ error: 'Property uuid is missing' }),
 					}),
 					detail: {
 						tags: ['Player'],

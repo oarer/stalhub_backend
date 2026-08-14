@@ -67,7 +67,10 @@ class PlayerService {
 
 	async get({ region, character }: PlayerParams): Promise<PlayerResponse> {
 		const cached = await cache.getPlayer(region, character)
-		if (cached) return cached
+		if (cached) {
+			await this.recordClanHistory(cached, region)
+			return cached
+		}
 
 		let data: PlayerResponse
 		try {
@@ -90,6 +93,7 @@ class PlayerService {
 			where: { uuid: data.uuid },
 		})
 
+		await this.recordClanHistory(data, region)
 		await this.incrementPopularPlayer(
 			data.uuid,
 			data.username,
@@ -220,6 +224,74 @@ class PlayerService {
 			recentPlayersList.pop()
 		}
 		setRecentPlayersCount(recentPlayersList.length)
+	}
+
+	private async recordClanHistory(
+		data: PlayerResponse,
+		region: string
+	): Promise<void> {
+		const clan = data.clan
+		if (!clan?.info?.id) return
+
+		try {
+			const auth = await prisma.eXBOAuth.findUnique({
+				where: { exbo_id: data.uuid },
+				select: { userid: true },
+			})
+
+			const rank = clan.member?.rank ?? ''
+			const joinedAt = clan.member?.joinTime ?? null
+
+			const existing = await prisma.clanHistory.findFirst({
+				where: {
+					player_name: data.username,
+					clan_id: clan.info.id,
+					rank,
+					joined_at: joinedAt ?? undefined,
+				},
+				orderBy: { seen_at: 'desc' },
+			})
+
+			if (existing) {
+				await prisma.clanHistory.update({
+					where: { id: existing.id },
+					data: { seen_at: new Date() },
+				})
+				return
+			}
+
+			await prisma.clanHistory.create({
+				data: {
+					player_name: data.username,
+					region,
+					clan_id: clan.info.id,
+					clan_name: clan.info.name,
+					clan_tag: clan.info.tag ?? '',
+					alliance: clan.info.alliance ?? '',
+					rank,
+					joined_at: joinedAt,
+					userId: auth?.userid ?? null,
+				},
+			})
+		} catch {
+			// даа
+		}
+	}
+
+	async getClanHistory(params: {
+		playerName?: string
+		userId?: number
+		limit?: number
+	}) {
+		const { playerName, userId, limit = 20 } = params
+		return prisma.clanHistory.findMany({
+			where: {
+				...(playerName ? { player_name: playerName } : {}),
+				...(userId ? { userId } : {}),
+			},
+			orderBy: { seen_at: 'desc' },
+			take: limit,
+		})
 	}
 
 	async getPopularPlayers(limit = 50): Promise<PopularPlayerDTO[]> {

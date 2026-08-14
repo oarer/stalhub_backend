@@ -29,7 +29,9 @@ class PermissionService {
 			where: { id },
 			data: {
 				...(data.name !== undefined && { name: data.name }),
-				...(data.description !== undefined && { description: data.description }),
+				...(data.description !== undefined && {
+					description: data.description,
+				}),
 				...(data.roleId !== undefined && { roleId: data.roleId }),
 			},
 		})

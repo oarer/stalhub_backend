@@ -277,4 +277,88 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 				detail: { tags: ['Admin'] },
 			}
 		)
+
+		.patch(
+			'/:userId/customization',
+			async ({ store, params, body, set }) => {
+				const targetId = Number(params.userId)
+				const canManage = await adminUserService.canManageUser(
+					fromStore(store).userId,
+					targetId
+				)
+				if (!canManage) {
+					set.status = 403
+					return {
+						error: 'Cannot modify user with equal or higher rank',
+					}
+				}
+				const result = await adminUserService.updateCustomization(
+					targetId,
+					body
+				)
+				if (!result) return { error: 'User not found' }
+				if ('error' in result) return result
+				return result
+			},
+			{
+				beforeHandle: [requireAuth, requireAdmin],
+				params: t.Object({ userId: t.Numeric() }),
+				body: t.Object({
+					bannerMode: t.Optional(
+						t.Enum({ COLOR: 'COLOR', IMAGE: 'IMAGE', NONE: 'NONE' })
+					),
+					bannerType: t.Optional(
+						t.Enum({ BACKGROUND: 'BACKGROUND', HEADER: 'HEADER' })
+					),
+					bannerColor: t.Optional(t.String()),
+					bannerImage: t.Optional(t.Nullable(t.String())),
+				}),
+				detail: { tags: ['Admin'] },
+			}
+		)
+
+		.post(
+			'/:userId/banner',
+			async ({ store, params, body, set }) => {
+				const targetId = Number(params.userId)
+				const canManage = await adminUserService.canManageUser(
+					fromStore(store).userId,
+					targetId
+				)
+				if (!canManage) {
+					set.status = 403
+					return {
+						error: 'Cannot modify user with equal or higher rank',
+					}
+				}
+				const file = body.file
+				const buf = Buffer.from(await file.arrayBuffer())
+
+				try {
+					const result = await adminUserService.saveBanner(targetId, {
+						name: file.name,
+						type: file.type,
+						buffer: buf,
+					})
+					if (!result) {
+						set.status = 404
+						return { error: 'User not found' }
+					}
+					return result
+				} catch (err) {
+					set.status = 400
+					return { error: (err as Error).message }
+				}
+			},
+			{
+				beforeHandle: [requireAuth, requireAdmin],
+				params: t.Object({ userId: t.Numeric() }),
+				body: t.Object({
+					file: t.File({
+						type: ['image/png', 'image/jpeg', 'image/webp'],
+					}),
+				}),
+				detail: { tags: ['Admin'] },
+			}
+		)
 )

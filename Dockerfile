@@ -22,3 +22,5 @@ RUN bun build \
  --minify-syntax \
  --outfile server \
  src/index.ts
+
+RUN mkdir -p /app/uploads

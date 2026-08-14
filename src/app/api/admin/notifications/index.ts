@@ -53,22 +53,22 @@ export const notificationsRoutes = createElysia().group(
 			.post(
 				'/batch',
 				async ({ body }) => {
-					return adminNotificationService.sendToUsers(
-						body.userIds,
-						{
-							title: body.title,
-							content: body.content,
-							type: body.type,
-							link: body.link,
-						}
-					)
+					return adminNotificationService.sendToUsers(body.userIds, {
+						title: body.title,
+						content: body.content,
+						type: body.type,
+						link: body.link,
+					})
 				},
 				{
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
 						userIds: t.Array(t.Number()),
 						title: t.String({ error: 'title is required' }),
-						content: t.String({ error: 'content is required', maxLength: 5000 }),
+						content: t.String({
+							error: 'content is required',
+							maxLength: 5000,
+						}),
 						type: t.Optional(t.Numeric()),
 						link: t.Optional(t.String()),
 					}),

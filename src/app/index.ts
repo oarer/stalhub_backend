@@ -10,5 +10,5 @@ export const routes = createElysia()
 	.get(
 		'/',
 		() =>
-			`Hi!\nThis API was created for https://stalhub.tech <3\n\nBy: https://github.com/oarer`
+			`Hi!\nThis API was created for https://stalhub.dev <3\n\nBy: https://github.com/oarer`
 	)

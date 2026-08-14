@@ -33,7 +33,12 @@ export const badgesRoutes = createElysia().group('/badges', (app) =>
 		.post(
 			'',
 			async ({ body }) => {
-				const result = await badgesService.create(body.name, body.icon, body.color, body.image)
+				const result = await badgesService.create(
+					body.name,
+					body.icon,
+					body.color,
+					body.image
+				)
 				if ('error' in result) return result
 				return result
 			},

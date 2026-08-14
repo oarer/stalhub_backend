@@ -7,7 +7,10 @@ interface JwtFacade {
 }
 
 interface AuthContext {
-	cookie: { access_token?: Cookie<string | undefined> }
+	cookie: {
+		access_token?: Cookie<string | undefined>
+		refresh_token?: Cookie<string | undefined>
+	}
 	jwt: JwtFacade
 	set: { status?: number | string; headers: Record<string, string | number> }
 	store: Record<string, unknown>
@@ -134,6 +137,25 @@ export async function requireAuth({
 	}
 
 	store.authUserId = userId
+	store.authSessionId = payload.sid
+}
+
+export async function requireRefreshAuth({
+	cookie: { refresh_token },
+	jwt,
+	set,
+	store,
+}: AuthContext) {
+	const payload = await jwt.verify(refresh_token?.value)
+	if (
+		!payload ||
+		typeof payload.sub !== 'string' ||
+		typeof payload.sid !== 'string'
+	) {
+		set.status = 401
+		return { error: 'Unauthorized' }
+	}
+	store.authUserId = Number(payload.sub)
 	store.authSessionId = payload.sid
 }
 

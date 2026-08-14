@@ -1,0 +1,31 @@
+{
+  "version": "7.8.0",
+  "steps": [
+    {
+      "tag": "CreateTable",
+      "table": "clan_squads"
+    },
+    {
+      "tag": "CreateTable",
+      "table": "clan_squad_members"
+    },
+    {
+      "tag": "CreateIndex",
+      "unique": true,
+      "fields": ["clanId", "name"],
+      "table": "clan_squads"
+    },
+    {
+      "tag": "CreateIndex",
+      "unique": true,
+      "fields": ["squadId", "slot"],
+      "table": "clan_squad_members"
+    },
+    {
+      "tag": "CreateIndex",
+      "unique": true,
+      "fields": ["squadId", "memberId"],
+      "table": "clan_squad_members"
+    }
+  ]
+}

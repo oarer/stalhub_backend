@@ -73,10 +73,15 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			'',
 			async ({ body, store, set }) => {
 				if (body.type === ArticleType.STALHUB) {
-					const isAdmin = await checkPermission(fromStore(store).userId, 'articles:manage')
+					const isAdmin = await checkPermission(
+						fromStore(store).userId,
+						'articles:manage'
+					)
 					if (!isAdmin) {
 						set.status = 403
-						return { error: 'Only admins can create STALHUB articles' }
+						return {
+							error: 'Only admins can create STALHUB articles',
+						}
 					}
 				}
 
@@ -93,14 +98,22 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			{
 				beforeHandle: [requireAuth],
 				body: t.Object({
-					title: t.String({ error: 'title is required', maxLength: 200 }),
-					content: t.String({ error: 'content is required', maxLength: 50000 }),
+					title: t.String({
+						error: 'title is required',
+						maxLength: 200,
+					}),
+					content: t.String({
+						error: 'content is required',
+						maxLength: 50000,
+					}),
 					type: t.Optional(t.Enum(ArticleType)),
 					image_url: t.Optional(t.String()),
-					rewards: t.Optional(t.Object({
-						money: t.Numeric(),
-						items: t.Array(t.String()),
-					})),
+					rewards: t.Optional(
+						t.Object({
+							money: t.Numeric(),
+							items: t.Array(t.String()),
+						})
+					),
 					flags: t.Optional(t.Numeric()),
 					tags: t.Optional(t.Array(t.String())),
 				}),
@@ -108,7 +121,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			}
 		)
 
-	.patch(
+		.patch(
 			'/:id',
 			async ({ params, body, store, set }) => {
 				const { userId } = fromStore(store)
@@ -123,7 +136,9 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 							content: body.content,
 						}),
 						...(body.type !== undefined && { type: body.type }),
-						...(body.rewards !== undefined && { rewards: body.rewards }),
+						...(body.rewards !== undefined && {
+							rewards: body.rewards,
+						}),
 						...(body.flags !== undefined && { flags: body.flags }),
 						...(body.tags !== undefined && {
 							tags: body.tags.join(','),
@@ -148,24 +163,26 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
-			body: t.Object({
-				title: t.Optional(t.String({ maxLength: 200 })),
-				content: t.Optional(t.String({ maxLength: 50000 })),
-				type: t.Optional(t.Enum(ArticleType)),
-				image_url: t.Optional(t.String()),
-				rewards: t.Optional(t.Object({
-					money: t.Numeric(),
-					items: t.Array(t.String()),
-				})),
-				flags: t.Optional(t.Numeric()),
-				tags: t.Optional(t.Array(t.String())),
-			}),
-			detail: { tags: ['Articles'] },
-		}
-	)
+				body: t.Object({
+					title: t.Optional(t.String({ maxLength: 200 })),
+					content: t.Optional(t.String({ maxLength: 50000 })),
+					type: t.Optional(t.Enum(ArticleType)),
+					image_url: t.Optional(t.Nullable(t.String())),
+					rewards: t.Optional(
+						t.Object({
+							money: t.Numeric(),
+							items: t.Array(t.String()),
+						})
+					),
+					flags: t.Optional(t.Numeric()),
+					tags: t.Optional(t.Array(t.String())),
+				}),
+				detail: { tags: ['Articles'] },
+			}
+		)
 
-	.delete(
-		'/:id',
+		.delete(
+			'/:id',
 			async ({ params, store, set }) => {
 				const { userId } = fromStore(store)
 				const isAdmin = await checkPermission(userId, 'articles:manage')

@@ -1,10 +1,23 @@
+import { randomUUID } from 'node:crypto'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
+import path from 'node:path'
 import {
 	type AvatarSource,
-	type BgVariant,
+	type BannerMode,
+	type BannerType,
+	type CardBackground,
+	type Prisma,
 	StarTargetType,
+	type UserLayout,
 } from 'generated/prisma/client'
+import { decompress } from '@/app/api/builds/builds.service'
+import { clanService } from '@/app/api/clan/services/clan'
+import { normalizeSchedule } from '@/app/api/clan/services/clan'
 import { prisma } from '@/lib/prisma'
 import { authService } from '@/utils/auth.service'
+import { decryptSecretJson } from '@/utils/crypto'
+
+const USERNAME_COOLDOWN_DAYS = 30
 
 function parseUserAgent(ua: string) {
 	const isMobile = /mobile|android|iphone|ipad|tablet/i.test(ua)
@@ -32,6 +45,41 @@ function parseUserAgent(ua: string) {
 }
 
 class UsersService {
+	async saveBanner(
+		userId: number,
+		file: { name: string; type: string; buffer: Buffer }
+	) {
+		const bannerDir = './uploads/users/banners'
+		await mkdir(bannerDir, { recursive: true })
+
+		const existing = await prisma.userCustomization.findUnique({
+			where: { userId },
+			select: { bannerImage: true },
+		})
+		const oldPath = existing?.bannerImage
+		if (
+			oldPath &&
+			oldPath.startsWith('/uploads/users/banners/') &&
+			!oldPath.includes('..')
+		) {
+			await rm(path.join('.', oldPath), { force: true }).catch(() => {})
+		}
+
+		const ext = path.extname(file.name) || '.png'
+		const filename = `${userId}-${randomUUID()}${ext}`
+		const fullPath = path.join(bannerDir, filename)
+		await writeFile(fullPath, file.buffer)
+
+		const bannerImage = `/uploads/users/banners/${filename}`
+		await prisma.userCustomization.upsert({
+			where: { userId },
+			update: { bannerImage, bannerMode: 'IMAGE' },
+			create: { userId, bannerImage, bannerMode: 'IMAGE' },
+		})
+
+		return { banner_image: bannerImage }
+	}
+
 	async getMe(sessionId: string) {
 		const session = await authService.getSession(sessionId)
 		return authService.userPayload(session!)
@@ -41,24 +89,222 @@ class UsersService {
 		userId: number,
 		data: {
 			public_profile?: boolean
+			layout?: UserLayout
+
+			bannerMode?: BannerMode
+			bannerType?: BannerType
+			bannerColor?: string
+			bannerImage?: string
+
+			cardBackground?: CardBackground
+			cardColor?: string
 			avatar?: AvatarSource
-			name?: string
-			bg_variant?: BgVariant
-			bg_color?: string
+
+			region?: string
 		}
 	) {
 		if (Object.keys(data).length === 0) {
 			return { error: 'No valid fields to update' }
 		}
 
-		return prisma.userSettings.upsert({
-			where: { userId },
-			update: data,
-			create: {
-				userId,
-				...data,
+		const { public_profile, region, ...customization } = data
+
+		const [settings, userCustomization] = await Promise.all([
+			public_profile !== undefined
+				? prisma.userSettings.upsert({
+						where: { userId },
+						update: { public_profile },
+						create: { userId, public_profile },
+					})
+				: Promise.resolve(null),
+			Object.keys(customization).length > 0
+				? prisma.userCustomization.upsert({
+						where: { userId },
+						update: customization,
+						create: { userId, ...customization },
+					})
+				: Promise.resolve(null),
+		])
+
+		if (region) {
+			const user = await prisma.user.findUnique({
+				where: { id: userId },
+				include: { EXBOAuth: true },
+			})
+
+			if (user?.EXBOAuth) {
+				await prisma.eXBOAuth.update({
+					where: { id: user.EXBOAuth.id },
+					data: { region, region_changed_at: new Date() },
+				})
+
+				try {
+					const { access_token } = decryptSecretJson<{
+						access_token: string
+					}>(user.EXBOAuth.token_blob)
+					if (access_token) {
+						await clanService.detectFromExboCharacters(
+							userId,
+							region,
+							access_token
+						)
+					}
+				} catch {
+					// no block
+				}
+			}
+		}
+
+		return { settings, userCustomization }
+	}
+
+	async updateProfile(
+		userId: number,
+		data: {
+			name?: string
+			username?: string
+		}
+	) {
+		const user = await prisma.user.findUnique({
+			where: { id: userId },
+			select: { username_changed_at: true },
+		})
+		if (!user) return { error: 'User not found' }
+
+		if (data.username) {
+			const daysSinceLastChange = Math.floor(
+				(Date.now() - user.username_changed_at.getTime()) /
+					(1000 * 60 * 60 * 24)
+			)
+			if (daysSinceLastChange < USERNAME_COOLDOWN_DAYS) {
+				const daysLeft = USERNAME_COOLDOWN_DAYS - daysSinceLastChange
+				return {
+					error: `Username can be changed once every ${USERNAME_COOLDOWN_DAYS} days. ${daysLeft} days remaining.`,
+				}
+			}
+
+			const existing = await prisma.user.findUnique({
+				where: { username: data.username },
+				select: { id: true },
+			})
+			if (existing) return { error: 'Username is already taken' }
+		}
+
+		const updateData: {
+			name?: string
+			username?: string
+			username_changed_at?: Date
+		} = {}
+		if (data.name) updateData.name = data.name
+		if (data.username) {
+			updateData.username = data.username
+			updateData.username_changed_at = new Date()
+		}
+
+		if (Object.keys(updateData).length === 0) {
+			return { error: 'No valid fields to update' }
+		}
+
+		return prisma.user.update({
+			where: { id: userId },
+			data: updateData,
+			select: {
+				id: true,
+				username: true,
+				name: true,
+				username_changed_at: true,
 			},
 		})
+	}
+
+	async completeOnboarding(
+		userId: number,
+		data: {
+			name?: string
+			username?: string
+			region?: string
+			layout?: UserLayout
+			bannerMode?: BannerMode
+			bannerType?: BannerType
+			bannerColor?: string
+			bannerImage?: string
+			cardBackground?: CardBackground
+			cardColor?: string
+		}
+	) {
+		const user = await prisma.user.findUnique({
+			where: { id: userId },
+			include: { EXBOAuth: true },
+		})
+		if (!user) return { error: 'User not found' }
+
+		if (data.username) {
+			const existing = await prisma.user.findUnique({
+				where: { username: data.username },
+				select: { id: true },
+			})
+			if (existing && existing.id !== userId) {
+				return { error: 'Username is already taken' }
+			}
+		}
+
+		const userUpdate: {
+			name?: string
+			username?: string
+			username_changed_at?: Date
+			onboarded: boolean
+		} = { onboarded: true }
+		if (data.name) userUpdate.name = data.name
+		if (data.username) {
+			userUpdate.username = data.username
+			userUpdate.username_changed_at = new Date()
+		}
+
+		const customization: Record<string, unknown> = {}
+		if (data.layout) customization.layout = data.layout
+		if (data.bannerMode) customization.bannerMode = data.bannerMode
+		if (data.bannerType) customization.bannerType = data.bannerType
+		if (data.bannerColor) customization.bannerColor = data.bannerColor
+		if (data.bannerImage) customization.bannerImage = data.bannerImage
+		if (data.cardBackground)
+			customization.cardBackground = data.cardBackground
+		if (data.cardColor) customization.cardColor = data.cardColor
+
+		await Promise.all([
+			prisma.user.update({ where: { id: userId }, data: userUpdate }),
+			Object.keys(customization).length > 0
+				? prisma.userCustomization.upsert({
+						where: { userId },
+						update: customization,
+						create: { userId, ...customization },
+					})
+				: Promise.resolve(null),
+			user.EXBOAuth && data.region
+				? prisma.eXBOAuth.update({
+						where: { id: user.EXBOAuth.id },
+						data: { region: data.region, region_changed_at: new Date() },
+					})
+				: Promise.resolve(null),
+		])
+
+		if (user.EXBOAuth && data.region) {
+			try {
+				const { access_token } = decryptSecretJson<{
+					access_token: string
+				}>(user.EXBOAuth.token_blob)
+				if (access_token) {
+					await clanService.detectFromExboCharacters(
+						userId,
+						data.region,
+						access_token
+					)
+				}
+			} catch {
+				// no block
+			}
+		}
+
+		return { success: true }
 	}
 
 	async revokeSession(sessionId: string) {
@@ -112,6 +358,7 @@ class UsersService {
 			where: { id: userId },
 			include: {
 				UserSettings: true,
+				customization: true,
 				DiscordAuth: true,
 				TelegramAuth: true,
 				EXBOAuth: true,
@@ -132,9 +379,11 @@ class UsersService {
 			public_profile: user.UserSettings?.public_profile ?? false,
 			can_be_public: worksCount > 0,
 			avatar: {
-				current: user.UserSettings?.avatar?.toLowerCase() ?? 'discord',
+				current: user.customization?.avatar?.toLowerCase() ?? 'discord',
 				available,
 			},
+			region: user.EXBOAuth?.region ?? null,
+			region_changed_at: user.EXBOAuth?.region_changed_at ?? null,
 		}
 	}
 
@@ -296,20 +545,59 @@ class UsersService {
 		return { data, totalCount }
 	}
 
-	async getPublicProfile(username: string, currentUserId?: number) {
+	async getPublicProfile(username: string) {
+		return this.getPublicProfileBy({ username })
+	}
+
+	async getPublicProfileById(userId: number) {
+		return this.getPublicProfileBy({ id: userId })
+	}
+
+	private async getPublicProfileBy(where: Prisma.UserWhereInput) {
 		const user = await prisma.user.findFirst({
-			where: { username },
+			where,
 			include: {
 				UserSettings: true,
+				customization: {
+					omit: {
+						id: true,
+						userId: true,
+						createdAt: true,
+						updatedAt: true,
+					},
+				},
 				badges: true,
+				builds: {
+					select: {
+						id: true,
+						title: true,
+						tags: true,
+						created_at: true,
+						data: true,
+					},
+				},
+				articles: {
+					where: {
+						status: 'APPROVED',
+					},
+					select: {
+						id: true,
+						type: true,
+						title: true,
+						image_url: true,
+						tags: true,
+						created_at: true,
+					},
+				},
+				clanProfile: { include: { clan: true } },
+				clanHistory: {
+					orderBy: { seen_at: 'desc' },
+					take: 20,
+				},
 			},
 		})
 
 		if (!user) return null
-
-		if (currentUserId && user.id === currentUserId) {
-			return { is_self: true }
-		}
 
 		const publicProfile = user.UserSettings?.public_profile ?? false
 		if (!publicProfile) return null
@@ -344,14 +632,72 @@ class UsersService {
 		})
 
 		return {
-			userID: user.id,
+			id: user.id,
 			username: user.username,
 			name: user.name,
 			joined_at: user.joined_at,
 			stars_count,
-			badges: user.badges?.length ?? 0,
+			badges: user.badges ?? [],
+			builds: (user.builds ?? []).map((b) => ({
+				...b,
+				data: decompress(b.data),
+			})),
+			articles: user.articles ?? [],
+			clan:
+				user.clanProfile?.clan?.is_public === true
+					? publicClanPayload(user.clanProfile.clan)
+					: null,
+			clan_history: (user.clanHistory ?? []).map((h) => ({
+				id: h.id,
+				player_name: h.player_name,
+				region: h.region,
+				clan_id: h.clan_id,
+				clan_name: h.clan_name,
+				clan_tag: h.clan_tag,
+				alliance: h.alliance,
+				rank: h.rank,
+				joined_at: h.joined_at,
+				seen_at: h.seen_at,
+			})),
+			customization: user.customization,
 		}
 	}
 }
 
 export const usersService = new UsersService()
+
+function publicClanPayload(clan: {
+	id: string
+	name: string
+	tag: string
+	level: number
+	level_points: number
+	alliance: string
+	description: string
+	leader: string
+	member_count: number
+	region: string
+	status: string
+	is_public: boolean
+	recruiting: boolean
+	schedule: unknown
+	created_at: Date
+}) {
+	return {
+		id: clan.id,
+		name: clan.name,
+		tag: clan.tag,
+		level: clan.level,
+		level_points: clan.level_points,
+		alliance: clan.alliance,
+		description: clan.description,
+		leader: clan.leader,
+		member_count: clan.member_count,
+		region: clan.region,
+		status: clan.status,
+		is_public: clan.is_public,
+		recruiting: clan.recruiting,
+		schedule: normalizeSchedule(clan.schedule),
+		created_at: clan.created_at,
+	}
+}

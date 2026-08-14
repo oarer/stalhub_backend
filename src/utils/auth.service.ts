@@ -17,7 +17,11 @@ export async function assignDefaultRole(userId: number) {
 	})
 }
 
-export async function createSession(userId: number, userAgent: string, ip: string) {
+export async function createSession(
+	userId: number,
+	userAgent: string,
+	ip: string
+) {
 	const sessionId = crypto.randomUUID()
 
 	const session = await prisma.sessions.create({
@@ -42,6 +46,7 @@ export type SessionWithFullUser = Prisma.SessionsGetPayload<{
 				TelegramAuth: true
 				EXBOAuth: true
 				roles: true
+				customization: true
 			}
 		}
 	}
@@ -70,6 +75,7 @@ class AuthService {
 						TelegramAuth: true,
 						EXBOAuth: true,
 						roles: true,
+						customization: true,
 					},
 				},
 			},
@@ -110,8 +116,10 @@ class AuthService {
 		return {
 			id: u.id,
 			username: u.username,
+			username_changed_at: u.username_changed_at,
 			name: u.name,
 			joined_at: u.joined_at,
+			onboarded: u.onboarded,
 
 			settings: u.UserSettings ?? null,
 			badges: u.badges ?? [],
@@ -142,6 +150,18 @@ class AuthService {
 						}
 					: null,
 			},
+
+			customization:
+				u.customization ?? {
+					layout: 'CLASSIC',
+					bannerMode: 'NONE',
+					bannerType: 'HEADER',
+					bannerColor: '#171717',
+					bannerImage: null,
+					cardBackground: 'NONE',
+					cardColor: '#171717',
+					avatar: null,
+				},
 		}
 	}
 

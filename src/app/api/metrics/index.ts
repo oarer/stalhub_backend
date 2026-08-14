@@ -86,6 +86,12 @@ export const barterRequestsTotal = new Counter({
 	registers: [register],
 })
 
+export const attachmentsRequestsTotal = new Counter({
+	name: 'attachments_requests_total',
+	help: 'Total number of weapon attachments lookup requests',
+	registers: [register],
+})
+
 export const exboApiRequestsTotal = new Counter({
 	name: 'exbo_api_requests_total',
 	help: 'Total number of requests to the EXBO API',
@@ -104,6 +110,20 @@ export const appErrorsTotal = new Counter({
 	name: 'app_errors_total',
 	help: 'Total number of application errors',
 	labelNames: ['type'],
+	registers: [register],
+})
+
+export const aiAnalysisTotal = new Counter({
+	name: 'ai_analysis_total',
+	help: 'Total AI screenshot analyses',
+	labelNames: ['status'],
+	registers: [register],
+})
+
+export const aiAnalysisDuration = new Histogram({
+	name: 'ai_analysis_duration_seconds',
+	help: 'AI analysis duration in seconds',
+	buckets: [1, 5, 10, 30, 60],
 	registers: [register],
 })
 

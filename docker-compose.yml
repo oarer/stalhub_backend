@@ -8,17 +8,33 @@ services:
       - .env
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      NO_PROXY: localhost,127.0.0.1,::1,app,host.docker.internal
+      no_proxy: localhost,127.0.0.1,::1,app,host.docker.internal
     depends_on:
       redis:
         condition: service_healthy
       postgres:
         condition: service_healthy
-    command: ["sh", "-c", "bun run db:deploy && ./server"]
+    command: [ "sh", "-c", "bun run db:deploy && ./server" ]
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      test: [ "CMD", "bun", "-e", "fetch('http://localhost:3001/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" ]
       interval: 10s
       timeout: 3s
       retries: 5
+
+  discord-bot:
+    build: ./discord-bot
+    container_name: StalHub_discord_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      BACKEND_URL: http://app:3001
+      NO_PROXY: localhost,127.0.0.1,::1,app,host.docker.internal
+      no_proxy: localhost,127.0.0.1,::1,app,host.docker.internal
+    depends_on:
+      app:
+        condition: service_healthy
 
   redis:
     image: redis:7-alpine
@@ -26,9 +42,9 @@ services:
     restart: unless-stopped
     volumes:
       - redis_data:/data
-    command: ["redis-server", "--appendonly", "yes"]
+    command: [ "redis-server", "--appendonly", "yes" ]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 3s
       timeout: 5s
       retries: 5
@@ -46,7 +62,7 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -71,8 +87,8 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
     environment:
-      GF_SERVER_ROOT_URL: https://grafana.stalhub.tech
-      GF_SERVER_DOMAIN: grafana.stalhub.tech
+      GF_SERVER_ROOT_URL: https://grafana.stalhub.dev
+      GF_SERVER_DOMAIN: grafana.stalhub.dev
       GF_SERVER_SERVE_FROM_SUB_PATH: "false"
       GF_SECURITY_ALLOW_EMBEDDING: "true"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
@@ -87,16 +103,6 @@ services:
       - /:/host:ro,rslave
     command:
       - "--path.rootfs=/host"
-
-  postgres-exporter:
-    image: prometheuscommunity/postgres-exporter:latest
-    container_name: StalHub_postgres_exporter
-    restart: unless-stopped
-    environment:
-      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest

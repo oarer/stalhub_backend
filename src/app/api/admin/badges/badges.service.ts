@@ -47,7 +47,15 @@ class BadgesService {
 		})
 	}
 
-	async update(badgeId: number, data: { name?: string; icon?: string; color?: string; image?: string | null }) {
+	async update(
+		badgeId: number,
+		data: {
+			name?: string
+			icon?: string
+			color?: string
+			image?: string | null
+		}
+	) {
 		const existing = await prisma.userBadges.findUnique({
 			where: { id: badgeId },
 		})
@@ -58,7 +66,8 @@ class BadgesService {
 			const nameTaken = await prisma.userBadges.findFirst({
 				where: { name: data.name, id: { not: badgeId } },
 			})
-			if (nameTaken) return { error: 'Badge with this name already exists' }
+			if (nameTaken)
+				return { error: 'Badge with this name already exists' }
 		}
 
 		return prisma.userBadges.update({
@@ -99,9 +108,7 @@ class BadgesService {
 			include: { badges: true },
 		})
 
-		const alreadyAssigned = userBadges?.badges.some(
-			(b) => b.id === badgeId
-		)
+		const alreadyAssigned = userBadges?.badges.some((b) => b.id === badgeId)
 
 		if (alreadyAssigned) {
 			return { error: 'User already has this badge' }

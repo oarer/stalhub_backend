@@ -3,6 +3,7 @@ import { apiClient } from '@/app/interceptors/sc.interceptor'
 import { prisma } from '@/lib/prisma'
 import type { PlayerResponse, Stat } from '@/types/player.type'
 import { fromStore, requireAuth } from '@/utils/auth.guard'
+import { decryptSecretJson } from '@/utils/crypto'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 import * as cache from './cache'
@@ -18,11 +19,13 @@ const ALLOWED_STAT_IDS = new Set([
 	'sho-hea',
 ])
 
-function decodeTokenBlob(tokenBlob: string) {
-	return JSON.parse(Buffer.from(tokenBlob, 'base64').toString('utf-8')) as {
-		access_token: string
-		refresh_token?: string
-	}
+interface TokenBlob {
+	access_token: string
+	refresh_token?: string
+}
+
+function decodeTokenBlob(tokenBlob: string): TokenBlob {
+	return decryptSecretJson<TokenBlob>(tokenBlob)
 }
 
 interface CharacterInformation {
@@ -66,9 +69,7 @@ function filterPlayerResponse(raw: PlayerResponse): PlayerResponse {
 }
 
 export const exboRoutes = createElysia().group('/exbo', (app) =>
-	app
-		.use(jwtPlugin)
-		.get(
+	app.use(jwtPlugin).get(
 		'/:region/characters',
 		async ({ params, store, set }) => {
 			const { userId } = fromStore(store)
@@ -118,7 +119,11 @@ export const exboRoutes = createElysia().group('/exbo', (app) =>
 					)
 
 					const filtered = filterPlayerResponse(raw)
-					await cache.setProfile(params.region, char.information.name, filtered)
+					await cache.setProfile(
+						params.region,
+						char.information.name,
+						filtered
+					)
 					profiles.push(filtered)
 				} catch {
 					profiles.push({

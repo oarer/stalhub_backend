@@ -2,14 +2,12 @@ import { t } from 'elysia'
 import { prisma } from '@/lib/prisma'
 import { createElysia } from '@/utils/elysia'
 
-const DISCORD_CDN = 'https://cdn.discordapp.com'
-
 type AvatarProvider = 'discord' | 'telegram'
 
 function buildDiscordUrl(discordId: string, avatarId: string) {
 	const ext = avatarId.startsWith('a_') ? 'gif' : 'png'
 
-	return `${DISCORD_CDN}/avatars/${discordId}/${avatarId}.${ext}?size=1024`
+	return `https://cdn.discordapp.com/avatars/${discordId}/${avatarId}.${ext}?size=1024`
 }
 
 function escapeXml(value: string) {

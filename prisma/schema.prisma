@@ -39,6 +39,29 @@ enum BgVariant {
   NONE
 }
 
+enum CardBackground {
+  COLOR
+  AVATAR
+  NONE
+}
+
+enum BannerMode {
+  COLOR
+  IMAGE
+  NONE
+}
+
+enum BannerType {
+  BACKGROUND
+  HEADER
+}
+
+enum UserLayout {
+  CLASSIC
+  MODERN
+  COMPACT
+}
+
 enum ArticleStatus {
   PENDING
   APPROVED
@@ -54,19 +77,48 @@ enum ArticleType {
   STALHUB
 }
 
+enum ClanStatus {
+  FROZEN
+  ACTIVE
+}
+
+enum StageType {
+  TOURNAMENT
+  BRAWL
+  BASE_CAPTURE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum SquadMap {
+  SMALL_BERDOVKA
+  KHVOUINOY
+  NIZINA
+}
+
+enum GoldDropStatus {
+  PENDING
+  CLAIMED
+}
+
 // ================ USER MODEL ===================
 model User {
-  id       Int    @id @default(autoincrement())
-  username String @unique @default("")
-  name     String @default("") // display name
+  id                  Int      @id @default(autoincrement())
+  username            String   @unique @default("")
+  username_changed_at DateTime @default(now())
+  name                String   @default("") // display name
+  onboarded           Boolean  @default(false)
 
-  sessions Sessions[]
-
-  UserSettings UserSettings?
-
-  joined_at DateTime @default(now())
-
-  notifications Notifications[] @relation("Notifications")
+  sessions      Sessions[]
+  UserSettings  UserSettings?
+  customization UserCustomization?
+  notifications Notifications[]    @relation("Notifications")
+  joined_at     DateTime           @default(now())
 
   roles Role[]
 
@@ -81,6 +133,14 @@ model User {
   articles Article[]
   stars    Star[]
   comments ArticleComment[]
+
+  clanProfile   UserClanProfile?
+  loadout       UserLoadout?
+  absences      Absence[]
+  clanMembers   ClanMember[]
+  stageSessions StageSession[]
+  attendance    StageAttendance[]
+  clanHistory   ClanHistory[]
 }
 
 model UserBadges {
@@ -106,6 +166,26 @@ model UserSettings {
   avatar     AvatarSource?
 
   public_profile Boolean @default(false)
+}
+
+model UserCustomization {
+  id     Int  @id @default(autoincrement())
+  userId Int  @unique
+  User   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  layout UserLayout @default(CLASSIC)
+
+  bannerMode  BannerMode @default(NONE)
+  bannerType  BannerType @default(HEADER)
+  bannerColor String     @default("#171717")
+  bannerImage String?
+
+  cardBackground CardBackground @default(NONE)
+  cardColor      String         @default("#171717")
+  avatar         AvatarSource?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Sessions {
@@ -196,6 +276,9 @@ model EXBOAuth {
 
   token_blob String
 
+  region            String?
+  region_changed_at DateTime?
+
   access_expires_at  DateTime
   refresh_expires_at DateTime?
 
@@ -244,9 +327,9 @@ model Article {
   status_reason String?
   type          ArticleType   @default(OTHER)
 
-  title      String
-  content    String
-  image_url  String?
+  title     String
+  content   String
+  image_url String?
 
   rewards Json?
 
@@ -256,8 +339,8 @@ model Article {
   author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId Int
 
-  versions     ArticleVersion[]
-  comments     ArticleComment[]
+  versions ArticleVersion[]
+  comments ArticleComment[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -279,8 +362,8 @@ model ArticleVersion {
 }
 
 model ArticleComment {
-  id        Int    @id @default(autoincrement())
-  content   String
+  id      Int    @id @default(autoincrement())
+  content String
 
   author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId Int
@@ -288,7 +371,7 @@ model ArticleComment {
   article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
   articleId Int
 
-  parent   ArticleComment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  parent   ArticleComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   parentId Int?
   replies  ArticleComment[] @relation("CommentReplies")
 
@@ -338,6 +421,322 @@ model PlayerBlacklist {
   id        String   @id @default(cuid())
   uuid      String   @unique
   createdAt DateTime @default(now())
+}
+
+// ================ CLAN ANALYTICS ===================
+
+model Clan {
+  id           String     @id // EXBO clan id
+  name         String
+  tag          String     @default("")
+  level        Int        @default(0)
+  level_points Int        @default(0)
+  alliance     String     @default("")
+  description  String     @default("")
+  leader       String     @default("")
+  member_count Int        @default(0)
+  region       String     @default("RU")
+  status       ClanStatus @default(FROZEN)
+
+  is_public     Boolean @default(false)
+  recruiting    Boolean @default(false)
+  public_fields Json    @default("[]")
+
+  blocked      Boolean   @default(false)
+  block_reason String?
+  blocked_at   DateTime?
+
+  schedule Json?
+
+  members  ClanMember[]
+  sessions StageSession[]
+  squads   ClanSquad[]
+  profile  UserClanProfile[]
+
+  synced_at  DateTime @updatedAt
+  created_at DateTime @default(now())
+
+  @@map("clans")
+}
+
+model ClanMember {
+  id        Int       @id @default(autoincrement())
+  clan      Clan      @relation(fields: [clanId], references: [id], onDelete: Cascade)
+  clanId    String
+  name      String
+  rank      String    @default("")
+  join_time DateTime?
+
+  user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId Int?  @unique
+
+  synced_at        DateTime           @updatedAt
+  clanSquadMembers ClanSquadMember[]
+  squadRequests    ClanSquadRequest[]
+  goldAttendances  GoldDropAttendee[]
+
+  @@unique([clanId, name])
+  @@map("clan_members")
+}
+
+model ClanHistory {
+  id Int @id @default(autoincrement())
+
+  player_name String
+  region      String @default("RU")
+
+  clan_id   String
+  clan_name String
+  clan_tag  String @default("")
+  alliance  String @default("")
+
+  rank      String    @default("")
+  joined_at DateTime?
+
+  seen_at DateTime @default(now())
+
+  user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId Int?
+
+  @@index([userId, seen_at])
+  @@index([player_name, seen_at])
+  @@map("clan_history")
+}
+
+model UserClanProfile {
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int     @id
+  clan   Clan?   @relation(fields: [clanId], references: [id], onDelete: SetNull)
+  clanId String?
+  region String  @default("RU")
+
+  updated_at DateTime @updatedAt
+
+  @@map("user_clan_profile")
+}
+
+// ================ STAGE SESSIONS / AI ANALYSIS ===================
+
+model StageSession {
+  id           Int       @id @default(autoincrement())
+  external_id  String    @unique @default(cuid())
+  region       String    @default("RU")
+  map_name     String
+  type         StageType @default(TOURNAMENT)
+  started_at   DateTime  @default(now())
+  ended_at     DateTime?
+  stage_number Int?
+
+  creator   User?   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId Int?
+  clan      Clan?   @relation(fields: [clanId], references: [id], onDelete: SetNull)
+  clanId    String?
+
+  screenshots StageScreenshot[]
+  attendance  StageAttendance[]
+  ai_summary  Json?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("stage_sessions")
+}
+
+model StageScreenshot {
+  id        Int          @id @default(autoincrement())
+  session   StageSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId Int
+
+  file_path  String
+  mime_type  String @default("image/png")
+  size_bytes Int    @default(0)
+
+  ai_result Json?
+  ai_status String  @default("pending")
+  ai_error  String?
+
+  created_at DateTime @default(now())
+
+  @@map("stage_screenshots")
+}
+
+model StageAttendance {
+  id        Int          @id @default(autoincrement())
+  session   StageSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId Int
+  name      String       @default("")
+  user      User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int?
+
+  status AttendanceStatus @default(PRESENT)
+  source String           @default("ai") // ai | manual
+  note   String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([sessionId, name])
+  @@map("stage_attendance")
+}
+
+// ================ CLAN SQUADS ===================
+
+model ClanSquad {
+  id        Int      @id @default(autoincrement())
+  clanId    String
+  map       SquadMap @default(SMALL_BERDOVKA)
+  name      String
+  createdBy Int
+
+  leaderId Int?             @unique
+  leader   ClanSquadMember? @relation("SquadLeader", fields: [leaderId], references: [id], onDelete: SetNull)
+
+  clan     Clan               @relation(fields: [clanId], references: [id], onDelete: Cascade)
+  members  ClanSquadMember[]
+  requests ClanSquadRequest[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([clanId, map, name])
+  @@map("clan_squads")
+}
+
+model ClanSquadMember {
+  id      Int @id @default(autoincrement())
+  squadId Int
+  slot    Int
+
+  memberId Int
+  member   ClanMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  squad     ClanSquad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  leaderFor ClanSquad? @relation("SquadLeader")
+
+  @@unique([squadId, slot])
+  @@unique([squadId, memberId])
+  @@map("clan_squad_members")
+}
+
+model ClanSquadRequest {
+  id       Int @id @default(autoincrement())
+  squadId  Int
+  memberId Int
+
+  squad  ClanSquad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  member ClanMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+
+  @@unique([squadId, memberId])
+  @@map("clan_squad_requests")
+}
+
+// ================ GOLD DROPS ===================
+
+model GoldDrop {
+  id     Int            @id @default(autoincrement())
+  clanId String
+  date   DateTime
+  status GoldDropStatus @default(PENDING)
+
+  attendees GoldDropAttendee[]
+
+  created_at DateTime @default(now())
+
+  @@index([clanId, date])
+  @@map("gold_drops")
+}
+
+model GoldDropAttendee {
+  id       Int @id @default(autoincrement())
+  dropId   Int
+  memberId Int
+
+  drop   GoldDrop   @relation(fields: [dropId], references: [id], onDelete: Cascade)
+  member ClanMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([dropId, memberId])
+  @@map("gold_drop_attendees")
+}
+
+// ================ ABSENCES (отписки) ===================
+
+model Absence {
+  id     Int     @id @default(autoincrement())
+  clanId String
+  userId Int
+  date   String
+  events Json
+  note   String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([clanId, date])
+  @@map("absences")
+}
+
+// ================ DISCORD BOT GUILDS ===================
+
+model BotGuild {
+  id                 Int     @id @default(autoincrement())
+  guild_id           String  @unique
+  clan_id            String
+  allowed_role_id    String?
+  publish_time       String? // HH:MM MSK
+  publish_channel_id String?
+  linked_by          String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("bot_guilds")
+}
+
+model BotLinkState {
+  id         String   @id @default(cuid())
+  token      String   @unique
+  clan_id    String
+  user_id    Int?
+  expires_at DateTime
+
+  created_at DateTime @default(now())
+
+  @@map("bot_link_states")
+}
+
+// ================ GRENADE SNAPSHOTS ===================
+
+model GrenadeSnapshot {
+  id         Int       @id @default(autoincrement())
+  clanId     String
+  event_type StageType
+  checkpoint String
+  raid_date  DateTime
+  members    Json
+
+  created_at DateTime @default(now())
+
+  @@index([clanId, raid_date])
+  @@map("grenade_snapshots")
+}
+
+// ================ LOADOUT ===================
+
+model UserLoadout {
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int  @id
+
+  data      Json    @default("{}")
+  is_public Boolean @default(false)
+
+  updated_at DateTime @updatedAt
+
+  @@map("user_loadout")
 }
 
 // всё будет хорошо

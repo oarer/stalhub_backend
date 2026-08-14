@@ -22,8 +22,16 @@ export const routeBarter = createElysia()
 		})
 	)
 	.onStart(async () => {
-		await loadListing()
-		await loadBarter()
+		try {
+			await loadListing()
+			await loadBarter()
+		} catch (err) {
+			console.error('[Barter] Failed to load data on start, will retry:', err)
+			setTimeout(
+				() => loadListing().then(() => loadBarter()).catch(() => {}),
+				60_000
+			)
+		}
 	})
 	.get('/barter/:itemId', async ({ params, status }) => {
 		const { itemId } = params

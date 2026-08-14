@@ -29,7 +29,7 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
-.env
+.env*
 
 # vercel
 .vercel
@@ -45,4 +45,6 @@ package-lock.json
 test.*
 /generated/prisma
 
-/generated/prisma
+/uploads
+
+/discord-bot/node_modules

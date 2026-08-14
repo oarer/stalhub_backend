@@ -21,7 +21,10 @@ class RoleService {
 		})
 	}
 
-	async update(id: number, data: { name?: string; description?: string; rank?: number }) {
+	async update(
+		id: number,
+		data: { name?: string; description?: string; rank?: number }
+	) {
 		const existing = await prisma.role.findUnique({ where: { id } })
 		if (!existing) return null
 
@@ -29,7 +32,9 @@ class RoleService {
 			where: { id },
 			data: {
 				...(data.name !== undefined && { name: data.name }),
-				...(data.description !== undefined && { description: data.description }),
+				...(data.description !== undefined && {
+					description: data.description,
+				}),
 				...(data.rank !== undefined && { rank: data.rank }),
 			},
 		})

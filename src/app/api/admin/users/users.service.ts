@@ -1,6 +1,50 @@
+import { usersService } from '@/app/api/users/users.service'
 import { prisma } from '@/lib/prisma'
 
 class AdminUserService {
+	async updateCustomization(
+		userId: number,
+		data: {
+			bannerMode?: 'COLOR' | 'IMAGE' | 'NONE'
+			bannerType?: 'BACKGROUND' | 'HEADER'
+			bannerColor?: string
+			bannerImage?: string | null
+		}
+	) {
+		const existing = await prisma.user.findUnique({ where: { id: userId } })
+		if (!existing) return null
+
+		const updateData: Record<string, unknown> = {}
+		if (data.bannerMode !== undefined)
+			updateData.bannerMode = data.bannerMode
+		if (data.bannerType !== undefined)
+			updateData.bannerType = data.bannerType
+		if (data.bannerColor !== undefined)
+			updateData.bannerColor = data.bannerColor
+		if (data.bannerImage !== undefined)
+			updateData.bannerImage = data.bannerImage
+
+		if (Object.keys(updateData).length === 0) {
+			return { error: 'No valid fields to update' }
+		}
+
+		return prisma.userCustomization.upsert({
+			where: { userId },
+			update: updateData,
+			create: { userId, ...updateData },
+		})
+	}
+
+	async saveBanner(
+		userId: number,
+		file: { name: string; type: string; buffer: Buffer }
+	) {
+		const existing = await prisma.user.findUnique({ where: { id: userId } })
+		if (!existing) return null
+
+		return usersService.saveBanner(userId, file)
+	}
+
 	async getUserMaxRank(userId: number): Promise<number> {
 		const user = await prisma.user.findUnique({
 			where: { id: userId },
@@ -66,7 +110,7 @@ class AdminUserService {
 			prisma.user.count({ where }),
 		])
 
-		return { data, totalCount }
+		return { data, total: totalCount }
 	}
 
 	async get(userId: number) {
@@ -74,6 +118,7 @@ class AdminUserService {
 			where: { id: userId },
 			include: {
 				UserSettings: true,
+				customization: true,
 				DiscordAuth: true,
 				TelegramAuth: true,
 				EXBOAuth: true,

@@ -1,5 +1,5 @@
 <div align="center">
-  <a href="https://stalhub.tech">
+  <a href="https://stalhub.dev">
     <picture>
       <img alt="StalHub logo" src="https://github.com/oarer/stalhub/raw/main/public/svg/dark/logo.svg" height="128" />
     </picture>

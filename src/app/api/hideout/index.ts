@@ -12,7 +12,12 @@ export const routeHideout = createElysia()
 		})
 	)
 	.onStart(async () => {
-		await loadHideoutData()
+		try {
+			await loadHideoutData()
+		} catch (err) {
+			console.error('[Hideout] Failed to load data on start, will retry:', err)
+			setTimeout(() => loadHideoutData().catch(() => {}), 60_000)
+		}
 		updatePrices().catch((err) =>
 			console.error('[Hideout] Initial price update failed:', err)
 		)

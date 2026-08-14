@@ -1,10 +1,17 @@
 import { t } from 'elysia'
-import { AvatarSource, BgVariant } from 'generated/prisma/enums'
+import {
+	AvatarSource,
+	BannerMode,
+	BannerType,
+	CardBackground,
+	UserLayout,
+} from 'generated/prisma/enums'
+import { Regions } from '@/types/api.type'
 import {
 	fromStore,
-	fromStoreOpt,
 	requireAuth,
 	requireOptionalAuth,
+	requireRefreshAuth,
 } from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
@@ -19,25 +26,6 @@ const cookieSchema = t.Cookie({
 	refresh_token: t.Optional(t.String()),
 	access_token: t.Optional(t.String()),
 })
-
-async function requireRefreshAuth({
-	cookie: { refresh_token },
-	jwt,
-	set,
-	store,
-}: any) {
-	const payload = await jwt.verify(refresh_token?.value)
-	if (
-		!payload ||
-		typeof payload.sub !== 'string' ||
-		typeof payload.sid !== 'string'
-	) {
-		set.status = 401
-		return { error: 'Unauthorized' }
-	}
-	store.authUserId = Number(payload.sub)
-	store.authSessionId = payload.sid
-}
 
 export const usersRoutes = createElysia().group('/users', (app) =>
 	app
@@ -57,7 +45,66 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.patch(
 			'/@me',
 			async ({ body, store, set }) => {
-				const result = await usersService.updateSettings(
+				const { name, username, ...settingsData } = body
+				const userId = fromStore(store).userId
+
+				if (name !== undefined || username !== undefined) {
+					const result = await usersService.updateProfile(userId, {
+						name,
+						username,
+					})
+					if ('error' in result) {
+						set.status = 400
+						return result
+					}
+				}
+
+				if (Object.keys(settingsData).length > 0) {
+					const result = await usersService.updateSettings(
+						userId,
+						settingsData
+					)
+					if ('error' in result) {
+						set.status = 400
+						return result
+					}
+				}
+
+				return usersService.getMe(fromStore(store).sessionId)
+			},
+			{
+				beforeHandle: [requireAuth],
+				body: t.Object({
+					public_profile: t.Optional(t.Boolean()),
+					layout: t.Optional(t.Enum(UserLayout)),
+					avatar: t.Optional(t.Enum(AvatarSource)),
+					region: t.Optional(t.Enum(Regions)),
+
+					bannerMode: t.Optional(t.Enum(BannerMode)),
+					bannerType: t.Optional(t.Enum(BannerType)),
+					bannerColor: t.Optional(t.String()),
+					bannerImage: t.Optional(t.String()),
+
+					cardBackground: t.Optional(t.Enum(CardBackground)),
+					cardColor: t.Optional(t.String()),
+
+					name: t.Optional(t.String({ minLength: 1 })),
+					username: t.Optional(
+						t.String({
+							minLength: 3,
+							maxLength: 32,
+							pattern: '^[a-zA-Z0-9_]+$',
+						})
+					),
+				}),
+				detail: { tags: ['Users'] },
+			}
+		)
+
+		.post(
+			'/@me/onboarding',
+			async ({ body, store, set }) => {
+				const result = await usersService.completeOnboarding(
 					fromStore(store).userId,
 					body
 				)
@@ -65,16 +112,31 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					set.status = 400
 					return result
 				}
-				return result
+
+				return usersService.getMe(fromStore(store).sessionId)
 			},
 			{
 				beforeHandle: [requireAuth],
 				body: t.Object({
-					public_profile: t.Optional(t.Boolean()),
+					name: t.Optional(t.String({ minLength: 1 })),
+					username: t.Optional(
+						t.String({
+							minLength: 3,
+							maxLength: 32,
+							pattern: '^[a-zA-Z0-9_]+$',
+						})
+					),
+					region: t.Optional(t.Enum(Regions)),
+					layout: t.Optional(t.Enum(UserLayout)),
 					avatar: t.Optional(t.Enum(AvatarSource)),
-					name: t.Optional(t.String()),
-					bg_variant: t.Optional(t.Enum(BgVariant)),
-					bg_color: t.Optional(t.String()),
+
+					bannerMode: t.Optional(t.Enum(BannerMode)),
+					bannerType: t.Optional(t.Enum(BannerType)),
+					bannerColor: t.Optional(t.String()),
+					bannerImage: t.Optional(t.String()),
+
+					cardBackground: t.Optional(t.Enum(CardBackground)),
+					cardColor: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Users'] },
 			}
@@ -281,11 +343,27 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		)
 
 		.get(
+			'/id/:id',
+			async ({ params, set }) => {
+				const data = await usersService.getPublicProfileById(params.id)
+				if (!data) {
+					set.status = 404
+					return { error: 'User not found' }
+				}
+				return data
+			},
+			{
+				beforeHandle: [requireOptionalAuth],
+				params: t.Object({ id: t.Numeric() }),
+				detail: { tags: ['Users'] },
+			}
+		)
+
+		.get(
 			'/:username',
-			async ({ params, store, set }) => {
+			async ({ params, set }) => {
 				const data = await usersService.getPublicProfile(
-					params.username,
-					fromStoreOpt(store).userId
+					params.username
 				)
 				if (!data) {
 					set.status = 404
@@ -296,6 +374,37 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			{
 				beforeHandle: [requireOptionalAuth],
 				params: t.Object({ username: t.String() }),
+				detail: { tags: ['Users'] },
+			}
+		)
+
+		.post(
+			'/@me/banner',
+			async ({ body, store, set }) => {
+				const file = body.file
+				const buf = Buffer.from(await file.arrayBuffer())
+
+				try {
+					return await usersService.saveBanner(
+						fromStore(store).userId,
+						{
+							name: file.name,
+							type: file.type,
+							buffer: buf,
+						}
+					)
+				} catch (err) {
+					set.status = 400
+					return { error: (err as Error).message }
+				}
+			},
+			{
+				beforeHandle: [requireAuth],
+				body: t.Object({
+					file: t.File({
+						type: ['image/png', 'image/jpeg', 'image/webp'],
+					}),
+				}),
 				detail: { tags: ['Users'] },
 			}
 		)
