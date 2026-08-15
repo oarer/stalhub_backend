@@ -249,9 +249,9 @@ export const buildAggregate = (
 	}
 }
 
-export const updateRegion = async (region: string): Promise<void> => {
+export const updateRegion = async (region: string): Promise<number> => {
 	const gotLock = await acquireLock(region)
-	if (!gotLock) return
+	if (!gotLock) return 0
 
 	try {
 		const itemIds = await fetchListing()
@@ -273,17 +273,66 @@ export const updateRegion = async (region: string): Promise<void> => {
 		const traded = Object.keys(aggregate.items).length
 
 		if (traded > 0) {
-			await setRegionCache(region, aggregate)
+			setRegionCache(region, aggregate)
 		}
 
 		console.log(
 			`[Artifacts] ${region} updated: ${traded}/${itemIds.length} traded items`
 		)
+
+		return traded
 	} finally {
 		await releaseLock(region)
 	}
 }
 
-export const updateAllRegions = async (): Promise<void> => {
-	await Promise.all(SUPPORTED_REGIONS.map((region) => updateRegion(region)))
+const MAX_RETRIES = 5
+const RETRY_DELAY_MS = 60_000
+
+let updatePromise: Promise<number> | null = null
+let retryTimer: ReturnType<typeof setTimeout> | null = null
+
+const scheduleRetry = (attempt: number) => {
+	if (retryTimer) {
+		clearTimeout(retryTimer)
+		retryTimer = null
+	}
+
+	if (attempt >= MAX_RETRIES) return
+
+	console.warn(
+		`[Artifacts] Update failed, retrying in ${
+			RETRY_DELAY_MS / 1000
+		}s (${attempt + 1}/${MAX_RETRIES})`
+	)
+
+	retryTimer = setTimeout(() => {
+		retryTimer = null
+		updateAllRegions(attempt + 1)
+	}, RETRY_DELAY_MS)
+}
+
+export const updateAllRegions = async (attempt = 0): Promise<number> => {
+	if (updatePromise) return updatePromise
+
+	updatePromise = (async () => {
+		try {
+			const results = await Promise.all(
+				SUPPORTED_REGIONS.map((region) => updateRegion(region))
+			)
+			const traded = results.reduce((total, value) => total + value, 0)
+
+			if (traded === 0) scheduleRetry(attempt)
+
+			return traded
+		} catch (err) {
+			console.error('Failed to update artifacts prices:', err)
+			scheduleRetry(attempt)
+			return 0
+		}
+	})().finally(() => {
+		updatePromise = null
+	})
+
+	return updatePromise
 }

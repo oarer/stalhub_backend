@@ -4,7 +4,7 @@ import type {
 	ArtifactPriceResult,
 	ArtifactPricesResponse,
 } from '@/types/artifacts.type'
-import { SUPPORTED_REGIONS, updateRegion } from './aggregate'
+import { SUPPORTED_REGIONS, updateAllRegions } from './aggregate'
 import { getRegionCache } from './cache'
 import { resolveArtifactPrice } from './pricing'
 
@@ -18,11 +18,11 @@ const priceRequestSchema = t.Array(
 
 export const artifactsRoutes = new Elysia()
 	.onStart(async () => {
-		for (const region of SUPPORTED_REGIONS) {
-			const cached = await getRegionCache(region)
-			if (!cached) {
-				await updateRegion(region)
-			}
+		const missing = SUPPORTED_REGIONS.filter(
+			(region) => !getRegionCache(region)
+		)
+		if (missing.length > 0) {
+			await updateAllRegions()
 		}
 	})
 	.group('/artifacts-prices', (group) =>

@@ -181,11 +181,7 @@ export const crons = createElysia()
 			pattern: '0 0,12 * * *',
 			timezone: 'Europe/Moscow',
 			async run() {
-				try {
-					await updateArtifacts()
-				} catch (err) {
-					console.error('Failed to update artifacts prices:', err)
-				}
+				await updateArtifacts()
 			},
 		})
 	)
