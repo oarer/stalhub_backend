@@ -9,21 +9,29 @@ export class AuctionService {
 		id,
 		limit = '10',
 		additional = 'true',
+		offset = '0',
 	}: {
 		region: string
 		id: string
 		limit?: string
 		additional?: string
+		offset?: string
 	}): Promise<LotsResponse> {
-		const cached = await cache.getLots(region, id, limit, additional)
+		const cached = await cache.getLots(
+			region,
+			id,
+			limit,
+			additional,
+			offset
+		)
 		if (cached) return cached
 
 		const { data } = await apiClient.get<LotsResponse>(
 			`/${region}/auction/${id}/lots`,
-			{ params: { limit, additional } }
+			{ params: { limit, additional, offset } }
 		)
 		auctionRequestsTotal.inc({ region, type: 'lots' })
-		await cache.setLots(region, id, limit, additional, data)
+		await cache.setLots(region, id, limit, additional, offset, data)
 		return data
 	}
 
@@ -32,21 +40,29 @@ export class AuctionService {
 		id,
 		limit = '10',
 		additional = 'true',
+		offset = '0',
 	}: {
 		region: string
 		id: string
 		limit?: string
 		additional?: string
+		offset?: string
 	}): Promise<LotsHistoryResponse> {
-		const cached = await cache.getHistory(region, id, limit, additional)
+		const cached = await cache.getHistory(
+			region,
+			id,
+			limit,
+			additional,
+			offset
+		)
 		if (cached) return cached
 
 		const { data } = await apiClient.get<LotsHistoryResponse>(
 			`/${region}/auction/${id}/history`,
-			{ params: { limit, additional } }
+			{ params: { limit, additional, offset } }
 		)
 		auctionRequestsTotal.inc({ region, type: 'history' })
-		await cache.setHistory(region, id, limit, additional, data)
+		await cache.setHistory(region, id, limit, additional, offset, data)
 		return data
 	}
 }

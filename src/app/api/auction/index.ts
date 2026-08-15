@@ -12,12 +12,14 @@ export const auctionRoutes = createElysia().group('/auction', (app) =>
 
 				const limit = query.limit ?? '10'
 				const additional = query.additional ?? 'true'
+				const offset = query.offset ?? '0'
 
 				return auctionService.lots({
 					region,
 					id,
 					limit,
 					additional,
+					offset,
 				})
 			},
 			{
@@ -28,6 +30,7 @@ export const auctionRoutes = createElysia().group('/auction', (app) =>
 				query: t.Object({
 					limit: t.Optional(t.String()),
 					additional: t.Optional(t.String()),
+					offset: t.Optional(t.String()),
 				}),
 				detail: {
 					tags: ['Auction'],
@@ -41,12 +44,14 @@ export const auctionRoutes = createElysia().group('/auction', (app) =>
 
 				const limit = query.limit ?? '10'
 				const additional = query.additional ?? 'true'
+				const offset = query.offset ?? '0'
 
 				return auctionService.history({
 					region,
 					id,
 					limit,
 					additional,
+					offset,
 				})
 			},
 			{
@@ -57,6 +62,7 @@ export const auctionRoutes = createElysia().group('/auction', (app) =>
 				query: t.Object({
 					limit: t.Optional(t.String()),
 					additional: t.Optional(t.String()),
+					offset: t.Optional(t.String()),
 				}),
 				detail: {
 					tags: ['Auction'],
