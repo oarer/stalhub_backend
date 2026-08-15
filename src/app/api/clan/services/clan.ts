@@ -130,7 +130,11 @@ export class ClanService {
 		})
 		if (!profile?.clanId) throw new Error('No clan linked to user')
 
-		await this.sync(profile.clanId, profile.region)
+		try {
+			await this.sync(profile.clanId, profile.region)
+		} catch (err) {
+			console.error('[Clan] Sync skipped during register:', err)
+		}
 		await prisma.clan.update({
 			where: { id: profile.clanId },
 			data: { status: 'ACTIVE' },

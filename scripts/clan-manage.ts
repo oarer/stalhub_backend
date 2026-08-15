@@ -78,6 +78,11 @@ async function createTestClan() {
 		return
 	}
 
+	await prisma.clanMember.deleteMany({ where: { userId: USER_ID } })
+	if (existing) {
+		await prisma.userClanProfile.delete({ where: { userId: USER_ID } })
+	}
+
 	const clanId = `test-clan-${Date.now()}`
 	await prisma.clan.create({
 		data: {
@@ -117,12 +122,14 @@ async function removeClan() {
 	const profile = await prisma.userClanProfile.findUnique({
 		where: { userId: USER_ID },
 	})
-	if (!profile) {
+	const orphan = await prisma.clanMember.findFirst({
+		where: { userId: USER_ID },
+	})
+	const clanId = profile?.clanId ?? orphan?.clanId
+	if (!clanId) {
 		console.log('No clan to remove.')
 		return
 	}
-
-	const clanId = profile.clanId
 
 	await prisma.stageAttendance.deleteMany({
 		where: { session: { clanId } },

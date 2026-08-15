@@ -1,6 +1,6 @@
 import { t } from 'elysia'
-import { requireAuth } from '@/utils/auth.guard'
 import { Regions } from '@/types/api.type'
+import { requireAuth } from '@/utils/auth.guard'
 import { clanContext } from '../context'
 import { requireClanLeader, requireClanOfficer } from '../guards'
 import { clanService } from '../services/clan'
@@ -11,7 +11,7 @@ export const meRoutes = clanContext
 		detail: { tags: ['Clan'] },
 	})
 	.post('/register', ({ store }) => clanService.register(store.authUserId!), {
-		beforeHandle: [requireAuth],
+		beforeHandle: [requireAuth, requireClanLeader],
 		detail: { tags: ['Clan'] },
 	})
 	.post(

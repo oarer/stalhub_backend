@@ -57,7 +57,22 @@ export async function requireClanLeader(ctx: ClanGuardContext) {
 		where: { clanId: store.clanId, userId: store.authUserId },
 		select: { rank: true },
 	})
-	if (member?.rank !== 'LEADER') {
+	if (member?.rank === 'LEADER') return
+
+	const clan = await prisma.clan.findUnique({
+		where: { id: store.clanId },
+		select: { leader: true },
+	})
+	const auths = await prisma.eXBOAuth.findMany({
+		where: { userid: store.authUserId },
+		select: { username: true },
+	})
+	const isLeaderByNickname =
+		!!clan?.leader &&
+		auths.some(
+			(a) => a.username.toLowerCase() === clan.leader.toLowerCase()
+		)
+	if (!isLeaderByNickname) {
 		set.status = 403
 		return { error: 'Leader rank required' }
 	}

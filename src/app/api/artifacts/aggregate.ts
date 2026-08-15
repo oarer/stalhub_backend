@@ -27,6 +27,24 @@ const median = (values: number[]): number | null => {
 		: (sorted[mid - 1] + sorted[mid]) / 2
 }
 
+const withRetry = async <T>(
+	fn: () => Promise<T>,
+	attempts = 3,
+	delayMs = 1000
+): Promise<T> => {
+	let lastErr: unknown
+	for (let attempt = 1; attempt <= attempts; attempt++) {
+		try {
+			return await fn()
+		} catch (err) {
+			lastErr = err
+			if (attempt === attempts) break
+			await new Promise((r) => setTimeout(r, delayMs * attempt))
+		}
+	}
+	throw lastErr
+}
+
 const mapLimit = async <T, R>(
 	arr: readonly T[],
 	limit: number,
@@ -50,9 +68,11 @@ const mapLimit = async <T, R>(
 }
 
 export const fetchListing = async (): Promise<string[]> => {
-	const { data } = await axios.get<Record<string, unknown>>(LISTING_URL, {
-		timeout: 15_000,
-	})
+	const { data } = await withRetry(() =>
+		axios.get<Record<string, unknown>>(LISTING_URL, {
+			timeout: 15_000,
+		})
+	)
 	return Object.keys(data)
 }
 
@@ -240,7 +260,10 @@ export const updateRegion = async (region: string): Promise<void> => {
 
 		await mapLimit(itemIds, CONCURRENCY, async (itemId) => {
 			try {
-				lotGroups[itemId] = await fetchItemLots(region, itemId)
+				lotGroups[itemId] = await withRetry(
+					() => fetchItemLots(region, itemId),
+					2
+				)
 			} catch {
 				lotGroups[itemId] = []
 			}
