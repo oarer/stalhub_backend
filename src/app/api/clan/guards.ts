@@ -1,6 +1,16 @@
+import { apiClient } from '@/app/interceptors/sc.interceptor'
 import { prisma } from '@/lib/prisma'
+import { decryptSecretJson } from '@/utils/crypto'
 
 const OFFICER_RANKS = new Set(['OFFICER', 'COLONEL', 'LEADER'])
+
+interface ExboCharacterEntry {
+	information: { id: string; name: string }
+	clan?: {
+		info: { id: string }
+		member: { name: string; rank: string }
+	}
+}
 
 interface ClanGuardContext {
 	store: { authUserId?: number; clanId?: string }
@@ -53,6 +63,7 @@ export async function requireClanLeader(ctx: ClanGuardContext) {
 	if (error) return error
 
 	const { store, set } = ctx
+
 	const member = await prisma.clanMember.findFirst({
 		where: { clanId: store.clanId, userId: store.authUserId },
 		select: { rank: true },
@@ -61,19 +72,45 @@ export async function requireClanLeader(ctx: ClanGuardContext) {
 
 	const clan = await prisma.clan.findUnique({
 		where: { id: store.clanId },
-		select: { leader: true },
+		select: { leader: true, region: true },
 	})
-	const auths = await prisma.eXBOAuth.findMany({
+
+	const auth = await prisma.eXBOAuth.findUnique({
 		where: { userid: store.authUserId },
-		select: { username: true },
 	})
-	const isLeaderByNickname =
-		!!clan?.leader &&
-		auths.some(
-			(a) => a.username.toLowerCase() === clan.leader.toLowerCase()
-		)
-	if (!isLeaderByNickname) {
+	if (!auth) {
 		set.status = 403
 		return { error: 'Leader rank required' }
 	}
+
+	if (
+		clan?.leader &&
+		auth.username.toLowerCase() === clan.leader.toLowerCase()
+	) {
+		return
+	}
+
+	try {
+		const { access_token } = decryptSecretJson<{ access_token: string }>(
+			auth.token_blob
+		)
+		const { data: chars } = await apiClient.get<ExboCharacterEntry[]>(
+			`/${clan?.region ?? auth.region ?? 'RU'}/characters`,
+			{
+				headers: { Authorization: `Bearer ${access_token}` },
+				_skipAuth: true,
+			} as never
+		)
+		const isLeaderInGame = chars.some(
+			(c) =>
+				c.clan?.info?.id === store.clanId &&
+				c.clan?.member?.rank === 'LEADER'
+		)
+		if (isLeaderInGame) return
+	} catch {
+		// fall through to deny
+	}
+
+	set.status = 403
+	return { error: 'Leader rank required' }
 }
