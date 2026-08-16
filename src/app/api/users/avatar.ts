@@ -30,7 +30,6 @@ function buildFallbackAvatar(username: string) {
 			<rect
 				width="104"
 				height="104"
-				rx="52"
 				fill="#27272a"
 			/>
 
