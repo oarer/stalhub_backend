@@ -1,5 +1,6 @@
 import { apiClient } from '@/app/interceptors/sc.interceptor'
 import { prisma } from '@/lib/prisma'
+import { decryptSecretJson } from '@/utils/crypto'
 
 interface ExboCharacterEntry {
 	information: { id: string; name: string }
@@ -156,10 +157,20 @@ export class ClanService {
 		const { data: info } = await apiClient.get<ExboClanInfo>(
 			`/${reg}/clan/${clanId}/info`
 		)
-		const { data: members } = await apiClient.get<ExboClanMember[]>(
-			`/${reg}/clan/${clanId}/members`,
-			{ params: { limit: 100, offset: 0 } }
-		)
+
+		const accessToken = await this.getMemberAccessToken(clanId)
+		let members: ExboClanMember[] = []
+		if (accessToken) {
+			const { data } = await apiClient.get<ExboClanMember[]>(
+				`/${reg}/clan/${clanId}/members`,
+				{
+					params: { limit: 100, offset: 0 },
+					headers: { Authorization: `Bearer ${accessToken}` },
+					_skipAuth: true,
+				} as never
+			)
+			members = data
+		}
 
 		await prisma.clan.update({
 			where: { id: clanId },
@@ -198,7 +209,32 @@ export class ClanService {
 				},
 			})
 		}
-		return { clanId, memberCount: members.length }
+		return { clanId, memberCount: members.length, membersSynced: !!accessToken }
+	}
+
+	private async getMemberAccessToken(clanId: string): Promise<string | null> {
+		const profiles = await prisma.userClanProfile.findMany({
+			where: { clanId },
+			include: {
+				user: {
+					include: {
+						EXBOAuth: {
+							select: { token_blob: true, access_expires_at: true },
+						},
+					},
+				},
+			},
+		})
+		for (const p of profiles) {
+			const auth = p.user.EXBOAuth
+			if (!auth) continue
+			if (auth.access_expires_at <= new Date()) continue
+			const { access_token } = decryptSecretJson<{ access_token: string }>(
+				auth.token_blob
+			)
+			if (access_token) return access_token
+		}
+		return null
 	}
 
 	async listMembers(clanId: string) {
