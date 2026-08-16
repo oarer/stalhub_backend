@@ -120,6 +120,7 @@ class AuthService {
 			name: u.name,
 			joined_at: u.joined_at,
 			onboarded: u.onboarded,
+			social_links: u.social_links ?? null,
 
 			settings: u.UserSettings ?? null,
 			badges: u.badges ?? [],

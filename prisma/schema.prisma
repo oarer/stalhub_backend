@@ -31,12 +31,7 @@ enum AvatarSource {
 enum StarTargetType {
   BUILD
   ARTICLE
-}
-
-enum BgVariant {
-  COLOR
-  AVATAR
-  NONE
+  ART
 }
 
 enum CardBackground {
@@ -77,6 +72,11 @@ enum ArticleType {
   STALHUB
 }
 
+enum ArtType {
+  DEFAULT
+  NSFW
+}
+
 enum ClanStatus {
   FROZEN
   ACTIVE
@@ -113,6 +113,7 @@ model User {
   username_changed_at DateTime @default(now())
   name                String   @default("") // display name
   onboarded           Boolean  @default(false)
+  social_links        Json?    // { network: url } record of social links
 
   sessions      Sessions[]
   UserSettings  UserSettings?
@@ -131,6 +132,7 @@ model User {
 
   builds   Build[]
   articles Article[]
+  arts     Art[]
   stars    Star[]
   comments ArticleComment[]
 
@@ -344,6 +346,30 @@ model Article {
   @@map("articles")
 }
 
+model Art {
+  id          Int     @id @default(autoincrement())
+  external_id String  @unique
+  type        ArtType @default(DEFAULT)
+
+  title     String
+  image_url String?
+
+  tags String @default("")
+
+  author   User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorId Int?
+
+  author_name         String?
+  author_social_links Json?
+
+  comments ArticleComment[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("arts")
+}
+
 model ArticleVersion {
   id      Int    @id @default(autoincrement())
   version String
@@ -364,8 +390,11 @@ model ArticleComment {
   author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId Int
 
-  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  articleId Int
+  article   Article? @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  articleId Int?
+
+  art   Art? @relation(fields: [artId], references: [id])
+  artId Int?
 
   parent   ArticleComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   parentId Int?

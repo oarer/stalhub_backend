@@ -3,6 +3,7 @@ import { adminRoutes } from './admin'
 import { routeArsenal } from './arsenal'
 import { articlesRoutes } from './articles'
 import { artifactsRoutes } from './artifacts'
+import { artsRoutes } from './arts'
 import { routeAttachments } from './attachments'
 import { auctionRoutes } from './auction'
 import { authRoutes } from './auth'
@@ -34,6 +35,7 @@ export const api = createElysia()
 	.use(usersRoutes)
 	.use(buildsRoutes)
 	.use(articlesRoutes)
+	.use(artsRoutes)
 	.use(exboRoutes)
 	.use(adminRoutes)
 	.use(clanRoutes)

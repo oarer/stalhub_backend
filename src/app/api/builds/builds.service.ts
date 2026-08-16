@@ -108,6 +108,7 @@ class BuildsService {
 			sort?: 'newest' | 'stars' | 'price'
 			priceMin?: number
 			priceMax?: number
+			authorId?: number
 		} = {}
 	) {
 		const tags = opts.tags ?? []
@@ -115,13 +116,14 @@ class BuildsService {
 		const priceMin = opts.priceMin
 		const priceMax = opts.priceMax
 
-		const where = tags.length
-			? {
-					OR: tags.map((tag) => ({
-						tags: { contains: tag },
-					})),
-				}
-			: undefined
+		const where = {
+			...(tags.length && {
+				OR: tags.map((tag) => ({
+					tags: { contains: tag },
+				})),
+			}),
+			...(opts.authorId !== undefined && { authorId: opts.authorId }),
+		}
 
 		const hasPriceFilter = priceMin != null || priceMax != null
 		const needsFullScan =

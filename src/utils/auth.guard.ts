@@ -16,6 +16,8 @@ interface AuthContext {
 	store: Record<string, unknown>
 }
 
+export type { AuthContext }
+
 export async function checkPermission(
 	userId: number,
 	permission: string
@@ -36,6 +38,17 @@ export async function checkPermission(
 	return user.roles.some((r) =>
 		r.permissions.some((p) => p.name === permission)
 	)
+}
+
+export async function checkRole(userId: number, role: string): Promise<boolean> {
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		include: { roles: { select: { name: true } } },
+	})
+
+	if (!user) return false
+
+	return user.roles.some((r) => r.name === role)
 }
 
 export function fromStore(store: Record<string, unknown>) {

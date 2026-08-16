@@ -37,6 +37,110 @@ class CommentsService {
 		}
 	}
 
+	async listByArt(artId: number, take: number, page: number) {
+		const skip = page * take
+
+		const [rows, totalCount] = await Promise.all([
+			prisma.articleComment.findMany({
+				where: { artId, parentId: null },
+				skip,
+				take,
+				orderBy: { created_at: 'desc' },
+				include: {
+					author: {
+						select: { id: true, name: true, username: true },
+					},
+					replies: {
+						orderBy: { created_at: 'asc' },
+						include: {
+							author: {
+								select: {
+									id: true,
+									name: true,
+									username: true,
+								},
+							},
+						},
+					},
+				},
+			}),
+			prisma.articleComment.count({ where: { artId } }),
+		])
+
+		return {
+			data: rows,
+			totalCount,
+		}
+	}
+
+	async createForArt(
+		artId: number,
+		authorId: number,
+		data: { content: string; parentId?: number | null }
+	) {
+		if (data.parentId) {
+			const parent = await prisma.articleComment.findFirst({
+				where: { id: data.parentId, artId },
+			})
+			if (!parent) return null
+		}
+
+		const comment = await prisma.articleComment.create({
+			data: {
+				content: data.content,
+				artId,
+				authorId,
+				parentId: data.parentId ?? null,
+			},
+			include: {
+				author: { select: { id: true, name: true, username: true } },
+			},
+		})
+
+		const mentionRegex = /@([a-zA-Z0-9_]+)/g
+		const mentions = [
+			...new Set(
+				[...data.content.matchAll(mentionRegex)].map((m) => m[1])
+			),
+		]
+
+		if (mentions.length > 0) {
+			const art = await prisma.art.findUnique({
+				where: { id: artId },
+				select: { title: true },
+			})
+
+			const mentionedUsers = await prisma.user.findMany({
+				where: { username: { in: mentions } },
+				select: { id: true, username: true },
+			})
+
+			const author = await prisma.user.findUnique({
+				where: { id: authorId },
+				select: { username: true },
+			})
+
+			const notifications = mentionedUsers
+				.filter((u) => u.id !== authorId)
+				.map((u) => ({
+					title: 'Упоминание',
+					content: `${author?.username ?? 'Кто-то'} упомянул вас в комментарии к работе "${art?.title ?? ''}"`,
+					author: author?.username ?? 'Система',
+					type: 0,
+					link: `/arts/${artId}`,
+					users: { connect: [{ id: u.id }] },
+				}))
+
+			if (notifications.length > 0) {
+				for (const n of notifications) {
+					await prisma.notifications.create({ data: n })
+				}
+			}
+		}
+
+		return comment
+	}
+
 	async create(
 		articleId: number,
 		authorId: number,
