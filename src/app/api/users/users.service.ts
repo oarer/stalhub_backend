@@ -158,6 +158,31 @@ class UsersService {
 		return { settings, userCustomization }
 	}
 
+	async updateSocialLinks(
+		userId: number,
+		socialLinks: Record<string, string>
+	) {
+		const user = await prisma.user.findUnique({
+			where: { id: userId },
+			select: { id: true },
+		})
+		if (!user) return { error: 'User not found' }
+
+		const pruned: Record<string, string> = {}
+		for (const [key, value] of Object.entries(socialLinks)) {
+			const url = value.trim()
+			if (!url) continue
+			pruned[key.trim().toLowerCase()] = url
+		}
+
+		await prisma.user.update({
+			where: { id: userId },
+			data: { social_links: pruned },
+		})
+
+		return { success: true }
+	}
+
 	async updateProfile(
 		userId: number,
 		data: {
@@ -636,6 +661,7 @@ class UsersService {
 			username: user.username,
 			name: user.name,
 			joined_at: user.joined_at,
+			social_links: user.social_links ?? null,
 			stars_count,
 			badges: user.badges ?? [],
 			builds: (user.builds ?? []).map((b) => ({

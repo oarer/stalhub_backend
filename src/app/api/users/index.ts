@@ -15,6 +15,7 @@ import {
 } from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
+import { buildsService } from '@/app/api/builds/builds.service'
 import { avatarRoutes } from './avatar'
 import { usersService } from './users.service'
 
@@ -45,7 +46,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.patch(
 			'/@me',
 			async ({ body, store, set }) => {
-				const { name, username, ...settingsData } = body
+				const { name, username, social_links, ...settingsData } = body
 				const userId = fromStore(store).userId
 
 				if (name !== undefined || username !== undefined) {
@@ -53,6 +54,17 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 						name,
 						username,
 					})
+					if ('error' in result) {
+						set.status = 400
+						return result
+					}
+				}
+
+				if (social_links !== undefined) {
+					const result = await usersService.updateSocialLinks(
+						userId,
+						social_links
+					)
 					if ('error' in result) {
 						set.status = 400
 						return result
@@ -87,6 +99,8 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 
 					cardBackground: t.Optional(t.Enum(CardBackground)),
 					cardColor: t.Optional(t.String()),
+
+					social_links: t.Optional(t.Record(t.String(), t.String())),
 
 					name: t.Optional(t.String({ minLength: 1 })),
 					username: t.Optional(
@@ -233,6 +247,25 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth],
+				detail: { tags: ['Users'] },
+			}
+		)
+
+		.get(
+			'/@me/builds',
+			async ({ store, query }) => {
+				const take = query.take ?? 24
+				const page = (query.page ?? 1) - 1
+				return buildsService.list(take, page, {
+					authorId: fromStore(store).userId,
+				})
+			},
+			{
+				beforeHandle: [requireAuth],
+				query: t.Object({
+					take: t.Optional(t.Numeric()),
+					page: t.Optional(t.Numeric()),
+				}),
 				detail: { tags: ['Users'] },
 			}
 		)
