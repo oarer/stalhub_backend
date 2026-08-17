@@ -10,7 +10,7 @@ import { acquireLock, releaseLock, setRegionCache } from './cache'
 import { interpolateRatio } from './pricing'
 
 const LISTING_URL =
-	'https://raw.githubusercontent.com/oarer/sc-db/refs/heads/main/merged/listing/artefact.json'
+	'https://cdn.stalhub.dev/db/listing/artefact.json'
 
 export const SUPPORTED_REGIONS = ['RU'] as const
 
