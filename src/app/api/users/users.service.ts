@@ -80,6 +80,63 @@ class UsersService {
 		return { banner_image: bannerImage }
 	}
 
+	async saveAvatar(
+		userId: number,
+		file: { name: string; type: string; buffer: Buffer }
+	) {
+		const avatarDir = './uploads/users/avatars'
+		await mkdir(avatarDir, { recursive: true })
+
+		const existing = await prisma.userCustomization.findUnique({
+			where: { userId },
+			select: { avatarImage: true },
+		})
+		const oldPath = existing?.avatarImage
+		if (
+			oldPath &&
+			oldPath.startsWith('/uploads/users/avatars/') &&
+			!oldPath.includes('..')
+		) {
+			await rm(path.join('.', oldPath), { force: true }).catch(() => {})
+		}
+
+		const ext = path.extname(file.name) || '.png'
+		const filename = `${userId}-${randomUUID()}${ext}`
+		const fullPath = path.join(avatarDir, filename)
+		await writeFile(fullPath, file.buffer)
+
+		const avatarImage = `/uploads/users/avatars/${filename}`
+		await prisma.userCustomization.upsert({
+			where: { userId },
+			update: { avatarImage },
+			create: { userId, avatarImage },
+		})
+
+		return { avatar_image: avatarImage }
+	}
+
+	async clearAvatar(userId: number) {
+		const existing = await prisma.userCustomization.findUnique({
+			where: { userId },
+			select: { avatarImage: true },
+		})
+		const oldPath = existing?.avatarImage
+		if (
+			oldPath &&
+			oldPath.startsWith('/uploads/users/avatars/') &&
+			!oldPath.includes('..')
+		) {
+			await rm(path.join('.', oldPath), { force: true }).catch(() => {})
+		}
+
+		await prisma.userCustomization.updateMany({
+			where: { userId },
+			data: { avatarImage: null },
+		})
+
+		return { ok: true }
+	}
+
 	async getMe(sessionId: string) {
 		const session = await authService.getSession(sessionId)
 		return authService.userPayload(session!)
@@ -407,6 +464,7 @@ class UsersService {
 				current: user.customization?.avatar?.toLowerCase() ?? 'discord',
 				available,
 			},
+			avatar_image: user.customization?.avatarImage ?? null,
 			region: user.EXBOAuth?.region ?? null,
 			region_changed_at: user.EXBOAuth?.region_changed_at ?? null,
 		}

@@ -3,7 +3,7 @@ import type { LotsHistoryResponse } from '@/types/api.type'
 import type { Root } from '@/types/hideout.type'
 
 const HIDEOUT_URL =
-	'https://raw.githubusercontent.com/oarer/sc-db/refs/heads/main/merged/hideout_recipes.json'
+	'https://cdn.stalhub.dev/db/hideout_recipes.json'
 
 let inMemoryData: Root | null = null
 let loadPromise: Promise<Root> | null = null

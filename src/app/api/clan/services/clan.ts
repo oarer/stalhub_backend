@@ -195,21 +195,68 @@ export class ClanService {
 		}
 
 		await prisma.clanMember.deleteMany({ where: { clanId } })
+
+		const memberNames = members.map((m) => m.name)
+		const [exboAuths, usersByUsername, guestsByName] = await Promise.all([
+			prisma.eXBOAuth.findMany({
+				where: { username: { in: memberNames, mode: 'insensitive' } },
+				select: { userid: true, username: true },
+			}),
+			prisma.user.findMany({
+				where: { username: { in: memberNames, mode: 'insensitive' } },
+				select: { id: true, username: true },
+			}),
+			prisma.user.findMany({
+				where: {
+					name: { in: memberNames, mode: 'insensitive' },
+					roles: { some: { name: 'clan_guest' } },
+				},
+				select: { id: true, name: true },
+			}),
+		])
+		const exboByLower = new Map(
+			exboAuths.map((a) => [a.username.toLowerCase(), a.userid])
+		)
+		const usernameByLower = new Map(
+			usersByUsername.map((u) => [u.username.toLowerCase(), u.id])
+		)
+		const guestNameByLower = new Map(
+			guestsByName.map((u) => [u.name.toLowerCase(), u.id])
+		)
+
 		for (const m of members) {
-			const exboAuth = await prisma.eXBOAuth.findFirst({
-				where: { username: { equals: m.name, mode: 'insensitive' } },
-			})
+			const key = m.name.toLowerCase()
+			const linkedUserId =
+				exboByLower.get(key) ??
+				usernameByLower.get(key) ??
+				guestNameByLower.get(key) ??
+				null
 			await prisma.clanMember.create({
 				data: {
 					clanId,
 					name: m.name,
 					rank: m.rank,
 					join_time: m.joinTime ? new Date(m.joinTime) : null,
-					userId: exboAuth?.userid ?? null,
+					userId: linkedUserId,
 				},
 			})
+			if (linkedUserId != null) {
+				await prisma.userClanProfile.upsert({
+					where: { userId: linkedUserId },
+					create: {
+						userId: linkedUserId,
+						clanId,
+						region: reg,
+					},
+					update: { clanId, region: reg },
+				})
+			}
 		}
-		return { clanId, memberCount: members.length, membersSynced: !!accessToken }
+		return {
+			clanId,
+			memberCount: members.length,
+			membersSynced: !!accessToken,
+		}
 	}
 
 	private async getMemberAccessToken(clanId: string): Promise<string | null> {
@@ -219,7 +266,10 @@ export class ClanService {
 				user: {
 					include: {
 						EXBOAuth: {
-							select: { token_blob: true, access_expires_at: true },
+							select: {
+								token_blob: true,
+								access_expires_at: true,
+							},
 						},
 					},
 				},
@@ -229,9 +279,9 @@ export class ClanService {
 			const auth = p.user.EXBOAuth
 			if (!auth) continue
 			if (auth.access_expires_at <= new Date()) continue
-			const { access_token } = decryptSecretJson<{ access_token: string }>(
-				auth.token_blob
-			)
+			const { access_token } = decryptSecretJson<{
+				access_token: string
+			}>(auth.token_blob)
 			if (access_token) return access_token
 		}
 		return null

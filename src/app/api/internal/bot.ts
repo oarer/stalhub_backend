@@ -2,10 +2,12 @@ import { t } from 'elysia'
 import { StageType } from 'generated/prisma/enums'
 import { absenceService } from '@/app/api/clan/services/absence'
 import { analyticsService } from '@/app/api/clan/services/analytics'
+import { clanInviteService } from '@/app/api/clan/services/invites'
 import { squadService } from '@/app/api/clan/services/squad'
 import { env } from '@/env'
 import { mskDate } from '@/lib/msk'
 import { prisma } from '@/lib/prisma'
+import { detectStageSlot, nextStageSlot } from '@/lib/stages'
 import { createElysia } from '@/utils/elysia'
 
 function botAuth({
@@ -32,6 +34,7 @@ const guildSelect = {
 	allowed_role_id: true,
 	publish_time: true,
 	publish_channel_id: true,
+	stages_channel_id: true,
 	linked_by: true,
 } as const
 
@@ -245,13 +248,23 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 
 				const file = body.file
 				const date = body.date ?? mskDate()
+				const detected = detectStageSlot()
+				const type = body.type ?? detected?.type ?? null
+				const stage = body.stage ?? detected?.stage ?? null
+				if (!type || !stage) {
+					set.status = 400
+					return {
+						error: 'type/stage required when no active stage window detected',
+						detected,
+					}
+				}
 				let session
 				try {
 					session = await analyticsService.getOrCreateStageSession({
 						clanId: clan.id,
 						region: clan.region,
-						type: body.type,
-						stage: body.stage,
+						type,
+						stage,
 						date,
 					})
 				} catch (err) {
@@ -269,7 +282,7 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 							buffer: buf,
 						}
 					)
-					return { session, screenshot }
+					return { session, screenshot, detected }
 				} catch (err) {
 					set.status = 400
 					return { error: (err as Error).message }
@@ -279,13 +292,140 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 				beforeHandle: [botAuth],
 				body: t.Object({
 					clan_id: t.String(),
-					type: t.Enum(StageType),
-					stage: t.Numeric({ minimum: 1 }),
+					type: t.Optional(t.Enum(StageType)),
+					stage: t.Optional(t.Numeric({ minimum: 1 })),
 					date: t.Optional(t.String()),
 					file: t.File({
 						type: ['image/png', 'image/jpeg', 'image/webp'],
 					}),
 				}),
+				detail: { tags: ['Internal'] },
+			}
+		)
+		.get(
+			'/stage',
+			async ({ query }) => {
+				const now = query.at ? new Date(query.at) : new Date()
+				return {
+					detected: detectStageSlot(now),
+					next: nextStageSlot(now),
+				}
+			},
+			{
+				beforeHandle: [botAuth],
+				query: t.Object({ at: t.Optional(t.String()) }),
+				detail: { tags: ['Internal'] },
+			}
+		)
+		.post(
+			'/invites/claim',
+			async ({ body, set }) => {
+				const auth = await prisma.discordAuth.findUnique({
+					where: { discord_id: body.discord_id },
+					select: { userid: true },
+				})
+				if (!auth) {
+					set.status = 404
+					return {
+						error: 'Discord account not linked. Link it in profile settings.',
+					}
+				}
+				try {
+					return await clanInviteService.claim(
+						body.code,
+						`discord:${body.discord_id}`
+					)
+				} catch (err) {
+					set.status = 400
+					return { error: (err as Error).message }
+				}
+			},
+			{
+				beforeHandle: [botAuth],
+				body: t.Object({
+					discord_id: t.String(),
+					code: t.String({ minLength: 1 }),
+				}),
+				detail: { tags: ['Internal'] },
+			}
+		)
+		.post(
+			'/invites',
+			async ({ body, set }) => {
+				try {
+					return await clanInviteService.createGuestAccount(
+						body.clan_id,
+						`discord:${body.discord_id}`,
+						body.nickname
+					)
+				} catch (err) {
+					set.status = 400
+					return { error: (err as Error).message }
+				}
+			},
+			{
+				beforeHandle: [botAuth],
+				body: t.Object({
+					clan_id: t.String(),
+					discord_id: t.String(),
+					nickname: t.String({ minLength: 1 }),
+				}),
+				detail: { tags: ['Internal'] },
+			}
+		)
+		.delete(
+			'/invites/:id',
+			async ({ params, set }) => {
+				try {
+					return await clanInviteService.revoke(params.id)
+				} catch (err) {
+					set.status = 400
+					return { error: (err as Error).message }
+				}
+			},
+			{
+				beforeHandle: [botAuth],
+				params: t.Object({ id: t.Numeric() }),
+				detail: { tags: ['Internal'] },
+			}
+		)
+		.delete(
+			'/invites/guest/discord/:discordId',
+			async ({ params, set }) => {
+				const auth = await prisma.discordAuth.findUnique({
+					where: { discord_id: params.discordId },
+					select: { userid: true },
+				})
+				if (!auth) {
+					set.status = 404
+					return { error: 'Discord account not linked' }
+				}
+				const invite = await prisma.clanInvite.findUnique({
+					where: { userId: auth.userid },
+					select: { userId: true },
+				})
+				if (!invite) {
+					set.status = 400
+					return { error: 'This user is not a clan guest' }
+				}
+				await prisma.$transaction([
+					prisma.userClanProfile.deleteMany({
+						where: { userId: auth.userid },
+					}),
+					prisma.clanMember.updateMany({
+						where: { userId: auth.userid },
+						data: { userId: null },
+					}),
+					prisma.clanInvite.deleteMany({
+						where: { userId: auth.userid },
+					}),
+					prisma.user.delete({ where: { id: auth.userid } }),
+				])
+				return { ok: true }
+			},
+			{
+				beforeHandle: [botAuth],
+				params: t.Object({ discordId: t.String() }),
 				detail: { tags: ['Internal'] },
 			}
 		)
@@ -329,6 +469,7 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 						allowed_role_id: null,
 						publish_time: null,
 						publish_channel_id: null,
+						stages_channel_id: null,
 						linked_by: body.discord_id,
 						clan,
 					},
@@ -411,6 +552,9 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					),
 					publish_time: t.Optional(t.Union([t.String(), t.Null()])),
 					publish_channel_id: t.Optional(
+						t.Union([t.String(), t.Null()])
+					),
+					stages_channel_id: t.Optional(
 						t.Union([t.String(), t.Null()])
 					),
 				}),

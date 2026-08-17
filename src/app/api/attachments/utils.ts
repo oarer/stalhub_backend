@@ -1,9 +1,8 @@
 import type { AttachmentItem, WeaponEntry } from '@/types/attachments.type'
 
-const ATTACHMENTS_URL =
-	'https://github.com/oarer/sc-db/raw/refs/heads/main/merged/listing/attachments.json'
+const ATTACHMENTS_URL = 'https://cdn.stalhub.dev/db/listing/attachments.json'
 const WEAPONS_URL =
-	'https://github.com/oarer/sc-db/raw/refs/heads/main/merged/listing/weapons.json'
+	'https://cdn.stalhub.dev/db/listing/weapons.json'
 
 const SUITABLE_TARGETS_KEY = 'weapon.lore.attachment.all_suitable_targets'
 

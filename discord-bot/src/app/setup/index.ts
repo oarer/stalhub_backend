@@ -42,6 +42,14 @@ function channelName(guild: Guild, settings: GuildSettings): string {
 	return ch?.toString() ?? 'канал удалён'
 }
 
+function stagesChannelName(guild: Guild, settings: GuildSettings): string {
+	if (!settings.stages_channel_id) return 'не выбран'
+	const ch = guild.channels.cache.get(settings.stages_channel_id) as
+		| GuildChannel
+		| undefined
+	return ch?.toString() ?? 'канал удалён'
+}
+
 function settingsEmbed(guild: Guild, settings: GuildSettings) {
 	const clan = settings.clan
 	const embed = new EmbedBuilder()
@@ -66,6 +74,11 @@ function settingsEmbed(guild: Guild, settings: GuildSettings) {
 			{
 				name: 'Канал публикации',
 				value: channelName(guild, settings),
+				inline: true,
+			},
+			{
+				name: 'Канал скриншотов этапов',
+				value: stagesChannelName(guild, settings),
 				inline: true,
 			}
 		)
@@ -115,6 +128,16 @@ function settingsComponents(guild: Guild, settings: GuildSettings) {
 				.setMaxValues(1)
 		)
 
+	const stagesChannelRow =
+		new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(
+			new ChannelSelectMenuBuilder()
+				.setCustomId('setup:stages-channel')
+				.setPlaceholder('Канал для скриншотов этапов')
+				.setChannelTypes(ChannelType.GuildText)
+				.setMinValues(1)
+				.setMaxValues(1)
+		)
+
 	const actionsRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
 		new ButtonBuilder()
 			.setCustomId('setup:unlink')
@@ -126,7 +149,7 @@ function settingsComponents(guild: Guild, settings: GuildSettings) {
 			.setStyle(ButtonStyle.Secondary)
 	)
 
-	return [roleRow, timeRow, channelRow, actionsRow]
+	return [roleRow, timeRow, channelRow, stagesChannelRow, actionsRow]
 }
 
 function renderMenu(guild: Guild, settings: GuildSettings) {
@@ -295,6 +318,10 @@ export async function handleSetupComponent(
 		patch.publish_time = value === 'off' ? null : value
 	} else if (customId === 'setup:channel') {
 		patch.publish_channel_id = (
+			interaction as AnySelectMenuInteraction
+		).values[0]
+	} else if (customId === 'setup:stages-channel') {
+		patch.stages_channel_id = (
 			interaction as AnySelectMenuInteraction
 		).values[0]
 	}

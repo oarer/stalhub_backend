@@ -6,6 +6,7 @@ import {
 	CardBackground,
 	UserLayout,
 } from 'generated/prisma/enums'
+import { buildsService } from '@/app/api/builds/builds.service'
 import { Regions } from '@/types/api.type'
 import {
 	fromStore,
@@ -15,7 +16,6 @@ import {
 } from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
-import { buildsService } from '@/app/api/builds/builds.service'
 import { avatarRoutes } from './avatar'
 import { usersService } from './users.service'
 
@@ -438,6 +438,55 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 						type: ['image/png', 'image/jpeg', 'image/webp'],
 					}),
 				}),
+				detail: { tags: ['Users'] },
+			}
+		)
+
+		.post(
+			'/@me/avatar',
+			async ({ body, store, set }) => {
+				const file = body.file
+				const buf = Buffer.from(await file.arrayBuffer())
+
+				try {
+					return await usersService.saveAvatar(
+						fromStore(store).userId,
+						{
+							name: file.name,
+							type: file.type,
+							buffer: buf,
+						}
+					)
+				} catch (err) {
+					set.status = 400
+					return { error: (err as Error).message }
+				}
+			},
+			{
+				beforeHandle: [requireAuth],
+				body: t.Object({
+					file: t.File({
+						type: ['image/png', 'image/jpeg', 'image/webp'],
+					}),
+				}),
+				detail: { tags: ['Users'] },
+			}
+		)
+
+		.delete(
+			'/@me/avatar',
+			async ({ store, set }) => {
+				try {
+					return await usersService.clearAvatar(
+						fromStore(store).userId
+					)
+				} catch (err) {
+					set.status = 400
+					return { error: (err as Error).message }
+				}
+			},
+			{
+				beforeHandle: [requireAuth],
 				detail: { tags: ['Users'] },
 			}
 		)

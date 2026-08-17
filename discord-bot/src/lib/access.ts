@@ -20,6 +20,7 @@ export interface GuildSettings {
 	allowed_role_id: string | null
 	publish_time: string | null
 	publish_channel_id: string | null
+	stages_channel_id: string | null
 	linked_by: string
 	clan: GuildClanInfo | null
 }

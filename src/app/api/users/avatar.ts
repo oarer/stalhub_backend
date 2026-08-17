@@ -1,3 +1,4 @@
+import { relative, resolve } from 'node:path'
 import { t } from 'elysia'
 import { prisma } from '@/lib/prisma'
 import { createElysia } from '@/utils/elysia'
@@ -85,6 +86,30 @@ async function proxyImage(url: string) {
 	})
 }
 
+async function serveUploadedAvatar(pathname: string) {
+	if (
+		!pathname.startsWith('/uploads/users/avatars/') ||
+		pathname.includes('..')
+	) {
+		return null
+	}
+
+	const uploadsDir = resolve(process.cwd(), 'uploads')
+	const requested = resolve(uploadsDir, pathname)
+
+	const rel = relative(uploadsDir, requested)
+	if (rel.startsWith('..') || resolve(uploadsDir, rel) !== requested) {
+		return null
+	}
+
+	const file = Bun.file(requested)
+	if (!(await file.exists())) {
+		return null
+	}
+
+	return file
+}
+
 function getAvatarUrl(
 	user: {
 		DiscordAuth: {
@@ -141,6 +166,12 @@ export const avatarRoutes = createElysia().get(
 			select: {
 				username: true,
 
+				customization: {
+					select: {
+						avatarImage: true,
+					},
+				},
+
 				DiscordAuth: {
 					select: {
 						discord_id: true,
@@ -168,6 +199,13 @@ export const avatarRoutes = createElysia().get(
 					},
 				}
 			)
+		}
+
+		if (user.customization?.avatarImage) {
+			const uploaded = await serveUploadedAvatar(
+				user.customization.avatarImage
+			)
+			if (uploaded) return uploaded
 		}
 
 		const avatarUrl = getAvatarUrl(user, query.provider)

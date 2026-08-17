@@ -1,18 +1,21 @@
 import { readFile } from 'node:fs/promises'
 import axios from 'axios'
 import { aiAnalysisDuration, aiAnalysisTotal } from '@/app/api/metrics'
-import { SYSTEM_PROMPT } from '@/data/prompt'
+import type { ClanRosterEntry } from '@/data/prompt'
+import { buildSystemPrompt } from '@/data/prompt'
 import { env } from '@/env'
 import type { AIScreenshotResult } from '../types'
 
 const MAX_ATTEMPTS = 3
 
 export async function analyzeScreenshot(
-	filePath: string
+	filePath: string,
+	roster?: ClanRosterEntry[]
 ): Promise<AIScreenshotResult> {
 	const buf = await readFile(filePath)
 	const dataUrl = `data:image/png;base64,${buf.toString('base64')}`
 	const start = Date.now()
+	const systemPrompt = buildSystemPrompt(roster)
 
 	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
 		try {
@@ -23,7 +26,7 @@ export async function analyzeScreenshot(
 					max_tokens: 2000,
 					response_format: { type: 'json_object' },
 					messages: [
-						{ role: 'system', content: SYSTEM_PROMPT },
+						{ role: 'system', content: systemPrompt },
 						{
 							role: 'user',
 							content: [

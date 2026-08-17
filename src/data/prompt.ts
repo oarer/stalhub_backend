@@ -717,4 +717,41 @@ Before returning the final JSON, verify all of the following:
 29. There is no text outside the JSON object.
 
 Return ONLY the JSON object.
-`;
+`
+
+export type ClanRosterEntry = { name: string; role?: string | null }
+
+export function buildSystemPrompt(roster: ClanRosterEntry[] = []): string {
+	if (roster.length === 0) return SYSTEM_PROMPT
+
+	const rosterBlock = roster
+		.map((m) => `- ${m.name}${m.role ? ` (${m.role})` : ''}`)
+		.join('\n')
+
+	return `
+${SYSTEM_PROMPT}
+
+==================================================
+PLAYER'S CLAN ROSTER (CONTEXT)
+==================================================
+
+The player's clan roster (members who belong to the player's clan) is:
+
+${rosterBlock}
+
+Use this roster to correctly identify clan membership.
+
+For EVERY player extracted into the "players" array, set:
+- "isClanMember": true  -> when the player's name exactly matches one of the roster entries (ignore case, trim spaces).
+- "isClanMember": false -> when the player is NOT present in the roster.
+- Do not set "isClanMember" to null; always set true or false for every player.
+
+IMPORTANT:
+- Match roster names case-insensitively.
+- If a player name is partially visible or differs by a single character, prefer the value that is most clearly visible and mark accordingly.
+- Use the roster only to tag clan membership. Do NOT filter players out of the "players" array.
+- The roster does NOT affect "totalScore", "opponentScore", "teams", "mapName", or "victory".
+
+Return ONLY the JSON object.
+`
+}

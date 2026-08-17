@@ -1,10 +1,16 @@
 import './lib/ws-proxy'
-import type { ChatInputCommandInteraction, TextChannel } from 'discord.js'
+import type {
+	ChatInputCommandInteraction,
+	Message,
+	TextChannel,
+} from 'discord.js'
 import { handleAbsenceComponent, handleAbsenceListCommand } from './app/absence'
 import { commandDefinitions } from './app/commands'
+import { handleJoin } from './app/join'
 import { handleScreenshot } from './app/screenshot'
 import { handleSetup, handleSetupComponent } from './app/setup'
 import { handlePublishSquads, publishSquads } from './app/squads'
+import { handleStageMessage } from './app/stages/listener'
 import {
 	type GuildSettings,
 	getGuildSettings,
@@ -12,6 +18,11 @@ import {
 	listGuildSettings,
 	resolveMember,
 } from './lib/access'
+import {
+	describeClose,
+	fatalExit,
+	isFatalCloseCode,
+} from './lib/gateway'
 import { error, log, warn } from './lib/logger'
 import { mskDateStr, mskHHMM } from './lib/msk'
 
@@ -34,7 +45,13 @@ async function main() {
 	const { Client, Events, GatewayIntentBits }: typeof import('discord.js') =
 		await import('discord.js')
 
-	const client = new Client({ intents: [GatewayIntentBits.Guilds] })
+	const client = new Client({
+		intents: [
+			GatewayIntentBits.Guilds,
+			GatewayIntentBits.GuildMessages,
+			GatewayIntentBits.MessageContent,
+		],
+	})
 
 	client.once(Events.ClientReady, (c) => {
 		log(`Bot ready as ${c.user.tag} (id ${c.user.id})`)
@@ -121,6 +138,11 @@ async function main() {
 			return
 		}
 
+		if (command === 'join') {
+			await handleJoin(interaction)
+			return
+		}
+
 		if (!settings?.clan) {
 			await interaction.reply({
 				content:
@@ -148,8 +170,49 @@ async function main() {
 		}
 	})
 
+	client.on(Events.MessageCreate, (message: Message) => {
+		handleStageMessage(message).catch((err) =>
+			error('Stage message handler failed:', err)
+		)
+	})
+
+	client.on(Events.GuildMemberRemove, async (member) => {
+		const guildId = member.guild.id
+		const settings = await getGuildSettings(guildId)
+		if (!settings?.clan) return
+		try {
+			const { backendDelete } = await import('./lib/api')
+			await backendDelete(
+				`/internal/bot/invites/guest/discord/${encodeURIComponent(member.id)}`,
+				{}
+			)
+			log(`Guest removed on member leave: ${member.user.tag}`)
+		} catch (err) {
+			error('Guest cleanup on member leave failed:', err)
+		}
+	})
+
 	client.on(Events.Warn, (info) => warn(info))
 	client.on(Events.Error, (err) => error(err))
+
+	client.on(Events.ShardDisconnect, (close, shardId) => {
+		const info = describeClose(close)
+		if (isFatalCloseCode(close.code)) {
+			fatalExit(
+				client,
+				`Fatal gateway disconnect (shard ${shardId}): ${info}. Reconnecting will not help.`
+			)
+		} else {
+			warn(`Gateway disconnected (shard ${shardId}): ${info}`)
+		}
+	})
+
+	client.on(Events.Invalidated, () => {
+		fatalExit(
+			client,
+			'Discord session was invalidated (token revoked or another client logged in with the same token).'
+		)
+	})
 
 	const token = process.env.DISCORD_BOT_TOKEN
 	if (!token) {
@@ -185,7 +248,11 @@ async function main() {
 		.then(() => log('Discord gateway connected'))
 		.catch((err) => {
 			error('Discord login failed:', err)
-			process.exit(1)
+			error(
+				'Check that the token is valid and not revoked, and that privileged intents are enabled in the Developer Portal.'
+			)
+			client.destroy().catch(() => {})
+			setTimeout(() => process.exit(1), 60_000)
 		})
 }
 

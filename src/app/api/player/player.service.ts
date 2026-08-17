@@ -8,12 +8,14 @@ import {
 } from '@/app/api/metrics'
 import { apiClient } from '@/app/interceptors/sc.interceptor'
 import { prisma } from '@/lib/prisma'
+import type { OperationSessionListing } from '@/types/operations.type'
 import type {
 	PlayerParams,
 	PlayerResponse,
 	PlayerRole,
 } from '@/types/player.type'
 import * as cache from './cache'
+import * as operationsCache from './operations.cache'
 
 type ServiceResponse<T> = {
 	success: boolean
@@ -118,6 +120,22 @@ class PlayerService {
 
 		await cache.setPlayer(region, character, result)
 		return result
+	}
+
+	async getOperations(
+		region: string,
+		params: { username?: string; limit?: number; offset?: number }
+	): Promise<OperationSessionListing> {
+		const cached = await operationsCache.getOperations(region, params)
+		if (cached) return cached
+
+		const { data } = await apiClient.get<OperationSessionListing>(
+			`/${region}/operations/sessions`,
+			{ params }
+		)
+
+		await operationsCache.setOperations(region, params, data)
+		return data
 	}
 
 	async list(role?: PlayerRole) {

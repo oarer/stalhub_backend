@@ -94,6 +94,30 @@ export const playersRoute = createElysia()
 			)
 
 			.get(
+				'/:region/operations/sessions',
+				async ({ params, query }) => {
+					return playerService.getOperations(params.region, {
+						username: query.username,
+						limit: query.limit ? Number(query.limit) : undefined,
+						offset: query.offset ? Number(query.offset) : undefined,
+					})
+				},
+				{
+					params: t.Object({
+						region: t.Enum(Regions),
+					}),
+					query: t.Object({
+						username: t.Optional(t.String()),
+						limit: t.Optional(t.Numeric({ minimum: 0, maximum: 100 })),
+						offset: t.Optional(t.Numeric({ minimum: 0 })),
+					}),
+					detail: {
+						tags: ['Player'],
+					},
+				}
+			)
+
+			.get(
 				'/:region/:character',
 				async ({ params }) => {
 					const profile = await playerService.get({

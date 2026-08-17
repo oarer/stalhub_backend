@@ -15,6 +15,7 @@ export interface AIScreenshotResult {
 		assists: number | null
 		score: number | null
 		role: string | null
+		isClanMember?: boolean
 	}>
 	rawText?: string
 }

@@ -114,6 +114,7 @@ model User {
   name                String   @default("") // display name
   onboarded           Boolean  @default(false)
   social_links        Json?    // { network: url } record of social links
+  password_hash       String?
 
   sessions      Sessions[]
   UserSettings  UserSettings?
@@ -143,6 +144,7 @@ model User {
   stageSessions StageSession[]
   attendance    StageAttendance[]
   clanHistory   ClanHistory[]
+  clanInvite    ClanInvite?
 }
 
 model UserBadges {
@@ -181,6 +183,7 @@ model UserCustomization {
   cardBackground CardBackground @default(NONE)
   cardColor      String         @default("#171717")
   avatar         AvatarSource?
+  avatarImage    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -714,12 +717,27 @@ model BotGuild {
   allowed_role_id    String?
   publish_time       String? // HH:MM MSK
   publish_channel_id String?
+  stages_channel_id  String?
   linked_by          String
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
   @@map("bot_guilds")
+}
+
+model ClanInvite {
+  id         Int      @id @default(autoincrement())
+  code       String   @unique
+  clan_id    String
+  userId     Int      @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  claimed_by String?
+  claimed_at DateTime?
+  created_by String   @default("")
+  created_at DateTime @default(now())
+
+  @@map("clan_invites")
 }
 
 model BotLinkState {

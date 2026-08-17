@@ -14,9 +14,17 @@ interface AuthContext {
 	jwt: JwtFacade
 	set: { status?: number | string; headers: Record<string, string | number> }
 	store: Record<string, unknown>
+	request: Request
 }
 
 export type { AuthContext }
+
+const GUEST_ALLOWED_PREFIXES = [
+	'/api/v1/auth/',
+	'/api/v1/clan/',
+	'/api/v1/users/@me',
+	'/api/v1/health',
+]
 
 export async function checkPermission(
 	userId: number,
@@ -40,7 +48,10 @@ export async function checkPermission(
 	)
 }
 
-export async function checkRole(userId: number, role: string): Promise<boolean> {
+export async function checkRole(
+	userId: number,
+	role: string
+): Promise<boolean> {
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		include: { roles: { select: { name: true } } },
@@ -122,6 +133,7 @@ export async function requireAuth({
 	jwt,
 	set,
 	store,
+	request,
 }: AuthContext) {
 	const payload = await jwt.verify(access_token?.value)
 	if (
@@ -151,6 +163,18 @@ export async function requireAuth({
 
 	store.authUserId = userId
 	store.authSessionId = payload.sid
+
+	const isGuest =
+		Array.isArray(payload.role) && payload.role.includes('clan_guest')
+	store.isGuest = isGuest
+	if (isGuest) {
+		const path = new URL(request.url).pathname
+		const allowed = GUEST_ALLOWED_PREFIXES.some((p) => path.startsWith(p))
+		if (!allowed) {
+			set.status = 403
+			return { error: 'Guest access is limited to clan features' }
+		}
+	}
 }
 
 export async function requireRefreshAuth({

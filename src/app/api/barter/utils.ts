@@ -12,7 +12,7 @@ import type {
 const BARTER_URL =
 	'https://github.com/EXBO-Studio/stalcraft-database/raw/refs/heads/main/ru/barter_recipes.json'
 const LISTING_URL =
-	'https://github.com/oarer/sc-db/raw/refs/heads/main/merged/listing.json'
+	'https://cdn.stalhub.dev/db/listing.json'
 
 const fetchJson = async <T>(url: string): Promise<T> => {
 	const res = await fetch(url)

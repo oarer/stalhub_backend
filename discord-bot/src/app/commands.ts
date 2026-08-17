@@ -85,12 +85,22 @@ export const commandDefinitions: CommandDefinition[] = [
 		description_localizations: { ru: 'Отправка скриншотов' },
 		options: [
 			{
+				type: OPT_ATTACHMENT,
+				name: 'image',
+				name_localizations: { ru: 'изображение' },
+				description: 'Screenshot image',
+				description_localizations: { ru: 'Изображение скриншота' },
+				required: true,
+			},
+			{
 				type: OPT_STRING,
 				name: 'type',
 				name_localizations: { ru: 'тип' },
-				description: 'Event type',
-				description_localizations: { ru: 'Тип события' },
-				required: true,
+				description: 'Event type (auto-detect if omitted)',
+				description_localizations: {
+					ru: 'Тип события (авто-определение, если не указан)',
+				},
+				required: false,
 				choices: [
 					{
 						name: 'Tournament',
@@ -113,18 +123,12 @@ export const commandDefinitions: CommandDefinition[] = [
 				type: OPT_INTEGER,
 				name: 'stage',
 				name_localizations: { ru: 'этап' },
-				description: 'Stage number',
-				description_localizations: { ru: 'Номер этапа' },
-				required: true,
+				description: 'Stage number (auto-detect if omitted)',
+				description_localizations: {
+					ru: 'Номер этапа (авто-определение, если не указан)',
+				},
+				required: false,
 				min_value: 1,
-			},
-			{
-				type: OPT_ATTACHMENT,
-				name: 'image',
-				name_localizations: { ru: 'изображение' },
-				description: 'Screenshot image',
-				description_localizations: { ru: 'Изображение скриншота' },
-				required: true,
 			},
 			{
 				type: OPT_STRING,
@@ -134,6 +138,22 @@ export const commandDefinitions: CommandDefinition[] = [
 				description_localizations: {
 					ru: 'Дата YYYY-MM-DD (по умолчанию: сегодня)',
 				},
+			},
+		],
+	},
+	{
+		name: 'join',
+		name_localizations: { ru: 'войти' },
+		description: 'Activate a clan guest access code',
+		description_localizations: { ru: 'Активировать код гостевого доступа' },
+		options: [
+			{
+				type: OPT_STRING,
+				name: 'code',
+				name_localizations: { ru: 'код' },
+				description: 'Guest access code',
+				description_localizations: { ru: 'Код гостевого доступа' },
+				required: true,
 			},
 		],
 	},

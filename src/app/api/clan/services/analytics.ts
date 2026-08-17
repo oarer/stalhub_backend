@@ -107,7 +107,19 @@ class AnalyticsService {
 			data: { ai_status: 'processing' },
 		})
 		try {
-			const result = await analyzeScreenshot(filePath)
+			const shot = await prisma.stageScreenshot.findUnique({
+				where: { id: screenshotId },
+				include: { session: { select: { clanId: true } } },
+			})
+			const roster = shot?.session.clanId
+				? (
+						await prisma.clanMember.findMany({
+							where: { clanId: shot.session.clanId },
+							select: { name: true, rank: true },
+						})
+					).map((m) => ({ name: m.name, role: m.rank }))
+				: undefined
+			const result = await analyzeScreenshot(filePath, roster)
 			await prisma.stageScreenshot.update({
 				where: { id: screenshotId },
 				data: {
