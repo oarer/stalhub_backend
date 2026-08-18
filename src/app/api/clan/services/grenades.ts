@@ -1,11 +1,22 @@
 import type { StageType } from 'generated/prisma/enums'
+import { env } from '@/env'
 import { apiClient } from '@/app/interceptors/sc.interceptor'
 import { prisma } from '@/lib/prisma'
-import { decryptSecretJson } from '@/utils/crypto'
+import { decryptSecretJson, encryptSecret } from '@/utils/crypto'
 import type { GrenadeStats } from './cache'
 import * as cache from './cache'
 
+type PoolToken = {
+	id: number
+	access_token: string
+	refresh_token?: string
+	access_expires_at: Date
+	refresh_expires_at?: Date | null
+}
+
 export class GrenadesService {
+	private poolIndex = new Map<string, number>()
+
 	async getForCharacter(region: string, character: string, token?: string) {
 		const cached = await cache.getGrenades(region, character)
 		if (cached) return cached
@@ -29,6 +40,119 @@ export class GrenadesService {
 		return result
 	}
 
+	private async getPoolTokens(clanId: string): Promise<PoolToken[]> {
+		const rows = await prisma.clanMember.findMany({
+			where: { clanId },
+			include: {
+				user: {
+					include: {
+						EXBOAuth: {
+							select: {
+								id: true,
+								token_blob: true,
+								access_expires_at: true,
+								refresh_expires_at: true,
+							},
+						},
+					},
+				},
+			},
+		})
+
+		const now = new Date()
+		const tokens: PoolToken[] = []
+
+		for (const m of rows) {
+			const auth = m.user?.EXBOAuth
+			if (!auth) continue
+
+			const blob = decryptSecretJson<{
+				access_token: string
+				refresh_token?: string
+			}>(auth.token_blob)
+
+			if (!blob.access_token) continue
+
+			const canRefresh =
+				auth.refresh_expires_at && auth.refresh_expires_at > now
+
+			if (auth.access_expires_at > now || canRefresh) {
+				tokens.push({
+					id: auth.id,
+					access_token: blob.access_token,
+					refresh_token: blob.refresh_token,
+					access_expires_at: auth.access_expires_at,
+					refresh_expires_at: auth.refresh_expires_at,
+				})
+			}
+		}
+
+		return tokens
+	}
+
+	private async refreshExboToken(authId: number, refreshToken: string) {
+		try {
+			const body = new URLSearchParams({
+				client_id: env.EXBO_CLIENT_ID,
+				client_secret: env.EXBO_CLIENT_SECRET,
+				refresh_token: refreshToken,
+				grant_type: 'refresh_token',
+			})
+
+			const res = await fetch('https://exbo.net/oauth/token', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded',
+				},
+				body,
+			})
+
+			if (!res.ok) return null
+
+			const data = (await res.json()) as {
+				access_token: string
+				refresh_token?: string
+				expires_in: number
+				refresh_expires_in?: number
+			}
+
+			const newBlob = encryptSecret(
+				JSON.stringify({
+					access_token: data.access_token,
+					refresh_token: data.refresh_token ?? refreshToken,
+				})
+			)
+
+			await prisma.eXBOAuth.update({
+				where: { id: authId },
+				data: {
+					token_blob: newBlob,
+					access_expires_at: new Date(
+						Date.now() + data.expires_in * 1000
+					),
+					refresh_expires_at: data.refresh_expires_in
+						? new Date(Date.now() + data.refresh_expires_in * 1000)
+						: undefined,
+				},
+			})
+
+			return data.access_token as string
+		} catch {
+			return null
+		}
+	}
+
+	private pickToken(
+		pool: PoolToken[],
+		clanId: string
+	): PoolToken | null {
+		if (pool.length === 0) return null
+		const idx = this.poolIndex.get(clanId) ?? 0
+		const token = pool[idx % pool.length]!
+		this.poolIndex.set(clanId, idx + 1)
+		return token
+	}
+
 	async takeSnapshot(
 		clanId: string,
 		eventType: StageType,
@@ -42,19 +166,32 @@ export class GrenadesService {
 
 		const members = await prisma.clanMember.findMany({
 			where: { clanId },
-			include: {
-				user: {
-					include: { EXBOAuth: { select: { token_blob: true } } },
-				},
-			},
+			select: { name: true },
 		})
+
+		const pool = await this.getPoolTokens(clanId)
+
 		const results = await Promise.all(
-			members.map((m) => {
-				if (!m.user?.EXBOAuth) return Promise.resolve(null)
-				const { access_token: token } = decryptSecretJson<{
-					access_token: string
-				}>(m.user.EXBOAuth.token_blob)
-				if (!token) return Promise.resolve(null)
+			members.map(async (m) => {
+				const picked = this.pickToken(pool, clanId)
+				if (!picked) return null
+
+				const now = new Date()
+				let token = picked.access_token
+
+				if (picked.access_expires_at <= now) {
+					if (picked.refresh_token) {
+						const refreshed = await this.refreshExboToken(
+							picked.id,
+							picked.refresh_token
+						)
+						if (!refreshed) return null
+						token = refreshed
+					} else {
+						return null
+					}
+				}
+
 				return this.getForCharacter(clan.region, m.name, token)
 					.then((r) => ({ name: r.character, total: r.total }))
 					.catch(() => null)
