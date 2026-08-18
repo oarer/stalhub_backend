@@ -3,7 +3,6 @@ import { ArtType } from 'generated/prisma/client'
 import {
 	type AuthContext,
 	checkPermission,
-	checkRole,
 	fromStore,
 	fromStoreOpt,
 	requireAuth,
@@ -16,7 +15,7 @@ import { artCommentsRoutes } from './comments'
 
 async function requireArtAuthor({ store, set }: AuthContext) {
 	const userId = store.authUserId as number
-	const isAuthor = await checkRole(userId, 'art:author')
+	const isAuthor = await checkPermission(userId, 'art:author')
 	const isAdmin = await checkPermission(userId, 'art:manage')
 	if (!isAuthor && !isAdmin) {
 		set.status = 403
