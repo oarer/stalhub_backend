@@ -11,8 +11,7 @@ import {
 	type UserLayout,
 } from 'generated/prisma/client'
 import { decompress } from '@/app/api/builds/builds.service'
-import { clanService } from '@/app/api/clan/services/clan'
-import { normalizeSchedule } from '@/app/api/clan/services/clan'
+import { clanService, normalizeSchedule } from '@/app/api/clan/services/clan'
 import { prisma } from '@/lib/prisma'
 import { authService } from '@/utils/auth.service'
 import { decryptSecretJson } from '@/utils/crypto'
@@ -364,7 +363,10 @@ class UsersService {
 			user.EXBOAuth && data.region
 				? prisma.eXBOAuth.update({
 						where: { id: user.EXBOAuth.id },
-						data: { region: data.region, region_changed_at: new Date() },
+						data: {
+							region: data.region,
+							region_changed_at: new Date(),
+						},
 					})
 				: Promise.resolve(null),
 		])
@@ -725,6 +727,7 @@ class UsersService {
 			builds: (user.builds ?? []).map((b) => ({
 				...b,
 				data: decompress(b.data),
+				tags: b.tags ? b.tags.split(',').filter(Boolean) : [],
 			})),
 			articles: user.articles ?? [],
 			clan:
