@@ -81,6 +81,11 @@ export class ClanService {
 			} as never
 		)
 
+		let hasActive = await prisma.userClanProfile.findFirst({
+			where: { userId, isActive: true },
+			select: { userId: true },
+		})
+
 		for (const c of chars) {
 			const clanId = c.clan?.info?.id
 			if (!clanId) continue
@@ -117,18 +122,44 @@ export class ClanService {
 				},
 			})
 
+			const activate = !hasActive
 			await prisma.userClanProfile.upsert({
-				where: { userId },
-				create: { userId, clanId, region },
-				update: { clanId, region },
+				where: { userId_clanId: { userId, clanId } },
+				create: { userId, clanId, region, isActive: activate },
+				update: { region },
 			})
+			if (activate) hasActive = { userId }
 		}
 	}
 
-	async register(userId: number) {
-		const profile = await prisma.userClanProfile.findUnique({
-			where: { userId },
+	async getActiveProfile(userId: number) {
+		let profile = await prisma.userClanProfile.findFirst({
+			where: { userId, isActive: true },
+			include: { clan: true },
 		})
+		if (!profile) {
+			profile = await prisma.userClanProfile.findFirst({
+				where: { userId },
+				include: { clan: true },
+			})
+			if (profile) {
+				await prisma.userClanProfile.update({
+					where: {
+						userId_clanId: {
+							userId: profile.userId,
+							clanId: profile.clanId,
+						},
+					},
+					data: { isActive: true },
+				})
+				profile.isActive = true
+			}
+		}
+		return profile
+	}
+
+	async register(userId: number) {
+		const profile = await this.getActiveProfile(userId)
 		if (!profile?.clanId) throw new Error('No clan linked to user')
 
 		try {
@@ -241,15 +272,24 @@ export class ClanService {
 				},
 			})
 			if (linkedUserId != null) {
-				await prisma.userClanProfile.upsert({
-					where: { userId: linkedUserId },
-					create: {
-						userId: linkedUserId,
-						clanId,
-						region: reg,
-					},
-					update: { clanId, region: reg },
+				const existing = await prisma.userClanProfile.findFirst({
+					where: { userId: linkedUserId, clanId },
+					select: { userId: true },
 				})
+				if (!existing) {
+					const hasActive = await prisma.userClanProfile.findFirst({
+						where: { userId: linkedUserId, isActive: true },
+						select: { userId: true },
+					})
+					await prisma.userClanProfile.create({
+						data: {
+							userId: linkedUserId,
+							clanId,
+							region: reg,
+							isActive: !hasActive,
+						},
+					})
+				}
 			}
 		}
 		return {
@@ -302,11 +342,34 @@ export class ClanService {
 	}
 
 	async getMe(userId: number) {
-		const profile = await prisma.userClanProfile.findUnique({
+		return this.getActiveProfile(userId)
+	}
+
+	async getMyClans(userId: number) {
+		const profiles = await prisma.userClanProfile.findMany({
 			where: { userId },
 			include: { clan: true },
+			orderBy: { updated_at: 'desc' },
 		})
-		return profile
+		return profiles
+	}
+
+	async switchClan(userId: number, clanId: string) {
+		const target = await prisma.userClanProfile.findUnique({
+			where: { userId_clanId: { userId, clanId } },
+		})
+		if (!target) throw new Error('You are not a member of this clan')
+
+		await prisma.$transaction([
+			prisma.userClanProfile.updateMany({
+				where: { userId, isActive: true },
+				data: { isActive: false },
+			}),
+			prisma.userClanProfile.update({
+				where: { userId_clanId: { userId, clanId } },
+				data: { isActive: true },
+			}),
+		])
 	}
 
 	async getPublicPayload(clanId: string) {

@@ -137,7 +137,7 @@ model User {
   stars    Star[]
   comments ArticleComment[]
 
-  clanProfile   UserClanProfile?
+  clanProfiles  UserClanProfile[]
   loadout       UserLoadout?
   absences      Absence[]
   clanMembers   ClanMember[]
@@ -145,6 +145,7 @@ model User {
   attendance    StageAttendance[]
   clanHistory   ClanHistory[]
   clanInvite    ClanInvite?
+  authoredNotes ClanMemberNote[]
 }
 
 model UserBadges {
@@ -502,6 +503,7 @@ model ClanMember {
   clanSquadMembers ClanSquadMember[]
   squadRequests    ClanSquadRequest[]
   goldAttendances  GoldDropAttendee[]
+  notes            ClanMemberNote[]
 
   @@unique([clanId, name])
   @@map("clan_members")
@@ -532,14 +534,16 @@ model ClanHistory {
 }
 
 model UserClanProfile {
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId Int     @id
-  clan   Clan?   @relation(fields: [clanId], references: [id], onDelete: SetNull)
-  clanId String?
-  region String  @default("RU")
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  Int
+  clan    Clan    @relation(fields: [clanId], references: [id], onDelete: Cascade)
+  clanId  String
+  region  String  @default("RU")
+  isActive Boolean @default(false)
 
   updated_at DateTime @updatedAt
 
+  @@id([userId, clanId])
   @@map("user_clan_profile")
 }
 
@@ -766,6 +770,40 @@ model GrenadeSnapshot {
 
   @@index([clanId, raid_date])
   @@map("grenade_snapshots")
+}
+
+// ================ CLAN MEMBER NOTES ===================
+
+model ClanMemberNote {
+  id       Int    @id @default(autoincrement())
+  clanId   String
+  memberId Int
+  authorId Int
+  content  String
+
+  member ClanMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  author User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([clanId])
+  @@index([memberId])
+  @@map("clan_member_notes")
+}
+
+model GrenadeBox {
+  id     Int    @id @default(autoincrement())
+  clanId String
+  date   String
+  name   String
+  type   String
+  count  Int    @default(1)
+
+  created_at DateTime @default(now())
+
+  @@index([clanId, date])
+  @@map("grenade_boxes")
 }
 
 // ================ LOADOUT ===================

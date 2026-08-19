@@ -10,6 +10,20 @@ export const meRoutes = clanContext
 		beforeHandle: [requireAuth],
 		detail: { tags: ['Clan'] },
 	})
+	.get('/my-clans', ({ store }) => clanService.getMyClans(store.authUserId!), {
+		beforeHandle: [requireAuth],
+		detail: { tags: ['Clan'] },
+	})
+	.post(
+		'/switch',
+		({ store, body }) =>
+			clanService.switchClan(store.authUserId!, body.clanId),
+		{
+			beforeHandle: [requireAuth],
+			body: t.Object({ clanId: t.String() }),
+			detail: { tags: ['Clan'] },
+		}
+	)
 	.post('/register', ({ store }) => clanService.register(store.authUserId!), {
 		beforeHandle: [requireAuth, requireClanLeader],
 		detail: { tags: ['Clan'] },

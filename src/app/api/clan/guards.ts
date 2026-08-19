@@ -23,8 +23,8 @@ export async function requireClanMember({ store, set }: ClanGuardContext) {
 		set.status = 401
 		return { error: 'Unauthorized' }
 	}
-	const profile = await prisma.userClanProfile.findUnique({
-		where: { userId },
+	const profile = await prisma.userClanProfile.findFirst({
+		where: { userId, isActive: true },
 		select: { clanId: true },
 	})
 	if (!profile?.clanId) {
@@ -39,8 +39,8 @@ export async function requireClanOfficer(ctx: ClanGuardContext) {
 	if (error) return error
 
 	const { store, set } = ctx
-	const profile = await prisma.userClanProfile.findUnique({
-		where: { userId: store.authUserId },
+	const profile = await prisma.userClanProfile.findFirst({
+		where: { userId: store.authUserId, isActive: true },
 		include: { clan: true },
 	})
 	if (profile?.clan?.status !== 'ACTIVE') {

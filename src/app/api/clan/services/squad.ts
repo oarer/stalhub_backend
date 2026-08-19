@@ -275,8 +275,8 @@ export class SquadService {
 		})
 		if (!squad) throw new Error('Отряд не найден')
 		if (squad.createdBy !== userId) {
-			const profile = await prisma.userClanProfile.findUnique({
-				where: { userId },
+			const profile = await prisma.userClanProfile.findFirst({
+				where: { userId, isActive: true },
 			})
 			const member = profile?.clanId
 				? await prisma.clanMember.findFirst({

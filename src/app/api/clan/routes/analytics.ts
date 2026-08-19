@@ -186,4 +186,54 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 				detail: { tags: ['Clan Analytics'] },
 			}
 		)
+		.get(
+			'/grenades/clan/:clanId/boxes',
+			({ params, query }) =>
+				grenadesService.getBoxes(params.clanId, query.date),
+			{
+				beforeHandle: [requireAuth, requireClanOfficer],
+				params: t.Object({ clanId: t.String() }),
+				query: t.Object({ date: t.String() }),
+				detail: { tags: ['Clan Analytics'] },
+			}
+		)
+		.post(
+			'/grenades/clan/:clanId/boxes',
+			({ params, body }) =>
+				grenadesService.addBox(params.clanId, {
+					name: body.name,
+					type: body.type,
+					count: body.count,
+					date: body.date,
+				}),
+			{
+				beforeHandle: [requireAuth, requireClanOfficer],
+				params: t.Object({ clanId: t.String() }),
+				body: t.Object({
+					name: t.String(),
+					type: t.String(),
+					count: t.Numeric({ minimum: 1 }),
+					date: t.String(),
+				}),
+				detail: { tags: ['Clan Analytics'] },
+			}
+		)
+		.delete(
+			'/grenades/clan/:clanId/boxes',
+			({ params, query }) =>
+				grenadesService.removeBox(
+					params.clanId,
+					query.date,
+					Number(query.index)
+				),
+			{
+				beforeHandle: [requireAuth, requireClanOfficer],
+				params: t.Object({ clanId: t.String() }),
+				query: t.Object({
+					date: t.String(),
+					index: t.Numeric(),
+				}),
+				detail: { tags: ['Clan Analytics'] },
+			}
+		)
 )

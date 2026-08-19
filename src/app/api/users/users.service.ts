@@ -674,7 +674,7 @@ class UsersService {
 						created_at: true,
 					},
 				},
-				clanProfile: { include: { clan: true } },
+				clanProfiles: { where: { isActive: true }, include: { clan: true }, take: 1 },
 				clanHistory: {
 					orderBy: { seen_at: 'desc' },
 					take: 20,
@@ -731,8 +731,8 @@ class UsersService {
 			})),
 			articles: user.articles ?? [],
 			clan:
-				user.clanProfile?.clan?.is_public === true
-					? publicClanPayload(user.clanProfile.clan)
+				user.clanProfiles?.[0]?.clan?.is_public === true
+					? publicClanPayload(user.clanProfiles[0].clan)
 					: null,
 			clan_history: (user.clanHistory ?? []).map((h) => ({
 				id: h.id,

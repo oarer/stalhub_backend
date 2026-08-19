@@ -92,8 +92,8 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					select: { userid: true },
 				})
 				if (!auth) return { clan: null }
-				const profile = await prisma.userClanProfile.findUnique({
-					where: { userId: auth.userid },
+				const profile = await prisma.userClanProfile.findFirst({
+					where: { userId: auth.userid, isActive: true },
 					include: {
 						clan: {
 							select: {
@@ -163,8 +163,8 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 						error: 'Discord account not linked. Link it in profile settings.',
 					}
 				}
-				const profile = await prisma.userClanProfile.findUnique({
-					where: { userId: auth.userid },
+				const profile = await prisma.userClanProfile.findFirst({
+					where: { userId: auth.userid, isActive: true },
 					select: { clanId: true },
 				})
 				if (profile?.clanId !== body.clan_id) {

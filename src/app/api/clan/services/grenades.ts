@@ -246,7 +246,14 @@ export class GrenadesService {
 			.slice(0, 10)
 			.filter((e) => e.stages.length > 0)
 
-		return { events }
+		const eventsWithBoxes = await Promise.all(
+			events.map(async (event) => {
+				const { boxes } = await this.getBoxes(clanId, event.raid_date)
+				return { ...event, boxes }
+			})
+		)
+
+		return { events: eventsWithBoxes }
 	}
 
 	async getAllTime(clanId: string) {
@@ -339,6 +346,41 @@ export class GrenadesService {
 			map.set(m.name, Number(m.total) || 0)
 		}
 		return map
+	}
+
+	async getBoxes(clanId: string, date: string) {
+		const boxes = await prisma.grenadeBox.findMany({
+			where: { clanId, date },
+			orderBy: { created_at: 'asc' },
+		})
+		return { boxes }
+	}
+
+	async addBox(
+		clanId: string,
+		entry: { name: string; type: string; count: number; date: string }
+	) {
+		await prisma.grenadeBox.create({
+			data: {
+				clanId,
+				date: entry.date,
+				name: entry.name,
+				type: entry.type,
+				count: entry.count,
+			},
+		})
+		return this.getBoxes(clanId, entry.date)
+	}
+
+	async removeBox(clanId: string, date: string, index: number) {
+		const boxes = await prisma.grenadeBox.findMany({
+			where: { clanId, date },
+			orderBy: { created_at: 'asc' },
+		})
+		if (boxes[index]) {
+			await prisma.grenadeBox.delete({ where: { id: boxes[index].id } })
+		}
+		return this.getBoxes(clanId, date)
 	}
 }
 

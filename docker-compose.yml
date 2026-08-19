@@ -21,6 +21,8 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    volumes:
+      - ./uploads:/app/uploads
 
   discord-bot:
     build: ./discord-bot

@@ -75,13 +75,14 @@ class ClanInviteService {
 					},
 				})
 				await prisma.userClanProfile.upsert({
-					where: { userId: user.id },
+					where: { userId_clanId: { userId: user.id, clanId: clan.id } },
 					create: {
 						userId: user.id,
 						clanId: clan.id,
 						region: clan.region ?? 'RU',
+						isActive: true,
 					},
-					update: { clanId: clan.id, region: clan.region ?? 'RU' },
+					update: { region: clan.region ?? 'RU' },
 				})
 				await prisma.clanMember.updateMany({
 					where: {
@@ -203,21 +204,28 @@ class ClanInviteService {
 		})
 		if (!clan) throw new Error('Clan not found')
 
-		await prisma.$transaction([
-			prisma.clanInvite.update({
-				where: { id: invite.id },
-				data: { claimed_by: claimedBy, claimed_at: new Date() },
-			}),
-			prisma.userClanProfile.upsert({
-				where: { userId: invite.userId },
-				create: {
-					userId: invite.userId,
-					clanId: clan.id,
-					region: clan.region ?? 'RU',
-				},
-				update: { clanId: clan.id, region: clan.region ?? 'RU' },
-			}),
-		])
+		const hasActive = await prisma.userClanProfile.findFirst({
+				where: { userId: invite.userId, isActive: true },
+				select: { userId: true },
+			})
+			await prisma.$transaction([
+				prisma.clanInvite.update({
+					where: { id: invite.id },
+					data: { claimed_by: claimedBy, claimed_at: new Date() },
+				}),
+				prisma.userClanProfile.upsert({
+					where: {
+						userId_clanId: { userId: invite.userId, clanId: clan.id },
+					},
+					create: {
+						userId: invite.userId,
+						clanId: clan.id,
+						region: clan.region ?? 'RU',
+						isActive: !hasActive,
+					},
+					update: { region: clan.region ?? 'RU' },
+				}),
+			])
 		return {
 			ok: true,
 			username: invite.user.username,
