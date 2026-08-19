@@ -1,4 +1,4 @@
-import { relative, resolve } from 'node:path'
+import { resolve } from 'node:path'
 import { t } from 'elysia'
 import { prisma } from '@/lib/prisma'
 import { createElysia } from '@/utils/elysia'
@@ -94,13 +94,7 @@ async function serveUploadedAvatar(pathname: string) {
 		return null
 	}
 
-	const uploadsDir = resolve(process.cwd(), 'uploads')
-	const requested = resolve(uploadsDir, pathname)
-
-	const rel = relative(uploadsDir, requested)
-	if (rel.startsWith('..') || resolve(uploadsDir, rel) !== requested) {
-		return null
-	}
+	const requested = resolve(process.cwd(), pathname.slice(1))
 
 	const file = Bun.file(requested)
 	if (!(await file.exists())) {
