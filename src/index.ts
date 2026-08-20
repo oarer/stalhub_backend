@@ -9,7 +9,6 @@ import { routes } from './app'
 import { crons } from './crons'
 import { env } from './env'
 
-// ага блять тест коммит
 export const app = createElysia()
 	.use(crons)
 	.use(
