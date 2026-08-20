@@ -13,9 +13,11 @@ function mskDayRange(date: string): [Date, Date] {
 	return [new Date(start), new Date(start + 24 * 60 * 60 * 1000)]
 }
 
+const UPLOAD_DIR = path.resolve('uploads', 'screenshots')
+
 class AnalyticsService {
 	private async ensureUploadDir() {
-		await mkdir('./uploads/screenshots', { recursive: true })
+		await mkdir(UPLOAD_DIR, { recursive: true })
 	}
 
 	async createSession(input: {
@@ -86,13 +88,14 @@ class AnalyticsService {
 		await this.ensureUploadDir()
 		const ext = path.extname(file.name) || '.png'
 		const filename = `${sessionId}-${randomUUID()}${ext}`
-		const fullPath = path.join('./uploads/screenshots', filename)
+		const fullPath = path.join(UPLOAD_DIR, filename)
+		const relativePath = path.join('uploads', 'screenshots', filename)
 		await writeFile(fullPath, file.buffer)
 
 		const row = await prisma.stageScreenshot.create({
 			data: {
 				sessionId,
-				file_path: fullPath,
+				file_path: relativePath,
 				mime_type: file.type,
 				size_bytes: file.buffer.length,
 			},
