@@ -357,15 +357,27 @@ export class GrenadesService {
 		clanId: string,
 		entry: { name: string; type: string; count: number; date: string }
 	) {
-		await prisma.grenadeBox.create({
-			data: {
-				clanId,
-				date: entry.date,
-				name: entry.name,
-				type: entry.type,
-				count: entry.count,
-			},
+		const existing = await prisma.grenadeBox.findFirst({
+			where: { clanId, date: entry.date, name: entry.name, type: entry.type },
 		})
+
+		if (existing) {
+			await prisma.grenadeBox.update({
+				where: { id: existing.id },
+				data: { count: existing.count + entry.count },
+			})
+		} else {
+			await prisma.grenadeBox.create({
+				data: {
+					clanId,
+					date: entry.date,
+					name: entry.name,
+					type: entry.type,
+					count: entry.count,
+				},
+			})
+		}
+
 		return this.getBoxes(clanId, entry.date)
 	}
 

@@ -483,6 +483,7 @@ model Clan {
   schedule Json?
 
   boost_mode BoostMode @default(ISSUED)
+  grenade_mode BoostMode @default(ISSUED)
 
   members  ClanMember[]
   sessions StageSession[]
@@ -797,8 +798,8 @@ model ClanMemberNote {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  @@unique([memberId])
   @@index([clanId])
-  @@index([memberId])
   @@map("clan_member_notes")
 }
 

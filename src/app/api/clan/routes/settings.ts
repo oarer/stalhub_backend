@@ -75,3 +75,13 @@ export const clanSettingsRoutes = clanContext
 			detail: { tags: ['Clan'] },
 		}
 	)
+	.patch(
+		'/grenade-mode',
+		({ store, body }) =>
+			clanService.updateGrenadeMode(store.clanId!, body.grenade_mode),
+		{
+			beforeHandle: [requireAuth, requireClanLeader],
+			body: t.Object({ grenade_mode: t.Enum(BoostMode) }),
+			detail: { tags: ['Clan'] },
+		}
+	)

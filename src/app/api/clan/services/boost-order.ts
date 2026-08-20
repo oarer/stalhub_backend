@@ -36,16 +36,28 @@ export class BoostOrderService {
 		})
 		if (!member) throw new Error('Member not found in clan')
 
-		await prisma.clanBoostOrder.create({
-			data: {
-				clanId,
-				playerId,
-				itemId,
-				itemName: itemName.slice(0, 200),
-				count,
-				date,
-			},
+		const existing = await prisma.clanBoostOrder.findFirst({
+			where: { clanId, playerId, itemId, date },
 		})
+
+		if (existing) {
+			await prisma.clanBoostOrder.update({
+				where: { id: existing.id },
+				data: { count: existing.count + count },
+			})
+		} else {
+			await prisma.clanBoostOrder.create({
+				data: {
+					clanId,
+					playerId,
+					itemId,
+					itemName: itemName.slice(0, 200),
+					count,
+					date,
+				},
+			})
+		}
+
 		return this.getOrders(clanId, date)
 	}
 

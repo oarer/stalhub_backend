@@ -43,6 +43,20 @@ function parseUserAgent(ua: string) {
 	return { isMobile, browser, browserVersion }
 }
 
+type AuthorPayload = {
+	id: number
+	name: string | null
+	username: string | null
+}
+
+type StarItem = {
+	id: number
+	external_id: string
+	title: string
+	author: AuthorPayload | null
+	created_at: Date
+}
+
 class UsersService {
 	async saveBanner(
 		userId: number,
@@ -556,89 +570,125 @@ class UsersService {
 			prisma.star.count({ where: { userId } }),
 		])
 
-		const buildIds = stars
-			.filter((s) => s.targetType === StarTargetType.BUILD)
-			.map((s) => s.targetId)
-		const articleIds = stars
-			.filter((s) => s.targetType === StarTargetType.ARTICLE)
-			.map((s) => s.targetId)
+		const authorSelect = {
+			id: true,
+			name: true,
+			username: true,
+		} as const
 
-		const [builds, articles] = await Promise.all([
-			buildIds.length
-				? prisma.build.findMany({
-						where: { id: { in: buildIds } },
-						include: {
-							author: {
-								select: {
-									id: true,
-									name: true,
-									username: true,
-								},
-							},
-						},
-					})
-				: Promise.resolve([]),
-			articleIds.length
-				? prisma.article.findMany({
-						where: { id: { in: articleIds } },
-						include: {
-							author: {
-								select: {
-									id: true,
-									name: true,
-									username: true,
-								},
-							},
-						},
-					})
-				: Promise.resolve([]),
-		])
+		const starTargets: {
+			type: string
+			targetType: StarTargetType
+			fetch: (ids: number[]) => Promise<
+				{
+					id: number
+					external_id: string
+					title: string
+					author: AuthorPayload | null
+					created_at: Date
+				}[]
+			>
+			map: (item: {
+				id: number
+				external_id: string
+				title: string
+				author: AuthorPayload | null
+				created_at: Date
+			}) => StarItem
+		}[] = [
+			{
+				type: 'build',
+				targetType: StarTargetType.BUILD,
+				fetch: (ids) =>
+					prisma.build.findMany({
+						where: { id: { in: ids } },
+						include: { author: { select: authorSelect } },
+					}),
+				map: (item) => ({
+					id: item.id,
+					external_id: item.external_id,
+					title: item.title,
+					author: item.author,
+					created_at: item.created_at,
+				}),
+			},
+			{
+				type: 'article',
+				targetType: StarTargetType.ARTICLE,
+				fetch: (ids) =>
+					prisma.article.findMany({
+						where: { id: { in: ids } },
+						include: { author: { select: authorSelect } },
+					}),
+				map: (item) => ({
+					id: item.id,
+					external_id: item.external_id,
+					title: item.title,
+					author: item.author,
+					created_at: item.created_at,
+				}),
+			},
+			{
+				type: 'art',
+				targetType: StarTargetType.ART,
+				fetch: (ids) =>
+					prisma.art.findMany({
+						where: { id: { in: ids } },
+						include: { author: { select: authorSelect } },
+					}),
+				map: (item) => ({
+					id: item.id,
+					external_id: item.external_id,
+					title: item.title,
+					author: item.author,
+					created_at: item.created_at,
+				}),
+			},
+		]
 
-		const buildMap = new Map(builds.map((b) => [b.id, b]))
-		const articleMap = new Map(articles.map((a) => [a.id, a]))
+		const maps = new Map<StarTargetType, Map<number, StarItem>>()
+		await Promise.all(
+			starTargets.map(async (t) => {
+				const ids = stars
+					.filter((s) => s.targetType === t.targetType)
+					.map((s) => s.targetId)
+				if (ids.length === 0) {
+					maps.set(t.targetType, new Map())
+					return
+				}
+				const items = await t.fetch(ids)
+				maps.set(
+					t.targetType,
+					new Map(items.map((item) => [item.id, t.map(item)]))
+				)
+			})
+		)
+
+		const typeMap = new Map(starTargets.map((t) => [t.targetType, t.type]))
 
 		const data = stars
 			.map((s) => {
-				if (s.targetType === StarTargetType.BUILD) {
-					const b = buildMap.get(s.targetId)
-					return b
-						? {
-								type: 'build' as const,
-								id: b.id,
-								external_id: b.external_id,
-								title: b.title,
-								author: b.author,
-								created_at: b.created_at,
-							}
-						: null
-				}
-
-				const a = articleMap.get(s.targetId)
-				return a
-					? {
-							type: 'article' as const,
-							id: a.id,
-							external_id: a.external_id,
-							title: a.title,
-							author: a.author,
-							created_at: a.created_at,
-						}
-					: null
+				const item = maps.get(s.targetType)?.get(s.targetId)
+				const type = typeMap.get(s.targetType)
+				return item && type ? { type, ...item } : null
 			})
 			.filter(Boolean)
 
 		return { data, totalCount }
 	}
 
-	async getPublicProfile(username: string) {
-		return this.getPublicProfileBy({ username })
+	async getPublicProfile(username: string, viewerId?: number) {
+		return this.getPublicProfileBy({ username }, viewerId)
 	}
 
-	async getPublicProfileById(userId: number) {
-		return this.getPublicProfileBy({ id: userId })
+	async getPublicProfileById(userId: number, viewerId?: number) {
+		return this.getPublicProfileBy({ id: userId }, viewerId)
 	}
 
-	private async getPublicProfileBy(where: Prisma.UserWhereInput) {
+	private async getPublicProfileBy(
+		where: Prisma.UserWhereInput,
+		viewerId?: number
+	) {
 		const user = await prisma.user.findFirst({
 			where,
 			include: {
@@ -674,7 +724,11 @@ class UsersService {
 						created_at: true,
 					},
 				},
-				clanProfiles: { where: { isActive: true }, include: { clan: true }, take: 1 },
+				clanProfiles: {
+					where: { isActive: true },
+					include: { clan: true },
+					take: 1,
+				},
 				clanHistory: {
 					orderBy: { seen_at: 'desc' },
 					take: 20,
@@ -716,6 +770,22 @@ class UsersService {
 			},
 		})
 
+		const buildIds = (user.builds ?? []).map((b) => b.id)
+		const starredBuildIds =
+			viewerId && buildIds.length
+				? (
+						await prisma.star.findMany({
+							where: {
+								userId: viewerId,
+								targetType: StarTargetType.BUILD,
+								targetId: { in: buildIds },
+							},
+							select: { targetId: true },
+						})
+					).map((s) => s.targetId)
+				: []
+		const starredBuildSet = new Set(starredBuildIds)
+
 		return {
 			id: user.id,
 			username: user.username,
@@ -728,6 +798,7 @@ class UsersService {
 				...b,
 				data: decompress(b.data),
 				tags: b.tags ? b.tags.split(',').filter(Boolean) : [],
+				is_starred: starredBuildSet.has(b.id),
 			})),
 			articles: user.articles ?? [],
 			clan:

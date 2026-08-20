@@ -404,6 +404,7 @@ export class ClanService {
 			is_public: clan.is_public,
 			schedule: normalizeSchedule(clan.schedule),
 			boost_mode: clan.boost_mode,
+			grenade_mode: clan.grenade_mode,
 		}
 	}
 
@@ -411,6 +412,13 @@ export class ClanService {
 		return prisma.clan.update({
 			where: { id: clanId },
 			data: { boost_mode },
+		})
+	}
+
+	async updateGrenadeMode(clanId: string, grenade_mode: 'ISSUED' | 'SELF') {
+		return prisma.clan.update({
+			where: { id: clanId },
+			data: { grenade_mode },
 		})
 	}
 
@@ -449,6 +457,8 @@ function publicClanPayload(clan: {
 	is_public: boolean
 	recruiting: boolean
 	schedule: unknown
+	boost_mode: string
+	grenade_mode: string
 	created_at: Date
 }) {
 	return {
@@ -463,6 +473,8 @@ function publicClanPayload(clan: {
 		is_public: clan.is_public,
 		recruiting: clan.recruiting,
 		schedule: normalizeSchedule(clan.schedule),
+		boost_mode: clan.boost_mode,
+		grenade_mode: clan.grenade_mode,
 		created_at: clan.created_at,
 	}
 }

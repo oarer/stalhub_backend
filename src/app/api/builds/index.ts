@@ -18,7 +18,7 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 
 		.get(
 			'',
-			async ({ query }) => {
+			async ({ query, store }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				const tags = query.tags
@@ -32,9 +32,11 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 					sort: query.sort ?? 'newest',
 					priceMin: query.priceMin,
 					priceMax: query.priceMax,
+					userId: fromStoreOpt(store).userId,
 				})
 			},
 			{
+				beforeHandle: [requireOptionalAuth],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),

@@ -45,6 +45,7 @@ package-lock.json
 test.*
 /generated/prisma
 
-/uploads
+/uploads/*
+!/uploads/.gitkeep
 
 /discord-bot/node_modules

@@ -1,4 +1,4 @@
-import { StarTargetType, type Prisma } from 'generated/prisma/client'
+import { type Prisma, StarTargetType } from 'generated/prisma/client'
 import { getRegionCache } from '@/app/api/artifacts/cache'
 import { resolveArtifactPrice } from '@/app/api/artifacts/pricing'
 import { prisma } from '@/lib/prisma'
@@ -109,6 +109,7 @@ class BuildsService {
 			priceMin?: number
 			priceMax?: number
 			authorId?: number
+			userId?: number
 		} = {}
 	) {
 		const tags = opts.tags ?? []
@@ -188,6 +189,11 @@ class BuildsService {
 			? new Map(ids.map((id) => [id, starCounts.get(id) ?? 0]))
 			: starCounts
 
+		let starredIds = new Set<number>()
+		if (opts.userId) {
+			starredIds = await this.userStarredIds(opts.userId, ids)
+		}
+
 		return {
 			data: rows.map((b) => ({
 				id: b.id,
@@ -199,6 +205,7 @@ class BuildsService {
 				price: aggregate ? cachedBuildPrice(b, aggregate) : null,
 				author: b.author,
 				stars_count: pageStarCounts.get(b.id) ?? 0,
+				is_starred: starredIds.has(b.id),
 				created_at: b.created_at,
 				updated_at: b.updated_at,
 			})),
@@ -397,6 +404,21 @@ class BuildsService {
 		const map = new Map<number, number>()
 		for (const r of rows) map.set(r.targetId, r._count.targetId)
 		return map
+	}
+
+	private async userStarredIds(userId: number, ids: number[]) {
+		if (!ids.length) return new Set<number>()
+
+		const rows = await prisma.star.findMany({
+			where: {
+				targetType: StarTargetType.BUILD,
+				targetId: { in: ids },
+				userId,
+			},
+			select: { targetId: true },
+		})
+
+		return new Set(rows.map((r) => r.targetId))
 	}
 }
 

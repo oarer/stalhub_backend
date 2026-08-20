@@ -12,21 +12,25 @@ export class NotesService {
 		})
 	}
 
-	async listByMember(memberId: number) {
-		return prisma.clanMemberNote.findMany({
-			where: { memberId },
-			include: {
-				author: { select: { id: true, username: true, name: true } },
-			},
-			orderBy: { created_at: 'desc' },
-		})
-	}
-
-	async create(clanId: string, authorId: number, memberId: number, content: string) {
+	async upsert(clanId: string, authorId: number, memberId: number, content: string) {
 		const member = await prisma.clanMember.findFirst({
 			where: { id: memberId, clanId },
 		})
 		if (!member) throw new Error('Участник не найден в клане')
+
+		const existing = await prisma.clanMemberNote.findUnique({
+			where: { memberId },
+		})
+
+		if (existing) {
+			return prisma.clanMemberNote.update({
+				where: { id: existing.id },
+				data: { content: content.slice(0, 512), authorId },
+				include: {
+					author: { select: { id: true, username: true, name: true } },
+				},
+			})
+		}
 
 		return prisma.clanMemberNote.create({
 			data: { clanId, authorId, memberId, content: content.slice(0, 512) },
@@ -36,7 +40,7 @@ export class NotesService {
 		})
 	}
 
-	async update(noteId: number, authorId: number, content: string) {
+	async update(noteId: number, content: string) {
 		const note = await prisma.clanMemberNote.findUnique({ where: { id: noteId } })
 		if (!note) throw new Error('Заметка не найдена')
 

@@ -10,6 +10,7 @@ import { buildsService } from '@/app/api/builds/builds.service'
 import { Regions } from '@/types/api.type'
 import {
 	fromStore,
+	fromStoreOpt,
 	requireAuth,
 	requireOptionalAuth,
 	requireRefreshAuth,
@@ -377,8 +378,11 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 
 		.get(
 			'/id/:id',
-			async ({ params, set }) => {
-				const data = await usersService.getPublicProfileById(params.id)
+			async ({ params, store, set }) => {
+				const data = await usersService.getPublicProfileById(
+					params.id,
+					fromStoreOpt(store).userId
+				)
 				if (!data) {
 					set.status = 404
 					return { error: 'User not found' }
@@ -394,9 +398,10 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 
 		.get(
 			'/:username',
-			async ({ params, set }) => {
+			async ({ params, store, set }) => {
 				const data = await usersService.getPublicProfile(
-					params.username
+					params.username,
+					fromStoreOpt(store).userId
 				)
 				if (!data) {
 					set.status = 404
