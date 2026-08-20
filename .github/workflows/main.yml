@@ -22,5 +22,7 @@ jobs:
             set -e
 
             cd /var/www/stalhub_backend
-            git pull
+            git fetch origin
+            git reset --hard origin/main
+            git clean -fd
             docker compose up -d --build
