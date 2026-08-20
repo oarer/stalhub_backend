@@ -677,6 +677,38 @@ class UsersService {
 		return { data, totalCount }
 	}
 
+	async syncClans(userId: number) {
+		const user = await prisma.user.findUnique({
+			where: { id: userId },
+			include: { EXBOAuth: true },
+		})
+		if (!user?.EXBOAuth) {
+			return { error: 'EXBO account is not linked' }
+		}
+
+		const region = user.EXBOAuth.region
+		if (!region) {
+			return { error: 'Region is not set. Please set a region first.' }
+		}
+
+		const { access_token } = decryptSecretJson<{
+			access_token: string
+		}>(user.EXBOAuth.token_blob)
+		if (!access_token) {
+			return { error: 'EXBO token is invalid' }
+		}
+
+		await clanService.detectFromExboCharacters(userId, region, access_token)
+
+		const profiles = await prisma.userClanProfile.findMany({
+			where: { userId },
+			include: { clan: true },
+			orderBy: { updated_at: 'desc' },
+		})
+
+		return { clans: profiles }
+	}
+
 	async getPublicProfile(username: string, viewerId?: number) {
 		return this.getPublicProfileBy({ username }, viewerId)
 	}

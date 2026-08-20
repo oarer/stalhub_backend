@@ -173,6 +173,24 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			}
 		)
 
+		.post(
+			'/@me/sync-clans',
+			async ({ store, set }) => {
+				const result = await usersService.syncClans(
+					fromStore(store).userId
+				)
+				if ('error' in result) {
+					set.status = 400
+					return result
+				}
+				return result
+			},
+			{
+				beforeHandle: [requireAuth],
+				detail: { tags: ['Users'] },
+			}
+		)
+
 		.delete(
 			'/@me/delete',
 			async ({ cookie: { refresh_token, access_token }, store }) => {
