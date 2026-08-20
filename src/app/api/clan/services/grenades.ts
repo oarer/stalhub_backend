@@ -1,6 +1,6 @@
 import type { StageType } from 'generated/prisma/enums'
-import { env } from '@/env'
 import { apiClient } from '@/app/interceptors/sc.interceptor'
+import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
 import { decryptSecretJson, encryptSecret } from '@/utils/crypto'
 import type { GrenadeStats } from './cache'
@@ -142,10 +142,7 @@ export class GrenadesService {
 		}
 	}
 
-	private pickToken(
-		pool: PoolToken[],
-		clanId: string
-	): PoolToken | null {
+	private pickToken(pool: PoolToken[], clanId: string): PoolToken | null {
 		if (pool.length === 0) return null
 		const idx = this.poolIndex.get(clanId) ?? 0
 		const token = pool[idx % pool.length]!

@@ -1,0 +1,66 @@
+import { prisma } from '@/lib/prisma'
+
+export class BoostOrderService {
+	async getOrders(clanId: string, date: string) {
+		const orders = await prisma.clanBoostOrder.findMany({
+			where: { clanId, date },
+			include: {
+				player: {
+					select: { id: true, name: true },
+				},
+			},
+			orderBy: { created_at: 'asc' },
+		})
+		return { orders }
+	}
+
+	async addOrder(
+		clanId: string,
+		playerId: number,
+		itemId: string,
+		itemName: string,
+		count: number,
+		date: string
+	) {
+		const clan = await prisma.clan.findUnique({
+			where: { id: clanId },
+			select: { boost_mode: true },
+		})
+		if (!clan) throw new Error('Clan not found')
+		if (clan.boost_mode === 'SELF') {
+			throw new Error('Self-boost mode')
+		}
+
+		const member = await prisma.clanMember.findFirst({
+			where: { id: playerId, clanId },
+		})
+		if (!member) throw new Error('Member not found in clan')
+
+		await prisma.clanBoostOrder.create({
+			data: {
+				clanId,
+				playerId,
+				itemId,
+				itemName: itemName.slice(0, 200),
+				count,
+				date,
+			},
+		})
+		return this.getOrders(clanId, date)
+	}
+
+	async removeOrder(clanId: string, date: string, index: number) {
+		const orders = await prisma.clanBoostOrder.findMany({
+			where: { clanId, date },
+			orderBy: { created_at: 'asc' },
+		})
+		if (orders[index]) {
+			await prisma.clanBoostOrder.delete({
+				where: { id: orders[index].id },
+			})
+		}
+		return this.getOrders(clanId, date)
+	}
+}
+
+export const boostOrderService = new BoostOrderService()

@@ -106,6 +106,11 @@ enum GoldDropStatus {
   CLAIMED
 }
 
+enum BoostMode {
+  ISSUED
+  SELF
+}
+
 // ================ USER MODEL ===================
 model User {
   id                  Int      @id @default(autoincrement())
@@ -477,10 +482,14 @@ model Clan {
 
   schedule Json?
 
+  boost_mode BoostMode @default(ISSUED)
+
   members  ClanMember[]
   sessions StageSession[]
   squads   ClanSquad[]
   profile  UserClanProfile[]
+
+  boost_orders ClanBoostOrder[]
 
   synced_at  DateTime @updatedAt
   created_at DateTime @default(now())
@@ -504,6 +513,7 @@ model ClanMember {
   squadRequests    ClanSquadRequest[]
   goldAttendances  GoldDropAttendee[]
   notes            ClanMemberNote[]
+  boostOrders      ClanBoostOrder[]
 
   @@unique([clanId, name])
   @@map("clan_members")
@@ -792,6 +802,7 @@ model ClanMemberNote {
   @@map("clan_member_notes")
 }
 
+// ORDERS
 model GrenadeBox {
   id     Int    @id @default(autoincrement())
   clanId String
@@ -804,6 +815,24 @@ model GrenadeBox {
 
   @@index([clanId, date])
   @@map("grenade_boxes")
+}
+
+model ClanBoostOrder {
+  id       Int    @id @default(autoincrement())
+  clanId   String
+  date     String
+  playerId Int
+  itemId   String
+  itemName String
+  count    Int    @default(1)
+
+  player ClanMember @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  clan   Clan       @relation(fields: [clanId], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+
+  @@index([clanId, date])
+  @@map("clan_boost_orders")
 }
 
 // ================ LOADOUT ===================

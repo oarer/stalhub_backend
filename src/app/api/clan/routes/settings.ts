@@ -1,4 +1,5 @@
 import { t } from 'elysia'
+import { BoostMode } from 'generated/prisma/enums'
 import { requireAuth } from '@/utils/auth.guard'
 import { clanContext } from '../context'
 import { requireClanLeader, requireClanMember } from '../guards'
@@ -61,6 +62,16 @@ export const clanSettingsRoutes = clanContext
 		{
 			beforeHandle: [requireAuth, requireClanLeader],
 			body: t.Object({ recruiting: t.Boolean() }),
+			detail: { tags: ['Clan'] },
+		}
+	)
+	.patch(
+		'/boost-mode',
+		({ store, body }) =>
+			clanService.updateBoostMode(store.clanId!, body.boost_mode),
+		{
+			beforeHandle: [requireAuth, requireClanLeader],
+			body: t.Object({ boost_mode: t.Enum(BoostMode) }),
 			detail: { tags: ['Clan'] },
 		}
 	)

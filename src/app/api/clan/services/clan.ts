@@ -403,7 +403,15 @@ export class ClanService {
 		return {
 			is_public: clan.is_public,
 			schedule: normalizeSchedule(clan.schedule),
+			boost_mode: clan.boost_mode,
 		}
+	}
+
+	async updateBoostMode(clanId: string, boost_mode: 'ISSUED' | 'SELF') {
+		return prisma.clan.update({
+			where: { id: clanId },
+			data: { boost_mode },
+		})
 	}
 
 	async updateSchedule(clanId: string, data: Partial<ClanSchedule>) {

@@ -3,7 +3,7 @@ import { AttendanceStatus, SquadMap, StageType } from 'generated/prisma/enums'
 import { Regions } from '@/types/api.type'
 import { requireAuth } from '@/utils/auth.guard'
 import { clanContext } from '../context'
-import { requireClanOfficer } from '../guards'
+import { requireClanMember, requireClanOfficer } from '../guards'
 import { analyticsService } from '../services/analytics'
 import { grenadesService } from '../services/grenades'
 
@@ -191,7 +191,7 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 			({ params, query }) =>
 				grenadesService.getBoxes(params.clanId, query.date),
 			{
-				beforeHandle: [requireAuth, requireClanOfficer],
+				beforeHandle: [requireAuth, requireClanMember],
 				params: t.Object({ clanId: t.String() }),
 				query: t.Object({ date: t.String() }),
 				detail: { tags: ['Clan Analytics'] },
@@ -207,7 +207,7 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 					date: body.date,
 				}),
 			{
-				beforeHandle: [requireAuth, requireClanOfficer],
+				beforeHandle: [requireAuth, requireClanMember],
 				params: t.Object({ clanId: t.String() }),
 				body: t.Object({
 					name: t.String(),
@@ -227,7 +227,7 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 					Number(query.index)
 				),
 			{
-				beforeHandle: [requireAuth, requireClanOfficer],
+				beforeHandle: [requireAuth, requireClanMember],
 				params: t.Object({ clanId: t.String() }),
 				query: t.Object({
 					date: t.String(),
