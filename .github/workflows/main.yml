@@ -24,5 +24,6 @@ jobs:
             cd /var/www/stalhub_backend
             git fetch origin
             git reset --hard origin/main
-            git clean -fd
+            git clean -fd -- ':!uploads'
+            mkdir -p uploads
             docker compose up -d --build
