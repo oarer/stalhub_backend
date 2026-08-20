@@ -1,5 +1,5 @@
 import { t } from 'elysia'
-import { AttendanceStatus, SquadMap, StageType } from 'generated/prisma/enums'
+import { AttendanceStatus, StageType } from 'generated/prisma/enums'
 import { Regions } from '@/types/api.type'
 import { requireAuth } from '@/utils/auth.guard'
 import { clanContext } from '../context'
@@ -26,7 +26,7 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 				beforeHandle: [requireAuth, requireClanOfficer],
 				body: t.Object({
 					region: t.Enum(Regions),
-					map_name: t.Enum(SquadMap),
+					map_name: t.String(),
 					type: t.Optional(t.Enum(StageType)),
 					started_at: t.Optional(t.String()),
 				}),
