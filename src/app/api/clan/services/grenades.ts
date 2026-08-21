@@ -107,7 +107,12 @@ export class GrenadesService {
 				body,
 			})
 
-			if (!res.ok) return null
+			if (!res.ok) {
+				console.error(
+					`[Grenades] EXBO token refresh failed for auth #${authId}: HTTP ${res.status}`
+				)
+				return null
+			}
 
 			const data = (await res.json()) as {
 				access_token: string
@@ -137,7 +142,11 @@ export class GrenadesService {
 			})
 
 			return data.access_token as string
-		} catch {
+		} catch (err) {
+			console.error(
+				`[Grenades] EXBO token refresh error for auth #${authId}:`,
+				err
+			)
 			return null
 		}
 	}
@@ -168,6 +177,12 @@ export class GrenadesService {
 
 		const pool = await this.getPoolTokens(clanId)
 
+		if (pool.length === 0) {
+			console.warn(
+				`[Grenades] ${clanId} ${eventType}/${checkpoint}: token pool is empty, snapshot will have 0 members`
+			)
+		}
+
 		const results = await Promise.all(
 			members.map(async (m) => {
 				const picked = this.pickToken(pool, clanId)
@@ -182,21 +197,52 @@ export class GrenadesService {
 							picked.id,
 							picked.refresh_token
 						)
-						if (!refreshed) return null
+						if (!refreshed) {
+							console.warn(
+								`[Grenades] ${clanId}: token refresh failed for auth #${picked.id}, skipping ${m.name}`
+							)
+							return null
+						}
 						token = refreshed
 					} else {
+						console.warn(
+							`[Grenades] ${clanId}: access token expired and no refresh_token for auth #${picked.id}, skipping ${m.name}`
+						)
 						return null
 					}
 				}
 
 				return this.getForCharacter(clan.region, m.name, token)
 					.then((r) => ({ name: r.character, total: r.total }))
-					.catch(() => null)
+					.catch((err) => {
+						const status =
+							typeof err === 'object' && err !== null && 'status' in err
+								? (err as { status: unknown }).status
+								: 'unknown'
+						const message =
+							err instanceof Error
+								? err.message
+								: typeof err === 'object' &&
+									  err !== null &&
+									  'message' in err
+									? String((err as { message: unknown }).message)
+									: String(err)
+						console.warn(
+							`[Grenades] ${clanId}: failed to fetch stats for ${m.name}: ${status} ${message}`
+						)
+						return null
+					})
 			})
 		)
 		const snapshot = results.filter(
 			(r): r is NonNullable<typeof r> => r !== null
 		)
+
+		if (snapshot.length < members.length) {
+			console.warn(
+				`[Grenades] ${clanId} ${eventType}/${checkpoint}: only ${snapshot.length}/${members.length} members fetched`
+			)
+		}
 		const raidDate = new Date()
 
 		await prisma.grenadeSnapshot.create({
@@ -208,6 +254,9 @@ export class GrenadesService {
 				members: snapshot as never,
 			},
 		})
+		console.log(
+			`[Grenades] ${clanId} ${eventType}/${checkpoint}: saved ${snapshot.length}/${members.length} members (pool: ${pool.length} tokens)`
+		)
 		return { clanId, eventType, checkpoint, count: snapshot.length }
 	}
 
@@ -217,6 +266,17 @@ export class GrenadesService {
 		})
 		const results = await Promise.allSettled(
 			clans.map((c) => this.takeSnapshot(c.id, eventType, checkpoint))
+		)
+		for (const r of results) {
+			if (r.status === 'rejected') {
+				console.error(
+					`[Grenades] takeSnapshotAll ${eventType}/${checkpoint}: clan snapshot failed:`,
+					r.reason
+				)
+			}
+		}
+		console.log(
+			`[Grenades] takeSnapshotAll ${eventType}/${checkpoint}: ${results.filter((r) => r.status === 'fulfilled').length}/${clans.length} clans processed`
 		)
 		return results
 			.filter((r) => r.status === 'fulfilled')

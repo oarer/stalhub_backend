@@ -101,6 +101,35 @@ The map name must NOT contain:
 
 If the map identifier in the upper-right corner is not visible or cannot be read reliably, return null.
 
+KNOWN MAP NAMES:
+
+The game has a fixed set of battle maps. The ONLY valid map names are:
+
+- Малая Бердовка
+- Хвойник
+- Низина
+- Кварталы
+- Роза ветров
+
+MAP NAME MATCHING RULES:
+
+1. After extracting the raw map name from the screenshot, compare it against the KNOWN MAP NAMES list above.
+2. OCR often misreads Cyrillic characters due to small font, low resolution, or stylized text.
+3. If the extracted name EXACTLY matches one of the known maps (case-insensitive), return that exact known spelling.
+4. If the extracted name does NOT exactly match any known map but is SIMILAR to one of them, return the closest matching known map name instead of the raw misread text.
+5. "Similar" means: differs by 1-2 characters, contains obvious OCR errors (e.g. "Нозина" -> "Низина", "Хвойнек" -> "Хвойник", "Кварталы" read as "Квартапы"), missing/extra spaces, wrong capitalization, or partially cut off text where the remaining part uniquely identifies the map.
+6. Examples of fuzzy matching:
+   - "малая бердовка" -> "Малая Бердовка"
+   - "Малая Бердова" -> "Малая Бердовка"
+   - "хвойник" -> "Хвойник"
+   - "Нозина" -> "Низина"
+   - "Низина#12" -> "Низина"
+   - "Квартапы" -> "Кварталы"
+   - "Роза ветроа" -> "Роза ветров"
+7. NEVER match a team name, player name, weapon, item, or faction name to a map name — only use similarity of the actual map identifier text.
+8. Only apply fuzzy matching when at least half of the characters match and there is exactly ONE clearly closest known map. If two or more known maps are similarly close, prefer the one sharing more characters in the same positions; if still ambiguous, return null.
+9. If the extracted text is not similar to ANY known map, return the extracted text as-is only if it is clearly readable; otherwise return null.
+
 ==================================================
 totalScore
 ==================================================
@@ -689,6 +718,7 @@ Before returning the final JSON, verify all of the following:
 1. "mapName" was extracted specifically from the TOP-RIGHT CORNER near the minimap.
 2. "mapName" does NOT contain the "#" character or the number after it.
 3. "mapName" contains ONLY the part before the "#" (e.g. "Хвойный#126" -> "Хвойный").
+4. "mapName" was matched against the KNOWN MAP NAMES list; if the raw text was similar to a known map, the known map spelling is returned.
 4. "totalScore" is populated ONLY when the player's own team/clan final score is clearly visible.
 5. "totalScore" is the score of the player's own team, NOT the opponent's.
 6. A player's individual "Счет" is NOT stored as "totalScore".

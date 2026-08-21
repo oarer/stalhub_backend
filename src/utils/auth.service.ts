@@ -148,6 +148,7 @@ class AuthService {
 							id: u.EXBOAuth.exbo_id,
 							login: u.EXBOAuth.login,
 							username: u.EXBOAuth.username,
+							region: u.EXBOAuth.region
 						}
 					: null,
 			},

@@ -25,10 +25,12 @@ export const crons = createElysia()
 	)
 
 	// tournament
+	// STAGE_SCHEDULE TOURNAMENT: 20:00 / 20:25 / 20:50 / 21:15 MSK (+5min api cooldown)
 	.use(
 		cron({
 			name: 'tournamentBeforeStages',
-			pattern: '0 17 * * 4,5,6',
+			pattern: '5 20 * * 4,5,6',
+			timezone: 'Europe/Moscow',
 			async run() {
 				await grenadesService.takeSnapshotAll(
 					'TOURNAMENT',
@@ -40,7 +42,8 @@ export const crons = createElysia()
 	.use(
 		cron({
 			name: 'tournamentBetween1and2',
-			pattern: '25 17 * * 4,5,6',
+			pattern: '30 20 * * 4,5,6',
+			timezone: 'Europe/Moscow',
 			async run() {
 				await grenadesService.takeSnapshotAll(
 					'TOURNAMENT',
@@ -52,7 +55,8 @@ export const crons = createElysia()
 	.use(
 		cron({
 			name: 'tournamentBetween2and3',
-			pattern: '50 17 * * 4,5,6',
+			pattern: '55 20 * * 4,5,6',
+			timezone: 'Europe/Moscow',
 			async run() {
 				await grenadesService.takeSnapshotAll(
 					'TOURNAMENT',
@@ -64,7 +68,8 @@ export const crons = createElysia()
 	.use(
 		cron({
 			name: 'tournamentAfterStages',
-			pattern: '15 18 * * 4,5,6',
+			pattern: '20 21 * * 4,5,6',
+			timezone: 'Europe/Moscow',
 			async run() {
 				await grenadesService.takeSnapshotAll(
 					'TOURNAMENT',
@@ -75,10 +80,12 @@ export const crons = createElysia()
 	)
 
 	// brawl
+	// STAGE_SCHEDULE BRAWL: 20:00 / 20:25 / 20:50 / 21:15 MSK (+5min api cooldown)
 	.use(
 		cron({
 			name: 'brawlBeforeStages',
-			pattern: '0 17 * * 0,1,2,6',
+			pattern: '5 20 * * 0,1,2,3',
+			timezone: 'Europe/Moscow',
 			async run() {
 				await grenadesService.takeSnapshotAll('BRAWL', 'BEFORE_STAGES')
 			},
@@ -87,7 +94,8 @@ export const crons = createElysia()
 	.use(
 		cron({
 			name: 'brawlBetween1and2',
-			pattern: '25 17 * * 0,1,2,6',
+			pattern: '30 20 * * 0,1,2,3',
+			timezone: 'Europe/Moscow',
 			async run() {
 				await grenadesService.takeSnapshotAll('BRAWL', 'BETWEEN_1_2')
 			},
@@ -96,7 +104,8 @@ export const crons = createElysia()
 	.use(
 		cron({
 			name: 'brawlBetween2and3',
-			pattern: '50 17 * * 0,1,2,6',
+			pattern: '55 20 * * 0,1,2,3',
+			timezone: 'Europe/Moscow',
 			async run() {
 				await grenadesService.takeSnapshotAll('BRAWL', 'BETWEEN_2_3')
 			},
@@ -105,7 +114,8 @@ export const crons = createElysia()
 	.use(
 		cron({
 			name: 'brawlAfterStages',
-			pattern: '15 18 * * 0,1,2,6',
+			pattern: '20 21 * * 0,1,2,3',
+			timezone: 'Europe/Moscow',
 			async run() {
 				await grenadesService.takeSnapshotAll('BRAWL', 'AFTER_STAGES')
 			},
@@ -113,10 +123,12 @@ export const crons = createElysia()
 	)
 
 	// base capture
+	// STAGE_SCHEDULE BASE_CAPTURE: 19:00 / 19:25 / 19:50 / 20:15 / 20:40 MSK (+5min api cooldown)
 	.use(
 		cron({
 			name: 'baseCaptureBeforeStages',
-			pattern: '0 16 * * 0',
+			pattern: '5 19 * * 0',
+			timezone: 'Europe/Moscow',
 			async run() {
 				await grenadesService.takeSnapshotAll(
 					'BASE_CAPTURE',
@@ -128,7 +140,8 @@ export const crons = createElysia()
 	.use(
 		cron({
 			name: 'baseCaptureBetween1and2',
-			pattern: '25 16 * * 0',
+			pattern: '30 19 * * 0',
+			timezone: 'Europe/Moscow',
 			async run() {
 				await grenadesService.takeSnapshotAll(
 					'BASE_CAPTURE',
@@ -140,7 +153,8 @@ export const crons = createElysia()
 	.use(
 		cron({
 			name: 'baseCaptureBetween2and3',
-			pattern: '50 16 * * 0',
+			pattern: '55 19 * * 0',
+			timezone: 'Europe/Moscow',
 			async run() {
 				await grenadesService.takeSnapshotAll(
 					'BASE_CAPTURE',
@@ -152,7 +166,8 @@ export const crons = createElysia()
 	.use(
 		cron({
 			name: 'baseCaptureBetween3and4',
-			pattern: '15 17 * * 0',
+			pattern: '20 20 * * 0',
+			timezone: 'Europe/Moscow',
 			async run() {
 				await grenadesService.takeSnapshotAll(
 					'BASE_CAPTURE',
@@ -164,7 +179,8 @@ export const crons = createElysia()
 	.use(
 		cron({
 			name: 'baseCaptureAfterStages',
-			pattern: '40 17 * * 0',
+			pattern: '45 20 * * 0',
+			timezone: 'Europe/Moscow',
 			async run() {
 				await grenadesService.takeSnapshotAll(
 					'BASE_CAPTURE',
