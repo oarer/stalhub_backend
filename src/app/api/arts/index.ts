@@ -97,7 +97,7 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 				const buf = Buffer.from(await file.arrayBuffer())
 
 				try {
-					return await artsService.saveArtImage({
+					return await artsService.saveArtMedia({
 						name: file.name,
 						type: file.type,
 						buffer: buf,
@@ -111,7 +111,14 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 				beforeHandle: [requireAuth, requireArtAuthor],
 				body: t.Object({
 					file: t.File({
-						type: ['image/png', 'image/jpeg', 'image/webp', 'image/gif'],
+						type: [
+							'image/png',
+							'image/jpeg',
+							'image/webp',
+							'image/gif',
+							'video/mp4',
+							'video/webm',
+						],
 					}),
 				}),
 				detail: { tags: ['Arts'] },

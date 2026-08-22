@@ -150,7 +150,7 @@ class ArtsService {
 		return this.mapArt(art, stars_count, is_starred, comments_count)
 	}
 
-	async saveArtImage(file: { name: string; type: string; buffer: Buffer }) {
+	async saveArtMedia(file: { name: string; type: string; buffer: Buffer }) {
 		const artDir = './uploads/arts'
 		await mkdir(artDir, { recursive: true })
 

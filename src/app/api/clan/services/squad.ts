@@ -67,12 +67,16 @@ export class SquadService {
 			throw new Error('Участник не из этого клана')
 		}
 
-		const existing = await prisma.clanSquadMember.findFirst({
+		const memberships = await prisma.clanSquadMember.findMany({
 			where: { memberId: clanMemberId },
+			include: { squad: true },
 		})
-		if (existing?.squadId === squadId && existing.slot === slot) {
+		const current = memberships.find(
+			(m) => m.squadId === squadId && m.slot === slot
+		)
+		if (current) {
 			return prisma.clanSquadMember.findUniqueOrThrow({
-				where: { id: existing.id },
+				where: { id: current.id },
 				include: memberInclude(),
 			})
 		}
@@ -81,18 +85,42 @@ export class SquadService {
 			where: { squadId_slot: { squadId, slot } },
 		})
 
-		return prisma.$transaction(async (tx) => {
-			if (existing) {
-				await tx.clanSquadMember.delete({ where: { id: existing.id } })
-				await tx.clanSquad.updateMany({
-					where: { id: existing.squadId, leaderId: existing.id },
-					data: { leaderId: null },
+		const ownRow = memberships.find((m) => m.squadId === squadId)
+		if (ownRow && !occupied) {
+			return prisma.clanSquadMember.update({
+				where: { id: ownRow.id },
+				data: { slot },
+				include: memberInclude(),
+			})
+		}
+		if (ownRow && occupied) {
+			return prisma.$transaction(async (tx) => {
+				await tx.clanSquadMember.update({
+					where: { id: occupied.id },
+					data: { slot: -1 },
 				})
+				await tx.clanSquadMember.update({
+					where: { id: ownRow.id },
+					data: { slot },
+				})
+				return tx.clanSquadMember.update({
+					where: { id: occupied.id },
+					data: { slot: ownRow.slot },
+					include: memberInclude(),
+				})
+			})
+		}
+
+		return prisma.$transaction(async (tx) => {
+			const toDelete = new Map<number, number>()
+			for (const m of memberships) {
+				if (m.squad.map === squad.map) toDelete.set(m.id, m.squadId)
 			}
-			if (occupied) {
-				await tx.clanSquadMember.delete({ where: { id: occupied.id } })
+			if (occupied) toDelete.set(occupied.id, occupied.squadId)
+			for (const [id, squadRowId] of toDelete) {
+				await tx.clanSquadMember.delete({ where: { id } })
 				await tx.clanSquad.updateMany({
-					where: { id: squadId, leaderId: occupied.id },
+					where: { id: squadRowId, leaderId: id },
 					data: { leaderId: null },
 				})
 			}
@@ -181,10 +209,9 @@ export class SquadService {
 		if (!member) throw new Error('Вы не состоите в этом клане')
 
 		const inSquad = await prisma.clanSquadMember.findFirst({
-			where: { memberId: member.id },
+			where: { memberId: member.id, squadId },
 		})
-		if (inSquad && inSquad.squadId === squadId)
-			throw new Error('Вы уже состоите в этом отряде')
+		if (inSquad) throw new Error('Вы уже состоите в этом отряде')
 
 		const full = await prisma.clanSquadMember.count({ where: { squadId } })
 		if (full >= MAX_SLOTS) throw new Error('В отряде нет свободных мест')
@@ -215,17 +242,18 @@ export class SquadService {
 		if (req.squad.clanId !== clanId)
 			throw new Error('Заявка не из вашего клана')
 
-		const inSquad = await prisma.clanSquadMember.findFirst({
+		const inSquads = await prisma.clanSquadMember.findMany({
 			where: { memberId: req.memberId },
+			include: { squad: true },
 		})
-		if (inSquad && inSquad.squadId === req.squadId) {
+		if (inSquads.some((m) => m.squadId === req.squadId)) {
 			await prisma.clanSquadRequest.delete({ where: { id: requestId } })
 			throw new Error('Участник уже состоит в этом отряде')
 		}
-		if (inSquad) {
-			await prisma.clanSquadMember.delete({ where: { id: inSquad.id } })
+		for (const m of inSquads.filter((m) => m.squad.map === req.squad.map)) {
+			await prisma.clanSquadMember.delete({ where: { id: m.id } })
 			await prisma.clanSquad.updateMany({
-				where: { id: inSquad.squadId, leaderId: inSquad.id },
+				where: { id: m.squadId, leaderId: m.id },
 				data: { leaderId: null },
 			})
 		}
