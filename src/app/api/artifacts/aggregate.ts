@@ -249,6 +249,58 @@ export const buildAggregate = (
 	}
 }
 
+const retryFailedItems = async (
+	region: string,
+	failedIds: string[],
+	lotGroups: Record<string, LotsResponse['lots']>,
+	totalCount: number,
+	attempt = 1,
+	maxAttempts = 3
+) => {
+	if (attempt > maxAttempts || failedIds.length === 0) return
+
+	console.log(
+		`[Artifacts] ${region} retrying ${failedIds.length} failed items (attempt ${attempt}/${maxAttempts})...`
+	)
+
+	await new Promise((r) => setTimeout(r, 60_000))
+
+	const stillFailed: string[] = []
+
+	await mapLimit(failedIds, CONCURRENCY, async (itemId) => {
+		try {
+			lotGroups[itemId] = await withRetry(
+				() => fetchItemLots(region, itemId),
+				2
+			)
+		} catch {
+			stillFailed.push(itemId)
+		}
+	})
+
+	const aggregate = buildAggregate(lotGroups, new Date().toISOString())
+	const traded = Object.keys(aggregate.items).length
+
+	if (traded > 0) {
+		setRegionCache(region, aggregate)
+	}
+
+	console.log(
+		`[Artifacts] ${region} retry ${attempt} done: ${traded}/${totalCount} traded items, ${stillFailed.length} still failed`
+	)
+
+	if (stillFailed.length > 0) {
+		await retryFailedItems(
+			region,
+			stillFailed,
+			lotGroups,
+			totalCount,
+			attempt + 1,
+			maxAttempts
+		)
+	}
+}
+
 export const updateRegion = async (region: string): Promise<number> => {
 	const gotLock = await acquireLock(region)
 	if (!gotLock) return 0
@@ -257,6 +309,7 @@ export const updateRegion = async (region: string): Promise<number> => {
 		const itemIds = await fetchListing()
 
 		const lotGroups: Record<string, LotsResponse['lots']> = {}
+		const failedIds: string[] = []
 
 		await mapLimit(itemIds, CONCURRENCY, async (itemId) => {
 			try {
@@ -266,6 +319,7 @@ export const updateRegion = async (region: string): Promise<number> => {
 				)
 			} catch {
 				lotGroups[itemId] = []
+				failedIds.push(itemId)
 			}
 		})
 
@@ -277,8 +331,14 @@ export const updateRegion = async (region: string): Promise<number> => {
 		}
 
 		console.log(
-			`[Artifacts] ${region} updated: ${traded}/${itemIds.length} traded items`
+			`[Artifacts] ${region} updated: ${traded}/${itemIds.length} traded items${failedIds.length > 0 ? `, ${failedIds.length} failed` : ''}`
 		)
+
+		if (failedIds.length > 0) {
+			retryFailedItems(region, failedIds, lotGroups, itemIds.length).catch(
+				(err) => console.error(`[Artifacts] ${region} retry error:`, err)
+			)
+		}
 
 		return traded
 	} finally {

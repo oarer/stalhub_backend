@@ -4,7 +4,8 @@
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"dev": "bun run --watch src/index.ts",
-		"db:deploy": "bunx prisma migrate deploy && bunx prisma generate"
+		"db:deploy": "bunx prisma migrate deploy && bunx prisma generate",
+		"grenade:seed": "bun run scripts/grenade-seed-snapshots.ts"
 	},
 	"dependencies": {
 		"@elysiajs/cors": "^1.4.2",
