@@ -1,9 +1,11 @@
 import { prisma } from '@/lib/prisma'
 
 export class BoostOrderService {
-	async getOrders(clanId: string, date: string) {
+	private static readonly PERMANENT_DATE = 'permanent'
+
+	async getOrders(clanId: string) {
 		const orders = await prisma.clanBoostOrder.findMany({
-			where: { clanId, date },
+			where: { clanId, date: BoostOrderService.PERMANENT_DATE },
 			include: {
 				player: {
 					select: { id: true, name: true },
@@ -19,9 +21,10 @@ export class BoostOrderService {
 		playerId: number,
 		itemId: string,
 		itemName: string,
-		count: number,
-		date: string
+		count: number
 	) {
+		const date = BoostOrderService.PERMANENT_DATE
+
 		const clan = await prisma.clan.findUnique({
 			where: { id: clanId },
 			select: { boost_mode: true },
@@ -58,12 +61,12 @@ export class BoostOrderService {
 			})
 		}
 
-		return this.getOrders(clanId, date)
+		return this.getOrders(clanId)
 	}
 
-	async removeOrder(clanId: string, date: string, index: number) {
+	async removeOrder(clanId: string, index: number) {
 		const orders = await prisma.clanBoostOrder.findMany({
-			where: { clanId, date },
+			where: { clanId, date: BoostOrderService.PERMANENT_DATE },
 			orderBy: { created_at: 'asc' },
 		})
 		if (orders[index]) {
@@ -71,7 +74,7 @@ export class BoostOrderService {
 				where: { id: orders[index].id },
 			})
 		}
-		return this.getOrders(clanId, date)
+		return this.getOrders(clanId)
 	}
 }
 

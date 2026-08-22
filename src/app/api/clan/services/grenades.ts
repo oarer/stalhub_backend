@@ -405,9 +405,12 @@ export class GrenadesService {
 		return map
 	}
 
-	async getBoxes(clanId: string, date: string) {
+	private static readonly PERMANENT_DATE = 'permanent'
+
+	async getBoxes(clanId: string, date?: string) {
+		const resolvedDate = date ?? GrenadesService.PERMANENT_DATE
 		const boxes = await prisma.grenadeBox.findMany({
-			where: { clanId, date },
+			where: { clanId, date: resolvedDate },
 			orderBy: { created_at: 'asc' },
 		})
 		return { boxes }
@@ -415,10 +418,11 @@ export class GrenadesService {
 
 	async addBox(
 		clanId: string,
-		entry: { name: string; type: string; count: number; date: string }
+		entry: { name: string; type: string; count: number }
 	) {
+		const date = GrenadesService.PERMANENT_DATE
 		const existing = await prisma.grenadeBox.findFirst({
-			where: { clanId, date: entry.date, name: entry.name, type: entry.type },
+			where: { clanId, date, name: entry.name, type: entry.type },
 		})
 
 		if (existing) {
@@ -430,7 +434,7 @@ export class GrenadesService {
 			await prisma.grenadeBox.create({
 				data: {
 					clanId,
-					date: entry.date,
+					date,
 					name: entry.name,
 					type: entry.type,
 					count: entry.count,
@@ -438,18 +442,18 @@ export class GrenadesService {
 			})
 		}
 
-		return this.getBoxes(clanId, entry.date)
+		return this.getBoxes(clanId)
 	}
 
-	async removeBox(clanId: string, date: string, index: number) {
+	async removeBox(clanId: string, index: number) {
 		const boxes = await prisma.grenadeBox.findMany({
-			where: { clanId, date },
+			where: { clanId, date: GrenadesService.PERMANENT_DATE },
 			orderBy: { created_at: 'asc' },
 		})
 		if (boxes[index]) {
 			await prisma.grenadeBox.delete({ where: { id: boxes[index].id } })
 		}
-		return this.getBoxes(clanId, date)
+		return this.getBoxes(clanId)
 	}
 }
 

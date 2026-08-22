@@ -7,12 +7,11 @@ import { boostOrderService } from '../services/boost-order'
 export const boostOrderRoutes = clanContext.group('/boosts', (app) =>
 	app
 		.get(
-			'/:date',
-			({ params, store }) =>
-				boostOrderService.getOrders(store.clanId!, params.date),
+			'',
+			({ store }) =>
+				boostOrderService.getOrders(store.clanId!),
 			{
 				beforeHandle: [requireAuth, requireClanMember],
-				params: t.Object({ date: t.String() }),
 				detail: { tags: ['Clan Boosts'] },
 			}
 		)
@@ -24,8 +23,7 @@ export const boostOrderRoutes = clanContext.group('/boosts', (app) =>
 					body.playerId,
 					body.itemId,
 					body.itemName,
-					body.count,
-					body.date
+					body.count
 				),
 			{
 				beforeHandle: [requireAuth, requireClanMember],
@@ -34,23 +32,20 @@ export const boostOrderRoutes = clanContext.group('/boosts', (app) =>
 					itemId: t.String(),
 					itemName: t.String(),
 					count: t.Numeric({ minimum: 1 }),
-					date: t.String(),
 				}),
 				detail: { tags: ['Clan Boosts'] },
 			}
 		)
 		.delete(
-			'/:date/:index',
+			'/:index',
 			({ params, store }) =>
 				boostOrderService.removeOrder(
 					store.clanId!,
-					params.date,
 					params.index
 				),
 			{
 				beforeHandle: [requireAuth, requireClanOfficer],
 				params: t.Object({
-					date: t.String(),
 					index: t.Numeric(),
 				}),
 				detail: { tags: ['Clan Boosts'] },
