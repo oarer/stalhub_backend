@@ -15,7 +15,7 @@
  * Arguments:
  *   clanId      — ID клана (обязательно)
  *   eventType   — тип события: TOURNAMENT | BRAWL | BASE_CAPTURE (по умолчанию: TOURNAMENT)
- *   dateOffset  — смещение даты в днях от сегодня (0 = сегодня, -1 = вчера, по умолчанию: 0)
+ *   dateOffset  — смещение даты
  */
 
 const [clanId, eventTypeArg, dateOffsetArg] = process.argv.slice(2)
@@ -40,7 +40,6 @@ const eventType: StageType =
 const dateOffset =
 	Number.isFinite(Number(dateOffsetArg)) ? Number(dateOffsetArg) : 0
 
-// Checkpoints needed for 3 stages: stage1=(BEFORE→BETWEEN_1_2), stage2=(BETWEEN_1_2→BETWEEN_2_3), stage3=(BETWEEN_2_3→BETWEEN_3_4)
 const CHECKPOINTS = [
 	'BEFORE_STAGES',
 	'BETWEEN_1_2',
@@ -48,11 +47,9 @@ const CHECKPOINTS = [
 	'BETWEEN_3_4',
 ] as const
 
-// Base grenade counts per member (BEFORE_STAGES baseline)
 const BASE_MIN = 500
 const BASE_MAX = 3000
 
-// Grenades thrown per stage per member
 const STAGE_MIN = 30
 const STAGE_MAX = 250
 
@@ -64,8 +61,6 @@ function ts(): string {
 	return new Date().toISOString().slice(11, 19)
 }
 
-// Spread 4 checkpoints over ~4 hours (realistic raid window)
-// BEFORE_STAGES → +0min, BETWEEN_1_2 → +60min, BETWEEN_2_3 → +120min, BETWEEN_3_4 → +180min
 const CHECKPOINT_OFFSETS_MIN = [0, 60, 120, 180]
 
 process.env.DATABASE_URL = (process.env.DATABASE_URL ?? '').replace(
