@@ -288,7 +288,7 @@ class PlayerService {
 					alliance: clan.info.alliance ?? '',
 					rank,
 					joined_at: joinedAt,
-					userId: auth?.userid ?? null,
+					user_id: auth?.userid ?? null,
 				},
 			})
 		} catch {
@@ -297,15 +297,15 @@ class PlayerService {
 	}
 
 	async getClanHistory(params: {
-		playerName?: string
-		userId?: number
+		player_name?: string
+		user_id?: number
 		limit?: number
 	}) {
-		const { playerName, userId, limit = 20 } = params
+		const { player_name, user_id, limit = 20 } = params
 		return prisma.clanHistory.findMany({
 			where: {
-				...(playerName ? { player_name: playerName } : {}),
-				...(userId ? { userId } : {}),
+				...(player_name ? { player_name: player_name } : {}),
+				...(user_id ? { user_id } : {}),
 			},
 			orderBy: { seen_at: 'desc' },
 			take: limit,
@@ -372,10 +372,10 @@ class PlayerService {
 		}
 	}
 
-	async getBlacklist(): Promise<{ uuid: string; createdAt: Date }[]> {
+	async getBlacklist(): Promise<{ uuid: string; created_at: Date }[]> {
 		return prisma.playerBlacklist.findMany({
-			select: { uuid: true, createdAt: true },
-			orderBy: { createdAt: 'desc' },
+			select: { uuid: true, created_at: true },
+			orderBy: { created_at: 'desc' },
 		})
 	}
 }

@@ -31,21 +31,21 @@ async function ensureGuestRole() {
 
 class ClanInviteService {
 	async createGuestAccount(
-		clanId: string,
-		createdBy: string,
+		clan_id: string,
+		created_by: string,
 		nickname: string
 	) {
 		const name = nickname.trim()
 		if (!name) throw new Error('Nickname is required')
 
 		const clan = await prisma.clan.findUnique({
-			where: { id: clanId },
+			where: { id: clan_id },
 			select: { id: true, name: true, tag: true, region: true },
 		})
 		if (!clan) throw new Error('Clan not found')
 
 		const member = await prisma.clanMember.findFirst({
-			where: { clanId, name: { equals: name, mode: 'insensitive' } },
+			where: { clan_id, name: { equals: name, mode: 'insensitive' } },
 			select: { id: true, name: true },
 		})
 		if (!member) throw new Error(`"${name}" is not in the clan member list`)
@@ -70,26 +70,26 @@ class ClanInviteService {
 					data: {
 						code,
 						clan_id: clan.id,
-						userId: user.id,
-						created_by: createdBy,
+						user_id: user.id,
+						created_by: created_by,
 					},
 				})
 				await prisma.userClanProfile.upsert({
-					where: { userId_clanId: { userId: user.id, clanId: clan.id } },
+					where: { user_id_clan_id: { user_id: user.id, clan_id: clan.id } },
 					create: {
-						userId: user.id,
-						clanId: clan.id,
+						user_id: user.id,
+						clan_id: clan.id,
 						region: clan.region ?? 'RU',
-						isActive: true,
+						is_active: true,
 					},
 					update: { region: clan.region ?? 'RU' },
 				})
 				await prisma.clanMember.updateMany({
 					where: {
-						clanId: clan.id,
+						clan_id: clan.id,
 						name: { equals: name, mode: 'insensitive' },
 					},
-					data: { userId: user.id },
+					data: { user_id: user.id },
 				})
 				return {
 					code,
@@ -109,8 +109,8 @@ class ClanInviteService {
 	}
 
 	async createGuestAccountsBulk(
-		clanId: string,
-		createdBy: string,
+		clan_id: string,
+		created_by: string,
 		nicknames: string[]
 	) {
 		const results = []
@@ -119,8 +119,8 @@ class ClanInviteService {
 			if (!nickname) continue
 			try {
 				const created = await this.createGuestAccount(
-					clanId,
-					createdBy,
+					clan_id,
+					created_by,
 					nickname
 				)
 				results.push({ ok: true, ...created })
@@ -149,9 +149,9 @@ class ClanInviteService {
 		throw new Error('Failed to generate unique guest username')
 	}
 
-	async listByClan(clanId: string) {
+	async listByClan(clan_id: string) {
 		return prisma.clanInvite.findMany({
-			where: { clan_id: clanId },
+			where: { clan_id: clan_id },
 			include: {
 				user: { select: { id: true, username: true, name: true } },
 			},
@@ -159,35 +159,35 @@ class ClanInviteService {
 		})
 	}
 
-	async revoke(inviteId: number) {
+	async revoke(invite_id: number) {
 		const invite = await prisma.clanInvite.findUnique({
-			where: { id: inviteId },
-			select: { userId: true },
+			where: { id: invite_id },
+			select: { user_id: true },
 		})
 		if (!invite) throw new Error('Invite not found')
 		await prisma.$transaction([
-			prisma.clanInvite.delete({ where: { id: inviteId } }),
-			prisma.user.delete({ where: { id: invite.userId } }),
+			prisma.clanInvite.delete({ where: { id: invite_id } }),
+			prisma.user.delete({ where: { id: invite.user_id } }),
 		])
 		return { ok: true }
 	}
 
-	async kickGuest(clanId: string, userId: number) {
+	async kickGuest(clan_id: string, user_id: number) {
 		await prisma.$transaction([
 			prisma.userClanProfile.deleteMany({
-				where: { userId, clanId },
+				where: { user_id, clan_id },
 			}),
 			prisma.clanMember.updateMany({
-				where: { userId, clanId },
-				data: { userId: null },
+				where: { user_id, clan_id },
+				data: { user_id: null },
 			}),
-			prisma.clanInvite.deleteMany({ where: { userId } }),
-			prisma.user.delete({ where: { id: userId } }),
+			prisma.clanInvite.deleteMany({ where: { user_id } }),
+			prisma.user.delete({ where: { id: user_id } }),
 		])
 		return { ok: true }
 	}
 
-	async claim(code: string, claimedBy: string) {
+	async claim(code: string, claimed_by: string) {
 		const normalized = code.trim().toUpperCase()
 		const invite = await prisma.clanInvite.findUnique({
 			where: { code: normalized },
@@ -205,23 +205,23 @@ class ClanInviteService {
 		if (!clan) throw new Error('Clan not found')
 
 		const hasActive = await prisma.userClanProfile.findFirst({
-				where: { userId: invite.userId, isActive: true },
-				select: { userId: true },
+				where: { user_id: invite.user_id, is_active: true },
+				select: { user_id: true },
 			})
 			await prisma.$transaction([
 				prisma.clanInvite.update({
 					where: { id: invite.id },
-					data: { claimed_by: claimedBy, claimed_at: new Date() },
+					data: { claimed_by: claimed_by, claimed_at: new Date() },
 				}),
 				prisma.userClanProfile.upsert({
 					where: {
-						userId_clanId: { userId: invite.userId, clanId: clan.id },
+						user_id_clan_id: { user_id: invite.user_id, clan_id: clan.id },
 					},
 					create: {
-						userId: invite.userId,
-						clanId: clan.id,
+						user_id: invite.user_id,
+						clan_id: clan.id,
 						region: clan.region ?? 'RU',
-						isActive: !hasActive,
+						is_active: !hasActive,
 					},
 					update: { region: clan.region ?? 'RU' },
 				}),

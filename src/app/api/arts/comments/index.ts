@@ -28,13 +28,13 @@ export const artCommentsRoutes = createElysia().group('/:id/comments', (app) =>
 		.post(
 			'',
 			async ({ params, body, store }) => {
-				const { userId } = fromStore(store)
+				const { user_id } = fromStore(store)
 				const comment = await commentsService.createForArt(
 					Number(params.id),
-					userId,
+					user_id,
 					{
 						content: body.content,
-						parentId: body.parentId,
+						parent_id: body.parent_id,
 					}
 				)
 
@@ -50,22 +50,22 @@ export const artCommentsRoutes = createElysia().group('/:id/comments', (app) =>
 						error: 'content is required',
 						maxLength: 5000,
 					}),
-					parentId: t.Optional(t.Number()),
+					parent_id: t.Optional(t.Number()),
 				}),
 				detail: { tags: ['Art Comments'] },
 			}
 		)
 
 		.delete(
-			'/:commentId',
+			'/:comment_id',
 			async ({ params, store, set }) => {
-				const { userId } = fromStore(store)
-				const isAdmin = await checkPermission(userId, 'art:manage')
+				const { user_id } = fromStore(store)
+				const is_admin = await checkPermission(user_id, 'art:manage')
 
 				const ok = await commentsService.delete(
-					Number(params.commentId),
-					userId,
-					isAdmin
+					Number(params.comment_id),
+					user_id,
+					is_admin
 				)
 
 				if (!ok) {
@@ -79,7 +79,7 @@ export const artCommentsRoutes = createElysia().group('/:id/comments', (app) =>
 				beforeHandle: [requireAuth],
 				params: t.Object({
 					id: t.String(),
-					commentId: t.String(),
+					comment_id: t.String(),
 				}),
 				detail: { tags: ['Art Comments'] },
 			}

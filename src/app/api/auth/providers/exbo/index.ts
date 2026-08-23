@@ -197,9 +197,9 @@ export const exboAuth = createElysia()
 						where: { exbo_id: exboUser.uuid },
 					})
 
-					let userId: number
+					let user_id: number
 					if (existing) {
-						userId = existing.userid
+						user_id = existing.userid
 						await prisma.eXBOAuth.update({
 							where: { id: existing.id },
 							data: {
@@ -221,7 +221,7 @@ export const exboAuth = createElysia()
 							data: {
 								username: exboUser.display_login,
 								name: exboUser.login,
-								EXBOAuth: {
+								exbo_auth: {
 									create: {
 										exbo_id: exboUser.uuid,
 										login: exboUser.login,
@@ -244,14 +244,14 @@ export const exboAuth = createElysia()
 								},
 							},
 						})
-						userId = user.id
-						await assignDefaultRole(userId)
+						user_id = user.id
+						await assignDefaultRole(user_id)
 					}
 					try {
 						const detectRegion = existing?.region ?? selectedRegion
 						if (detectRegion) {
 							await clanService.detectFromExboCharacters(
-								userId,
+								user_id,
 								detectRegion,
 								tokenData.access_token
 							)
@@ -261,7 +261,7 @@ export const exboAuth = createElysia()
 					}
 
 					const userData = await prisma.user.findUnique({
-						where: { id: userId },
+						where: { id: user_id },
 						include: { roles: true },
 					})
 					const roleNames = userData?.roles.map((r) => r.name) ?? []
@@ -274,18 +274,18 @@ export const exboAuth = createElysia()
 						h['x-forwarded-for']?.split(',')[0]?.trim() ??
 						h['x-real-ip'] ??
 						''
-					const session = await createSession(userId, ua, ip)
-					const accessToken = await jwt.sign({
-						sub: String(userId),
-						sid: session.sessionId,
+					const session = await createSession(user_id, ua, ip)
+					const access_token_value = await jwt.sign({
+						sub: String(user_id),
+						sid: session.session_id,
 						name: userData?.name ?? '',
 						username: userData?.username ?? '',
 						role: roleNames,
 						exp: Math.floor(Date.now() / 1000) + 5 * 60,
 					})
 					const refreshToken = await jwt.sign({
-						sub: String(userId),
-						sid: session.sessionId,
+						sub: String(user_id),
+						sid: session.session_id,
 						exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
 					})
 
@@ -294,7 +294,7 @@ export const exboAuth = createElysia()
 						...refreshCookie,
 					})
 					access_token.set({
-						value: accessToken,
+						value: access_token_value,
 						...accessCookie,
 					})
 
@@ -315,15 +315,15 @@ export const exboAuth = createElysia()
 			.get(
 				'/link',
 				async ({ store }) => {
-					const { userId } = fromStore(store)
+					const { user_id } = fromStore(store)
 					const existing = await prisma.eXBOAuth.findUnique({
-						where: { userid: userId },
+						where: { userid: user_id },
 					})
 					if (existing) {
 						return { error: 'EXBO already linked' }
 					}
 
-					const state = createLinkState(userId)
+					const state = createLinkState(user_id)
 
 					await prisma.eXBOAuthState.create({
 						data: {
@@ -349,9 +349,9 @@ export const exboAuth = createElysia()
 			.delete(
 				'/link',
 				async ({ store }) => {
-					const { userId } = fromStore(store)
+					const { user_id } = fromStore(store)
 					await prisma.eXBOAuth.deleteMany({
-						where: { userid: userId },
+						where: { userid: user_id },
 					})
 					return { success: true }
 				},
@@ -364,9 +364,9 @@ export const exboAuth = createElysia()
 			.get(
 				'/region',
 				async ({ store, set }) => {
-					const { userId } = fromStore(store)
+					const { user_id } = fromStore(store)
 					const auth = await prisma.eXBOAuth.findUnique({
-						where: { userid: userId },
+						where: { userid: user_id },
 					})
 					if (!auth) {
 						set.status = 404
@@ -402,9 +402,9 @@ export const exboAuth = createElysia()
 			.patch(
 				'/region',
 				async ({ body, store, set }) => {
-					const { userId } = fromStore(store)
+					const { user_id } = fromStore(store)
 					const auth = await prisma.eXBOAuth.findUnique({
-						where: { userid: userId },
+						where: { userid: user_id },
 					})
 					if (!auth) {
 						set.status = 404
@@ -448,7 +448,7 @@ export const exboAuth = createElysia()
 							}>(updated.token_blob)
 							if (access_token) {
 								await clanService.detectFromExboCharacters(
-									userId,
+									user_id,
 									updated.region,
 									access_token
 								)

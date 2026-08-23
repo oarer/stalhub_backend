@@ -8,7 +8,7 @@ import { clanService } from '../services/clan'
 export const clanSettingsRoutes = clanContext
 	.get('/settings', ({ store, set }) => {
 		return clanService
-			.getSettings(store.clanId!)
+			.getSettings(store.clan_id!)
 			.then((s) => {
 				if (!s) {
 					set.status = 404
@@ -27,9 +27,9 @@ export const clanSettingsRoutes = clanContext
 	.patch(
 		'/settings',
 		({ store, body, set }) => {
-			const clanId = store.clanId!
+			const clan_id = store.clan_id!
 			return clanService
-				.updatePublicSettings(clanId, body)
+				.updatePublicSettings(clan_id, body)
 				.catch(() => {
 					set.status = 404
 					return { error: 'Clan not found' }
@@ -45,12 +45,12 @@ export const clanSettingsRoutes = clanContext
 	)
 	.patch(
 		'/schedule',
-		({ store, body }) => clanService.updateSchedule(store.clanId!, body),
+		({ store, body }) => clanService.updateSchedule(store.clan_id!, body),
 		{
 			beforeHandle: [requireAuth, requireClanLeader],
 			body: t.Object({
-				brawlsPerWeek: t.Optional(t.Numeric({ minimum: 0, maximum: 4 })),
-				brawlsMandatory: t.Optional(t.Boolean()),
+				brawls_per_week: t.Optional(t.Numeric({ minimum: 0, maximum: 4 })),
+				brawls_mandatory: t.Optional(t.Boolean()),
 			}),
 			detail: { tags: ['Clan'] },
 		}
@@ -58,7 +58,7 @@ export const clanSettingsRoutes = clanContext
 	.patch(
 		'/recruiting',
 		({ store, body }) =>
-			clanService.updateRecruiting(store.clanId!, body.recruiting),
+			clanService.updateRecruiting(store.clan_id!, body.recruiting),
 		{
 			beforeHandle: [requireAuth, requireClanLeader],
 			body: t.Object({ recruiting: t.Boolean() }),
@@ -68,7 +68,7 @@ export const clanSettingsRoutes = clanContext
 	.patch(
 		'/boost-mode',
 		({ store, body }) =>
-			clanService.updateBoostMode(store.clanId!, body.boost_mode),
+			clanService.updateBoostMode(store.clan_id!, body.boost_mode),
 		{
 			beforeHandle: [requireAuth, requireClanLeader],
 			body: t.Object({ boost_mode: t.Enum(BoostMode) }),
@@ -78,7 +78,7 @@ export const clanSettingsRoutes = clanContext
 	.patch(
 		'/grenade-mode',
 		({ store, body }) =>
-			clanService.updateGrenadeMode(store.clanId!, body.grenade_mode),
+			clanService.updateGrenadeMode(store.clan_id!, body.grenade_mode),
 		{
 			beforeHandle: [requireAuth, requireClanLeader],
 			body: t.Object({ grenade_mode: t.Enum(BoostMode) }),

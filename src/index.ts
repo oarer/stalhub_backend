@@ -68,7 +68,7 @@ export const app = createElysia()
 			method: request.method,
 			route: new URL(request.url).pathname,
 			status: set.status ?? 200,
-			durationSeconds: start ? (Date.now() - start) / 1000 : 0,
+			duration_seconds: start ? (Date.now() - start) / 1000 : 0,
 		})
 	})
 

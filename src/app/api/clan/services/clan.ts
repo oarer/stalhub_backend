@@ -32,13 +32,13 @@ const LEADER_RANK = 'LEADER'
 export const TOURNAMENT_DAYS = 3
 
 export type ClanSchedule = {
-	brawlsPerWeek: number
-	brawlsMandatory: boolean
+	brawls_per_week: number
+	brawls_mandatory: boolean
 }
 
 export const DEFAULT_SCHEDULE: ClanSchedule = {
-	brawlsPerWeek: 4,
-	brawlsMandatory: false,
+	brawls_per_week: 4,
+	brawls_mandatory: false,
 }
 
 export function normalizeSchedule(raw: unknown): ClanSchedule {
@@ -49,16 +49,16 @@ export function normalizeSchedule(raw: unknown): ClanSchedule {
 			? r.daysPerWeek - r.tournamentDays
 			: null
 	return {
-		brawlsPerWeek: clampInt(
-			r.brawlsPerWeek ?? legacyBrawls ?? DEFAULT_SCHEDULE.brawlsPerWeek,
+		brawls_per_week: clampInt(
+			r.brawls_per_week ?? legacyBrawls ?? DEFAULT_SCHEDULE.brawls_per_week,
 			0,
 			4,
-			DEFAULT_SCHEDULE.brawlsPerWeek
+			DEFAULT_SCHEDULE.brawls_per_week
 		),
-		brawlsMandatory:
-			typeof r.brawlsMandatory === 'boolean'
-				? r.brawlsMandatory
-				: DEFAULT_SCHEDULE.brawlsMandatory,
+		brawls_mandatory:
+			typeof r.brawls_mandatory === 'boolean'
+				? r.brawls_mandatory
+				: DEFAULT_SCHEDULE.brawls_mandatory,
 	}
 }
 
@@ -69,35 +69,35 @@ function clampInt(value: unknown, min: number, max: number, fallback: number) {
 
 export class ClanService {
 	async detectFromExboCharacters(
-		userId: number,
+		user_id: number,
 		region: string,
-		accessToken: string
+		access_token: string
 	) {
 		const { data: chars } = await apiClient.get<ExboCharacterEntry[]>(
 			`/${region}/characters`,
 			{
-				headers: { Authorization: `Bearer ${accessToken}` },
+				headers: { Authorization: `Bearer ${access_token}` },
 				_skipAuth: true,
 			} as never
 		)
 
 		let hasActive = await prisma.userClanProfile.findFirst({
-			where: { userId, isActive: true },
-			select: { userId: true },
+			where: { user_id, is_active: true },
+			select: { user_id: true },
 		})
 
 		for (const c of chars) {
-			const clanId = c.clan?.info?.id
-			if (!clanId) continue
+			const clan_id = c.clan?.info?.id
+			if (!clan_id) continue
 
 			const isLeader = c.clan.member?.rank === LEADER_RANK
 
 			await prisma.clan.upsert({
 				where: {
-					id: clanId,
+					id: clan_id,
 				},
 				create: {
-					id: clanId,
+					id: clan_id,
 					name: c.clan.info.name,
 					tag: c.clan.info.tag,
 					level: c.clan.info.level,
@@ -124,79 +124,79 @@ export class ClanService {
 
 			const activate = !hasActive
 			await prisma.userClanProfile.upsert({
-				where: { userId_clanId: { userId, clanId } },
-				create: { userId, clanId, region, isActive: activate },
+				where: { user_id_clan_id: { user_id, clan_id } },
+				create: { user_id, clan_id, region, is_active: activate },
 				update: { region },
 			})
-			if (activate) hasActive = { userId }
+			if (activate) hasActive = { user_id }
 		}
 	}
 
-	async getActiveProfile(userId: number) {
+	async getActiveProfile(user_id: number) {
 		let profile = await prisma.userClanProfile.findFirst({
-			where: { userId, isActive: true },
+			where: { user_id, is_active: true },
 			include: { clan: true },
 		})
 		if (!profile) {
 			profile = await prisma.userClanProfile.findFirst({
-				where: { userId },
+				where: { user_id },
 				include: { clan: true },
 			})
 			if (profile) {
 				await prisma.userClanProfile.update({
 					where: {
-						userId_clanId: {
-							userId: profile.userId,
-							clanId: profile.clanId,
+						user_id_clan_id: {
+							user_id: profile.user_id,
+							clan_id: profile.clan_id,
 						},
 					},
-					data: { isActive: true },
+					data: { is_active: true },
 				})
-				profile.isActive = true
+				profile.is_active = true
 			}
 		}
 		return profile
 	}
 
-	async register(userId: number) {
-		const profile = await this.getActiveProfile(userId)
-		if (!profile?.clanId) throw new Error('No clan linked to user')
+	async register(user_id: number) {
+		const profile = await this.getActiveProfile(user_id)
+		if (!profile?.clan_id) throw new Error('No clan linked to user')
 
 		try {
-			await this.sync(profile.clanId, profile.region)
+			await this.sync(profile.clan_id, profile.region)
 		} catch (err) {
 			console.error('[Clan] Sync skipped during register:', err)
 		}
 		await prisma.clan.update({
-			where: { id: profile.clanId },
+			where: { id: profile.clan_id },
 			data: { status: 'ACTIVE' },
 		})
-		return prisma.clan.findUnique({ where: { id: profile.clanId } })
+		return prisma.clan.findUnique({ where: { id: profile.clan_id } })
 	}
 
-	async freeze(clanId: string) {
+	async freeze(clan_id: string) {
 		return prisma.clan.update({
-			where: { id: clanId },
+			where: { id: clan_id },
 			data: { status: 'FROZEN' },
 		})
 	}
 
-	async sync(clanId: string, region?: string) {
-		const clan = await prisma.clan.findUnique({ where: { id: clanId } })
+	async sync(clan_id: string, region?: string) {
+		const clan = await prisma.clan.findUnique({ where: { id: clan_id } })
 		const reg = region ?? clan?.region ?? 'RU'
 
 		const { data: info } = await apiClient.get<ExboClanInfo>(
-			`/${reg}/clan/${clanId}/info`
+			`/${reg}/clan/${clan_id}/info`
 		)
 
-		const accessToken = await this.getMemberAccessToken(clanId)
+		const access_token = await this.getMemberAccessToken(clan_id)
 		let members: ExboClanMember[] = []
-		if (accessToken) {
+		if (access_token) {
 			const { data } = await apiClient.get<ExboClanMember[]>(
-				`/${reg}/clan/${clanId}/members`,
+				`/${reg}/clan/${clan_id}/members`,
 				{
 					params: { limit: 100, offset: 0 },
-					headers: { Authorization: `Bearer ${accessToken}` },
+					headers: { Authorization: `Bearer ${access_token}` },
 					_skipAuth: true,
 				} as never
 			)
@@ -204,7 +204,7 @@ export class ClanService {
 		}
 
 		await prisma.clan.update({
-			where: { id: clanId },
+			where: { id: clan_id },
 			data: {
 				name: info.name,
 				tag: info.tag,
@@ -220,12 +220,12 @@ export class ClanService {
 
 		if (reg !== clan?.region) {
 			await prisma.userClanProfile.updateMany({
-				where: { clanId },
+				where: { clan_id },
 				data: { region: reg },
 			})
 		}
 
-		await prisma.clanMember.deleteMany({ where: { clanId } })
+		await prisma.clanMember.deleteMany({ where: { clan_id } })
 
 		const memberNames = members.map((m) => m.name)
 		const [exboAuths, usersByUsername, guestsByName] = await Promise.all([
@@ -264,48 +264,48 @@ export class ClanService {
 				null
 			await prisma.clanMember.create({
 				data: {
-					clanId,
+					clan_id,
 					name: m.name,
 					rank: m.rank,
 					join_time: m.joinTime ? new Date(m.joinTime) : null,
-					userId: linkedUserId,
+					user_id: linkedUserId,
 				},
 			})
 			if (linkedUserId != null) {
 				const existing = await prisma.userClanProfile.findFirst({
-					where: { userId: linkedUserId, clanId },
-					select: { userId: true },
+					where: { user_id: linkedUserId, clan_id },
+					select: { user_id: true },
 				})
 				if (!existing) {
 					const hasActive = await prisma.userClanProfile.findFirst({
-						where: { userId: linkedUserId, isActive: true },
-						select: { userId: true },
+						where: { user_id: linkedUserId, is_active: true },
+						select: { user_id: true },
 					})
 					await prisma.userClanProfile.create({
 						data: {
-							userId: linkedUserId,
-							clanId,
+							user_id: linkedUserId,
+							clan_id,
 							region: reg,
-							isActive: !hasActive,
+							is_active: !hasActive,
 						},
 					})
 				}
 			}
 		}
 		return {
-			clanId,
-			memberCount: members.length,
-			membersSynced: !!accessToken,
+			clan_id,
+			member_count: members.length,
+			members_synced: !!access_token,
 		}
 	}
 
-	private async getMemberAccessToken(clanId: string): Promise<string | null> {
+	private async getMemberAccessToken(clan_id: string): Promise<string | null> {
 		const profiles = await prisma.userClanProfile.findMany({
-			where: { clanId },
+			where: { clan_id },
 			include: {
 				user: {
 					include: {
-						EXBOAuth: {
+						exbo_auth: {
 							select: {
 								token_blob: true,
 								access_expires_at: true,
@@ -316,7 +316,7 @@ export class ClanService {
 			},
 		})
 		for (const p of profiles) {
-			const auth = p.user.EXBOAuth
+			const auth = p.user.exbo_auth
 			if (!auth) continue
 			if (auth.access_expires_at <= new Date()) continue
 			const { access_token } = decryptSecretJson<{
@@ -327,9 +327,9 @@ export class ClanService {
 		return null
 	}
 
-	async listMembers(clanId: string) {
+	async listMembers(clan_id: string) {
 		return prisma.clanMember.findMany({
-			where: { clanId },
+			where: { clan_id },
 			include: {
 				user: { select: { id: true, username: true, name: true } },
 			},
@@ -337,43 +337,43 @@ export class ClanService {
 		})
 	}
 
-	async getClan(clanId: string) {
-		return prisma.clan.findUnique({ where: { id: clanId } })
+	async getClan(clan_id: string) {
+		return prisma.clan.findUnique({ where: { id: clan_id } })
 	}
 
-	async getMe(userId: number) {
-		return this.getActiveProfile(userId)
+	async getMe(user_id: number) {
+		return this.getActiveProfile(user_id)
 	}
 
-	async getMyClans(userId: number) {
+	async getMyClans(user_id: number) {
 		const profiles = await prisma.userClanProfile.findMany({
-			where: { userId },
+			where: { user_id },
 			include: { clan: true },
 			orderBy: { updated_at: 'desc' },
 		})
 		return profiles
 	}
 
-	async switchClan(userId: number, clanId: string) {
+	async switchClan(user_id: number, clan_id: string) {
 		const target = await prisma.userClanProfile.findUnique({
-			where: { userId_clanId: { userId, clanId } },
+			where: { user_id_clan_id: { user_id, clan_id } },
 		})
 		if (!target) throw new Error('You are not a member of this clan')
 
 		await prisma.$transaction([
 			prisma.userClanProfile.updateMany({
-				where: { userId, isActive: true },
-				data: { isActive: false },
+				where: { user_id, is_active: true },
+				data: { is_active: false },
 			}),
 			prisma.userClanProfile.update({
-				where: { userId_clanId: { userId, clanId } },
-				data: { isActive: true },
+				where: { user_id_clan_id: { user_id, clan_id } },
+				data: { is_active: true },
 			}),
 		])
 	}
 
-	async getPublicPayload(clanId: string) {
-		const clan = await prisma.clan.findUnique({ where: { id: clanId } })
+	async getPublicPayload(clan_id: string) {
+		const clan = await prisma.clan.findUnique({ where: { id: clan_id } })
 		if (!clan || !clan.is_public) return null
 		return publicClanPayload(clan)
 	}
@@ -386,9 +386,9 @@ export class ClanService {
 		return clans.map(publicClanPayload)
 	}
 
-	async updatePublicSettings(clanId: string, data: { is_public?: boolean }) {
+	async updatePublicSettings(clan_id: string, data: { is_public?: boolean }) {
 		return prisma.clan.update({
-			where: { id: clanId },
+			where: { id: clan_id },
 			data: {
 				...(data.is_public !== undefined && {
 					is_public: data.is_public,
@@ -397,8 +397,8 @@ export class ClanService {
 		})
 	}
 
-	async getSettings(clanId: string) {
-		const clan = await prisma.clan.findUnique({ where: { id: clanId } })
+	async getSettings(clan_id: string) {
+		const clan = await prisma.clan.findUnique({ where: { id: clan_id } })
 		if (!clan) return null
 		return {
 			is_public: clan.is_public,
@@ -408,37 +408,37 @@ export class ClanService {
 		}
 	}
 
-	async updateBoostMode(clanId: string, boost_mode: 'ISSUED' | 'SELF') {
+	async updateBoostMode(clan_id: string, boost_mode: 'ISSUED' | 'SELF') {
 		return prisma.clan.update({
-			where: { id: clanId },
+			where: { id: clan_id },
 			data: { boost_mode },
 		})
 	}
 
-	async updateGrenadeMode(clanId: string, grenade_mode: 'ISSUED' | 'SELF') {
+	async updateGrenadeMode(clan_id: string, grenade_mode: 'ISSUED' | 'SELF') {
 		return prisma.clan.update({
-			where: { id: clanId },
+			where: { id: clan_id },
 			data: { grenade_mode },
 		})
 	}
 
-	async updateSchedule(clanId: string, data: Partial<ClanSchedule>) {
-		const clan = await prisma.clan.findUnique({ where: { id: clanId } })
+	async updateSchedule(clan_id: string, data: Partial<ClanSchedule>) {
+		const clan = await prisma.clan.findUnique({ where: { id: clan_id } })
 		if (!clan) throw new Error('Clan not found')
 		const current = normalizeSchedule(clan.schedule)
 		const merged: ClanSchedule = {
-			brawlsPerWeek: data.brawlsPerWeek ?? current.brawlsPerWeek,
-			brawlsMandatory: data.brawlsMandatory ?? current.brawlsMandatory,
+			brawls_per_week: data.brawls_per_week ?? current.brawls_per_week,
+			brawls_mandatory: data.brawls_mandatory ?? current.brawls_mandatory,
 		}
 		return prisma.clan.update({
-			where: { id: clanId },
+			where: { id: clan_id },
 			data: { schedule: merged },
 		})
 	}
 
-	async updateRecruiting(clanId: string, recruiting: boolean) {
+	async updateRecruiting(clan_id: string, recruiting: boolean) {
 		return prisma.clan.update({
-			where: { id: clanId },
+			where: { id: clan_id },
 			data: { recruiting },
 		})
 	}

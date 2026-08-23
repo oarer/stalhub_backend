@@ -8,16 +8,16 @@ import { squadService } from '../services/squad'
 const idParams = t.Object({ id: t.Numeric() })
 
 export const squadsRoutes = clanContext
-	.get('/squads/:clanId', ({ params }) => squadService.list(params.clanId), {
+	.get('/squads/:clan_id', ({ params }) => squadService.list(params.clan_id), {
 		beforeHandle: [requireAuth],
-		params: t.Object({ clanId: t.String() }),
+		params: t.Object({ clan_id: t.String() }),
 		detail: { tags: ['Clan'] },
 	})
 	.post(
 		'/squads',
 		({ body, store }) =>
 			squadService.create(
-				store.clanId!,
+				store.clan_id!,
 				store.authUserId!,
 				body.name,
 				body.map
@@ -34,12 +34,12 @@ export const squadsRoutes = clanContext
 	.post(
 		'/squads/:id/slots',
 		({ params, body }) =>
-			squadService.assignMember(params.id, body.memberId, body.slot),
+			squadService.assignMember(params.id, body.member_id, body.slot),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: idParams,
 			body: t.Object({
-				memberId: t.Numeric(),
+				member_id: t.Numeric(),
 				slot: t.Numeric({ minimum: 0, maximum: 4 }),
 			}),
 			detail: { tags: ['Clan'] },
@@ -47,11 +47,11 @@ export const squadsRoutes = clanContext
 	)
 	.put(
 		'/squads/:id/leader',
-		({ params, body }) => squadService.setLeader(params.id, body.memberId),
+		({ params, body }) => squadService.setLeader(params.id, body.member_id),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: idParams,
-			body: t.Object({ memberId: t.Nullable(t.Numeric()) }),
+			body: t.Object({ member_id: t.Nullable(t.Numeric()) }),
 			detail: { tags: ['Clan'] },
 		}
 	)
@@ -80,7 +80,7 @@ export const squadsRoutes = clanContext
 	.post(
 		'/squads/requests/:id/approve',
 		({ params, store }) =>
-			squadService.approveRequest(params.id, store.clanId!),
+			squadService.approveRequest(params.id, store.clan_id!),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: idParams,
@@ -90,7 +90,7 @@ export const squadsRoutes = clanContext
 	.post(
 		'/squads/requests/:id/reject',
 		({ params, store }) =>
-			squadService.rejectRequest(params.id, store.clanId!),
+			squadService.rejectRequest(params.id, store.clan_id!),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: idParams,
@@ -110,7 +110,7 @@ export const squadsRoutes = clanContext
 	.patch(
 		'/squads/:id/map',
 		({ params, body, store }) =>
-			squadService.updateMap(params.id, store.clanId!, body.map),
+			squadService.updateMap(params.id, store.clan_id!, body.map),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: idParams,

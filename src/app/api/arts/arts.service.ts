@@ -42,7 +42,7 @@ class ArtsService {
 			created_at: Date
 			updated_at: Date
 		},
-		starsCount: number,
+		stars_count: number,
 		isStarred = false,
 		commentsCount = 0
 	): ArtData {
@@ -54,7 +54,7 @@ class ArtsService {
 			image_url: art.image_url,
 			tags: art.tags ? art.tags.split(',').filter(Boolean) : [],
 			author: resolveArtAuthor(art),
-			stars_count: starsCount,
+			stars_count: stars_count,
 			comments_count: commentsCount,
 			is_starred: isStarred,
 			created_at: art.created_at,
@@ -65,10 +65,10 @@ class ArtsService {
 	async list(
 		take: number,
 		page: number,
-		opts?: { authorId?: number; tags?: string[]; type?: ArtType }
+		opts?: { author_id?: number; tags?: string[]; type?: ArtType }
 	) {
 		const where: Prisma.ArtWhereInput = {}
-		if (opts?.authorId) where.authorId = opts.authorId
+		if (opts?.author_id) where.author_id = opts.author_id
 		if (opts?.type) where.type = opts.type
 		if (opts?.tags?.length) {
 			where.OR = opts.tags.map((tag) => ({
@@ -101,11 +101,13 @@ class ArtsService {
 
 		return {
 			data: rows.map((a) => this.mapArt(a, starCounts.get(a.id) ?? 0)),
-			totalCount,
+			total_count: totalCount,
+			page: page + 1,
+			take,
 		}
 	}
 
-	async getById(id: string, userId?: number) {
+	async getById(id: string, user_id?: number) {
 		const num = Number(id)
 		const art = await prisma.art.findFirst({
 			where: isNaN(num)
@@ -126,17 +128,17 @@ class ArtsService {
 		if (!art) return null
 
 		const stars_count = await prisma.star.count({
-			where: { targetType: StarTargetType.ART, targetId: art.id },
+			where: { target_type: StarTargetType.ART, target_id: art.id },
 		})
 
 		let is_starred = false
-		if (userId) {
+		if (user_id) {
 			const star = await prisma.star.findUnique({
 				where: {
-					targetType_targetId_userId: {
-						targetType: StarTargetType.ART,
-						targetId: art.id,
-						userId,
+					target_type_target_id_user_id: {
+						target_type: StarTargetType.ART,
+						target_id: art.id,
+						user_id,
 					},
 				},
 			})
@@ -144,10 +146,18 @@ class ArtsService {
 		}
 
 		const comments_count = await prisma.articleComment.count({
-			where: { artId: art.id },
+			where: { art_id: art.id },
 		})
 
 		return this.mapArt(art, stars_count, is_starred, comments_count)
+	}
+
+	private mediaTypeTag(image_url?: string): 'рисунок' | 'анимация' {
+		if (!image_url) return 'рисунок'
+		const ext = path.extname(image_url.split('?')[0]).toLowerCase()
+		return ['.mp4', '.webm', '.mov', '.avi', '.mkv'].includes(ext)
+			? 'анимация'
+			: 'рисунок'
 	}
 
 	async saveArtMedia(file: { name: string; type: string; buffer: Buffer }) {
@@ -162,7 +172,7 @@ class ArtsService {
 	}
 
 	async create(
-		authorId: number,
+		author_id: number,
 		data: {
 			title: string
 			type?: string
@@ -172,14 +182,27 @@ class ArtsService {
 	) {
 		const artType = (data.type as ArtType) ?? ArtType.DEFAULT
 
+		const author = await prisma.user.findUnique({
+			where: { id: author_id },
+			select: { name: true, username: true },
+		})
+
+		const autoTags = [
+			author?.name || author?.username,
+			this.mediaTypeTag(data.image_url),
+		].filter((t): t is string => !!t)
+
+		const manualTags = data.tags ? data.tags.split(',').filter(Boolean) : []
+		const tags = [...new Set([...manualTags, ...autoTags])].join(',')
+
 		const art = await prisma.art.create({
 			data: {
 				external_id: generateSlug(data.title),
 				title: data.title,
 				type: artType,
 				image_url: data.image_url ?? undefined,
-				tags: data.tags ?? '',
-				authorId,
+				tags,
+				author_id,
 			},
 			include: {
 				author: {
@@ -198,8 +221,8 @@ class ArtsService {
 
 	async update(
 		id: number,
-		authorId: number,
-		isAdmin: boolean,
+		author_id: number,
+		is_admin: boolean,
 		data: {
 			title?: string
 			type?: string
@@ -209,7 +232,7 @@ class ArtsService {
 	) {
 		const existing = await prisma.art.findUnique({ where: { id } })
 		if (!existing) return null
-		if (existing.authorId !== authorId && !isAdmin)
+		if (existing.author_id !== author_id && !is_admin)
 			return { error: 'Forbidden' }
 
 		const updateData: Record<string, unknown> = {}
@@ -234,44 +257,44 @@ class ArtsService {
 		})
 
 		const stars_count = await prisma.star.count({
-			where: { targetType: StarTargetType.ART, targetId: art.id },
+			where: { target_type: StarTargetType.ART, target_id: art.id },
 		})
 
 		return this.mapArt(art, stars_count)
 	}
 
-	async delete(id: number, authorId: number, isAdmin: boolean) {
+	async delete(id: number, author_id: number, is_admin: boolean) {
 		const existing = await prisma.art.findUnique({ where: { id } })
 		if (!existing) return false
-		if (existing.authorId !== authorId && !isAdmin) return false
+		if (existing.author_id !== author_id && !is_admin) return false
 		await prisma.art.delete({ where: { id } })
 		return true
 	}
 
-	async addStar(artId: number, userId: number) {
+	async addStar(art_id: number, user_id: number) {
 		await prisma.star.upsert({
 			where: {
-				targetType_targetId_userId: {
-					targetType: StarTargetType.ART,
-					targetId: artId,
-					userId,
+				target_type_target_id_user_id: {
+					target_type: StarTargetType.ART,
+					target_id: art_id,
+					user_id,
 				},
 			},
 			create: {
-				targetType: StarTargetType.ART,
-				targetId: artId,
-				userId,
+				target_type: StarTargetType.ART,
+				target_id: art_id,
+				user_id,
 			},
 			update: {},
 		})
 	}
 
-	async removeStar(artId: number, userId: number) {
+	async removeStar(art_id: number, user_id: number) {
 		await prisma.star.deleteMany({
 			where: {
-				targetType: StarTargetType.ART,
-				targetId: artId,
-				userId,
+				target_type: StarTargetType.ART,
+				target_id: art_id,
+				user_id,
 			},
 		})
 	}
@@ -280,16 +303,16 @@ class ArtsService {
 		if (!ids.length) return new Map<number, number>()
 
 		const rows = await prisma.star.groupBy({
-			by: ['targetId'],
+			by: ['target_id'],
 			where: {
-				targetType: StarTargetType.ART,
-				targetId: { in: ids },
+				target_type: StarTargetType.ART,
+				target_id: { in: ids },
 			},
-			_count: { targetId: true },
+			_count: { target_id: true },
 		})
 
 		const map = new Map<number, number>()
-		for (const r of rows) map.set(r.targetId, r._count.targetId)
+		for (const r of rows) map.set(r.target_id, r._count.target_id)
 		return map
 	}
 }

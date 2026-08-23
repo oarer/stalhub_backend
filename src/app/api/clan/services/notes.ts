@@ -1,9 +1,9 @@
 import { prisma } from '@/lib/prisma'
 
 export class NotesService {
-	async listAll(clanId: string) {
+	async listAll(clan_id: string) {
 		return prisma.clanMemberNote.findMany({
-			where: { clanId },
+			where: { clan_id },
 			include: {
 				author: { select: { id: true, username: true, name: true } },
 				member: { select: { id: true, name: true } },
@@ -12,20 +12,20 @@ export class NotesService {
 		})
 	}
 
-	async upsert(clanId: string, authorId: number, memberId: number, content: string) {
+	async upsert(clan_id: string, author_id: number, member_id: number, content: string) {
 		const member = await prisma.clanMember.findFirst({
-			where: { id: memberId, clanId },
+			where: { id: member_id, clan_id },
 		})
 		if (!member) throw new Error('Участник не найден в клане')
 
 		const existing = await prisma.clanMemberNote.findUnique({
-			where: { memberId },
+			where: { member_id },
 		})
 
 		if (existing) {
 			return prisma.clanMemberNote.update({
 				where: { id: existing.id },
-				data: { content: content.slice(0, 512), authorId },
+				data: { content: content.slice(0, 512), author_id },
 				include: {
 					author: { select: { id: true, username: true, name: true } },
 				},
@@ -33,19 +33,19 @@ export class NotesService {
 		}
 
 		return prisma.clanMemberNote.create({
-			data: { clanId, authorId, memberId, content: content.slice(0, 512) },
+			data: { clan_id, author_id, member_id, content: content.slice(0, 512) },
 			include: {
 				author: { select: { id: true, username: true, name: true } },
 			},
 		})
 	}
 
-	async update(noteId: number, content: string) {
-		const note = await prisma.clanMemberNote.findUnique({ where: { id: noteId } })
+	async update(note_id: number, content: string) {
+		const note = await prisma.clanMemberNote.findUnique({ where: { id: note_id } })
 		if (!note) throw new Error('Заметка не найдена')
 
 		return prisma.clanMemberNote.update({
-			where: { id: noteId },
+			where: { id: note_id },
 			data: { content: content.slice(0, 512) },
 			include: {
 				author: { select: { id: true, username: true, name: true } },
@@ -53,11 +53,11 @@ export class NotesService {
 		})
 	}
 
-	async delete(noteId: number) {
-		const note = await prisma.clanMemberNote.findUnique({ where: { id: noteId } })
+	async delete(note_id: number) {
+		const note = await prisma.clanMemberNote.findUnique({ where: { id: note_id } })
 		if (!note) throw new Error('Заметка не найдена')
 
-		await prisma.clanMemberNote.delete({ where: { id: noteId } })
+		await prisma.clanMemberNote.delete({ where: { id: note_id } })
 		return { ok: true }
 	}
 }

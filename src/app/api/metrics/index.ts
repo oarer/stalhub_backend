@@ -17,7 +17,7 @@ function normalizeRoute(route: string): string {
 	return route
 		.replace(/^(\/player\/[^/]+)\/[^/]+/, '$1/:character')
 		.replace(/^(\/auction\/[^/]+)\/[^/]+(?=\/|$)/, '$1/:id')
-		.replace(/^\/barter\/[^/]+/, '/barter/:itemId')
+		.replace(/^\/barter\/[^/]+/, '/barter/:item_id')
 		.replace(/\/[0-9]+(?=\/|$)/g, '/:id')
 		.replace(
 			/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\/|$)/gi,
@@ -146,7 +146,7 @@ export function normalizeAndRecordHttpRequest(params: {
 	method: string
 	route: string
 	status: number | string
-	durationSeconds: number
+	duration_seconds: number
 }) {
 	const route = normalizeRoute(params.route)
 
@@ -162,7 +162,7 @@ export function normalizeAndRecordHttpRequest(params: {
 			route,
 			status: String(params.status),
 		},
-		params.durationSeconds
+		params.duration_seconds
 	)
 }
 

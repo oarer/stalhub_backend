@@ -78,10 +78,10 @@ export const fetchListing = async (): Promise<string[]> => {
 
 export const fetchItemLots = async (
 	region: string,
-	itemId: string
+	item_id: string
 ): Promise<LotsResponse['lots']> => {
 	const { data } = await apiClient.get<LotsResponse>(
-		`/${region}/auction/${itemId}/lots`,
+		`/${region}/auction/${item_id}/lots`,
 		{
 			params: { limit: LOT_LIMIT, additional: true },
 		}
@@ -126,11 +126,11 @@ const buildRow = (cells: RawCells): ArtifactRow | null => {
 
 export const buildAggregate = (
 	lotGroups: Record<string, LotsResponse['lots']>,
-	updatedAt: string
+	updated_at: string
 ): ArtifactAggregate => {
 	const rowsByItem: Record<string, (ArtifactRow | null)[] | undefined> = {}
 
-	for (const [itemId, lots] of Object.entries(lotGroups)) {
+	for (const [item_id, lots] of Object.entries(lotGroups)) {
 		const byQlt = new Map<number, RawCells>()
 
 		for (const lot of lots) {
@@ -157,24 +157,24 @@ export const buildAggregate = (
 			const bucket = byQlt.get(q)
 			rows[q] = bucket ? buildRow(bucket) : null
 		}
-		rowsByItem[itemId] = rows
+		rowsByItem[item_id] = rows
 	}
 
-	const rowMedian = (itemId: string, qlt: number): number | null => {
-		const cell = rowsByItem[itemId]?.[qlt]
+	const rowMedian = (item_id: string, qlt: number): number | null => {
+		const cell = rowsByItem[item_id]?.[qlt]
 		return cell ? cell.baseMedian : null
 	}
 
 	const curves: ArtifactAggregate['curves'] = {}
 	const ratioSamples = new Map<string, Map<number, number[]>>()
 
-	for (const [itemId, rows] of Object.entries(rowsByItem)) {
+	for (const [item_id, rows] of Object.entries(rowsByItem)) {
 		if (!rows) continue
 		for (let q = 0; q < 7; q++) {
 			const row = rows[q]
 			if (!row) continue
 
-			const ptn0Median = rowMedian(itemId, q)
+			const ptn0Median = rowMedian(item_id, q)
 			if (ptn0Median == null || ptn0Median <= 0) continue
 
 			for (const [ptn, cell] of Object.entries(row.cells)) {
@@ -201,9 +201,9 @@ export const buildAggregate = (
 
 	const base0: Record<string, number[]> = {}
 
-	for (const itemId of Object.keys(rowsByItem)) {
+	for (const item_id of Object.keys(rowsByItem)) {
 		for (let q = 0; q < 7; q++) {
-			const row = rowsByItem[itemId]?.[q]
+			const row = rowsByItem[item_id]?.[q]
 			if (!row) continue
 
 			const factor = interpolateRatio(curves[String(q)], row.basePtn)
@@ -241,7 +241,7 @@ export const buildAggregate = (
 	}
 
 	return {
-		updatedAt,
+		updated_at,
 		items: rowsByItem,
 		curves,
 		qualityRatios,
@@ -267,14 +267,14 @@ const retryFailedItems = async (
 
 	const stillFailed: string[] = []
 
-	await mapLimit(failedIds, CONCURRENCY, async (itemId) => {
+	await mapLimit(failedIds, CONCURRENCY, async (item_id) => {
 		try {
-			lotGroups[itemId] = await withRetry(
-				() => fetchItemLots(region, itemId),
+			lotGroups[item_id] = await withRetry(
+				() => fetchItemLots(region, item_id),
 				2
 			)
 		} catch {
-			stillFailed.push(itemId)
+			stillFailed.push(item_id)
 		}
 	})
 
@@ -311,15 +311,15 @@ export const updateRegion = async (region: string): Promise<number> => {
 		const lotGroups: Record<string, LotsResponse['lots']> = {}
 		const failedIds: string[] = []
 
-		await mapLimit(itemIds, CONCURRENCY, async (itemId) => {
+		await mapLimit(itemIds, CONCURRENCY, async (item_id) => {
 			try {
-				lotGroups[itemId] = await withRetry(
-					() => fetchItemLots(region, itemId),
+				lotGroups[item_id] = await withRetry(
+					() => fetchItemLots(region, item_id),
 					2
 				)
 			} catch {
-				lotGroups[itemId] = []
-				failedIds.push(itemId)
+				lotGroups[item_id] = []
+				failedIds.push(item_id)
 			}
 		})
 

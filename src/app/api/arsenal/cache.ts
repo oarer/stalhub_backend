@@ -20,9 +20,9 @@ const releaseLock = async () => {
 	await redis.del(LOCK_KEY)
 }
 
-export const shouldRevalidate = (updatedAt: Date | null) => {
-	if (!updatedAt) return true
-	return Date.now() - updatedAt.getTime() > STALE_TIME * 1000
+export const shouldRevalidate = (updated_at: Date | null) => {
+	if (!updated_at) return true
+	return Date.now() - updated_at.getTime() > STALE_TIME * 1000
 }
 
 export const getCache = async (): Promise<CacheData | null> => {
@@ -35,7 +35,7 @@ export const getCache = async (): Promise<CacheData | null> => {
 
 	return {
 		items: JSON.parse(data) as ItemResult[],
-		updatedAt: updated ? new Date(updated) : null,
+		updated_at: updated ? new Date(updated) : null,
 	}
 }
 

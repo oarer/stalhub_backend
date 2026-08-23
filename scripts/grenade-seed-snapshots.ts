@@ -5,7 +5,7 @@
  * which produces 3 stages when displayed in the UI.
  *
  * Usage:
- *   bun run scripts/grenade-seed-snapshots.ts <clanId> [eventType] [dateOffset]
+ *   bun run scripts/grenade-seed-snapshots.ts <clan_id> [eventType] [dateOffset]
  *
  * Examples:
  *   bun run scripts/grenade-seed-snapshots.ts clan_abc123
@@ -13,16 +13,18 @@
  *   bun run scripts/grenade-seed-snapshots.ts clan_abc123 TOURNAMENT -1
  *
  * Arguments:
- *   clanId      — ID клана (обязательно)
+ *   clan_id      — ID клана (обязательно)
  *   eventType   — тип события: TOURNAMENT | BRAWL | BASE_CAPTURE (по умолчанию: TOURNAMENT)
  *   dateOffset  — смещение даты
  */
 
-const [clanId, eventTypeArg, dateOffsetArg] = process.argv.slice(2)
+export {}
 
-if (!clanId) {
+const [clan_id, eventTypeArg, dateOffsetArg] = process.argv.slice(2)
+
+if (!clan_id) {
 	console.error(
-		'Usage: bun run scripts/grenade-seed-snapshots.ts <clanId> [eventType] [dateOffset]'
+		'Usage: bun run scripts/grenade-seed-snapshots.ts <clan_id> [eventType] [dateOffset]'
 	)
 	console.error('  eventType: TOURNAMENT | BRAWL | BASE_CAPTURE (default: TOURNAMENT)')
 	console.error('  dateOffset: days offset from today, e.g. -1 for yesterday (default: 0)')
@@ -72,27 +74,27 @@ async function main() {
 	const { prisma } = await import('@/lib/prisma')
 
 	const clan = await prisma.clan.findUnique({
-		where: { id: clanId },
+		where: { id: clan_id },
 		select: { id: true, region: true },
 	})
 
 	if (!clan) {
-		console.error(`[${ts()}] Clan "${clanId}" not found`)
+		console.error(`[${ts()}] Clan "${clan_id}" not found`)
 		process.exit(1)
 	}
 
 	const members = await prisma.clanMember.findMany({
-		where: { clanId },
+		where: { clan_id },
 		select: { name: true },
 	})
 
 	if (members.length === 0) {
-		console.error(`[${ts()}] Clan "${clanId}" has no members`)
+		console.error(`[${ts()}] Clan "${clan_id}" has no members`)
 		process.exit(1)
 	}
 
 	console.log(
-		`[${ts()}] Clan "${clanId}" region=${clan.region} | members: ${members.length} | event: ${eventType} | dateOffset: ${dateOffset}`
+		`[${ts()}] Clan "${clan_id}" region=${clan.region} | members: ${members.length} | event: ${eventType} | dateOffset: ${dateOffset}`
 	)
 
 	// Build base totals for each member (their totals before the raid)
@@ -136,7 +138,7 @@ async function main() {
 
 		await prisma.grenadeSnapshot.create({
 			data: {
-				clanId,
+				clan_id,
 				event_type: eventType,
 				checkpoint,
 				raid_date: raidDate,
@@ -152,7 +154,7 @@ async function main() {
 		)
 	}
 
-	console.log(`\n[${ts()}] Done! Created 3-stage grenade event for clan "${clanId}".`)
+	console.log(`\n[${ts()}] Done! Created 3-stage grenade event for clan "${clan_id}".`)
 	console.log(
 		`[${ts()}] Stage deltas (per member sample):`
 	)

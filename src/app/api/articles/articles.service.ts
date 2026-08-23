@@ -8,12 +8,12 @@ import { prisma } from '@/lib/prisma'
 import { generateSlug } from '@/utils/slug'
 
 class ArticlesService {
-	async list(take: number, page: number, opts?: { all?: boolean; authorId?: number }) {
+	async list(take: number, page: number, opts?: { all?: boolean; author_id?: number }) {
 		const where: Prisma.ArticleWhereInput = {}
 		if (opts?.all) {
 			// без фильтра
-		} else if (opts?.authorId) {
-			where.authorId = opts.authorId
+		} else if (opts?.author_id) {
+			where.author_id = opts.author_id
 		} else {
 			where.status = ArticleStatus.APPROVED
 		}
@@ -54,11 +54,13 @@ class ArticlesService {
 				created_at: a.created_at,
 				updated_at: a.updated_at,
 			})),
-			totalCount,
+			total_count: totalCount,
+			page: page + 1,
+			take,
 		}
 	}
 
-	async getById(id: string, userId?: number) {
+	async getById(id: string, user_id?: number) {
 		const num = Number(id)
 		const article = await prisma.article.findFirst({
 			where: isNaN(num)
@@ -72,17 +74,17 @@ class ArticlesService {
 		if (!article) return null
 
 		const stars_count = await prisma.star.count({
-			where: { targetType: StarTargetType.ARTICLE, targetId: article.id },
+			where: { target_type: StarTargetType.ARTICLE, target_id: article.id },
 		})
 
 		let is_starred = false
-		if (userId) {
+		if (user_id) {
 			const star = await prisma.star.findUnique({
 				where: {
-					targetType_targetId_userId: {
-						targetType: StarTargetType.ARTICLE,
-						targetId: article.id,
-						userId,
+					target_type_target_id_user_id: {
+						target_type: StarTargetType.ARTICLE,
+						target_id: article.id,
+						user_id,
 					},
 				},
 			})
@@ -111,7 +113,7 @@ class ArticlesService {
 	}
 
 	async create(
-		authorId: number,
+		author_id: number,
 		data: {
 			title: string
 			content: string
@@ -138,7 +140,7 @@ class ArticlesService {
 						: undefined,
 				flags: data.flags ?? 0,
 				tags: data.tags ?? '',
-				authorId,
+				author_id,
 			},
 			include: {
 				author: { select: { id: true, name: true, username: true } },
@@ -147,7 +149,7 @@ class ArticlesService {
 
 		await prisma.articleVersion.create({
 			data: {
-				articleId: article.id,
+				article_id: article.id,
 				version: '1.0.0',
 				content: data.content,
 			},
@@ -176,8 +178,8 @@ class ArticlesService {
 
 	async update(
 		id: number,
-		authorId: number,
-		isAdmin: boolean,
+		author_id: number,
+		is_admin: boolean,
 		data: {
 			title?: string
 			content?: string
@@ -191,7 +193,7 @@ class ArticlesService {
 	) {
 		const existing = await prisma.article.findUnique({ where: { id } })
 		if (!existing) return null
-		if (existing.authorId !== authorId && !isAdmin)
+		if (existing.author_id !== author_id && !is_admin)
 			return { error: 'Forbidden' }
 
 		const resolvedType = (data.type as ArticleType) ?? existing.type
@@ -220,7 +222,7 @@ class ArticlesService {
 		if (data.content !== undefined) {
 			await prisma.articleVersion.create({
 				data: {
-					articleId: id,
+					article_id: id,
 					version: data.version ?? this.nextVersion(existing),
 					content: data.content,
 				},
@@ -228,7 +230,7 @@ class ArticlesService {
 		}
 
 		const stars_count = await prisma.star.count({
-			where: { targetType: StarTargetType.ARTICLE, targetId: article.id },
+			where: { target_type: StarTargetType.ARTICLE, target_id: article.id },
 		})
 
 		return {
@@ -252,10 +254,10 @@ class ArticlesService {
 		}
 	}
 
-	async submitForReview(id: number, authorId: number) {
+	async submitForReview(id: number, author_id: number) {
 		const article = await prisma.article.findUnique({ where: { id } })
 		if (!article) return null
-		if (article.authorId !== authorId) return { error: 'Forbidden' }
+		if (article.author_id !== author_id) return { error: 'Forbidden' }
 
 		const newStatus =
 			article.status === ArticleStatus.REVIEW
@@ -271,7 +273,7 @@ class ArticlesService {
 		})
 
 		const stars_count = await prisma.star.count({
-			where: { targetType: StarTargetType.ARTICLE, targetId: updated.id },
+			where: { target_type: StarTargetType.ARTICLE, target_id: updated.id },
 		})
 
 		return {
@@ -321,7 +323,7 @@ class ArticlesService {
 		})
 
 		const stars_count = await prisma.star.count({
-			where: { targetType: StarTargetType.ARTICLE, targetId: updated.id },
+			where: { target_type: StarTargetType.ARTICLE, target_id: updated.id },
 		})
 
 		return {
@@ -344,17 +346,17 @@ class ArticlesService {
 		}
 	}
 
-	async delete(id: number, authorId: number, isAdmin: boolean) {
+	async delete(id: number, author_id: number, is_admin: boolean) {
 		const existing = await prisma.article.findUnique({ where: { id } })
 		if (!existing) return false
-		if (existing.authorId !== authorId && !isAdmin) return false
+		if (existing.author_id !== author_id && !is_admin) return false
 		await prisma.article.delete({ where: { id } })
 		return true
 	}
 
-	async getVersions(articleId: number) {
+	async getVersions(article_id: number) {
 		return prisma.articleVersion.findMany({
-			where: { articleId },
+			where: { article_id },
 			orderBy: { created_at: 'desc' },
 			select: { id: true, version: true, created_at: true },
 		})
@@ -364,30 +366,30 @@ class ArticlesService {
 		return prisma.articleVersion.findUnique({ where: { id } })
 	}
 
-	async addStar(articleId: number, userId: number) {
+	async addStar(article_id: number, user_id: number) {
 		await prisma.star.upsert({
 			where: {
-				targetType_targetId_userId: {
-					targetType: StarTargetType.ARTICLE,
-					targetId: articleId,
-					userId,
+				target_type_target_id_user_id: {
+					target_type: StarTargetType.ARTICLE,
+					target_id: article_id,
+					user_id,
 				},
 			},
 			create: {
-				targetType: StarTargetType.ARTICLE,
-				targetId: articleId,
-				userId,
+				target_type: StarTargetType.ARTICLE,
+				target_id: article_id,
+				user_id,
 			},
 			update: {},
 		})
 	}
 
-	async removeStar(articleId: number, userId: number) {
+	async removeStar(article_id: number, user_id: number) {
 		await prisma.star.deleteMany({
 			where: {
-				targetType: StarTargetType.ARTICLE,
-				targetId: articleId,
-				userId,
+				target_type: StarTargetType.ARTICLE,
+				target_id: article_id,
+				user_id,
 			},
 		})
 	}
@@ -400,16 +402,16 @@ class ArticlesService {
 		if (!ids.length) return new Map<number, number>()
 
 		const rows = await prisma.star.groupBy({
-			by: ['targetId'],
+			by: ['target_id'],
 			where: {
-				targetType: StarTargetType.ARTICLE,
-				targetId: { in: ids },
+				target_type: StarTargetType.ARTICLE,
+				target_id: { in: ids },
 			},
-			_count: { targetId: true },
+			_count: { target_id: true },
 		})
 
 		const map = new Map<number, number>()
-		for (const r of rows) map.set(r.targetId, r._count.targetId)
+		for (const r of rows) map.set(r.target_id, r._count.target_id)
 		return map
 	}
 }

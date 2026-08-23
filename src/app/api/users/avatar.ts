@@ -5,10 +5,10 @@ import { createElysia } from '@/utils/elysia'
 
 type AvatarProvider = 'discord' | 'telegram'
 
-function buildDiscordUrl(discordId: string, avatarId: string) {
+function buildDiscordUrl(discord_id: string, avatarId: string) {
 	const ext = avatarId.startsWith('a_') ? 'gif' : 'png'
 
-	return `https://cdn.discordapp.com/avatars/${discordId}/${avatarId}.${ext}?size=1024`
+	return `https://cdn.discordapp.com/avatars/${discord_id}/${avatarId}.${ext}?size=1024`
 }
 
 function escapeXml(value: string) {
@@ -106,18 +106,18 @@ async function serveUploadedAvatar(pathname: string) {
 
 function getAvatarUrl(
 	user: {
-		DiscordAuth: {
+		discord_auth: {
 			discord_id: string
 			avatar_id: string | null
 		} | null
-		TelegramAuth: {
+		telegram_auth: {
 			avatar_id: string | null
 		} | null
 	},
 	provider?: AvatarProvider
 ) {
 	if (provider === 'discord') {
-		const discordAuth = user.DiscordAuth
+		const discordAuth = user.discord_auth
 
 		if (!discordAuth?.avatar_id) {
 			return null
@@ -127,7 +127,7 @@ function getAvatarUrl(
 	}
 
 	if (provider === 'telegram') {
-		const telegramAuth = user.TelegramAuth
+		const telegramAuth = user.telegram_auth
 
 		if (!telegramAuth?.avatar_id) {
 			return null
@@ -136,15 +136,15 @@ function getAvatarUrl(
 		return telegramAuth.avatar_id
 	}
 
-	if (user.DiscordAuth?.avatar_id) {
+	if (user.discord_auth?.avatar_id) {
 		return buildDiscordUrl(
-			user.DiscordAuth.discord_id,
-			user.DiscordAuth.avatar_id
+			user.discord_auth.discord_id,
+			user.discord_auth.avatar_id
 		)
 	}
 
-	if (user.TelegramAuth?.avatar_id) {
-		return user.TelegramAuth.avatar_id
+	if (user.telegram_auth?.avatar_id) {
+		return user.telegram_auth.avatar_id
 	}
 
 	return null
@@ -162,18 +162,18 @@ export const avatarRoutes = createElysia().get(
 
 				customization: {
 					select: {
-						avatarImage: true,
+						avatar_image: true,
 					},
 				},
 
-				DiscordAuth: {
+				discord_auth: {
 					select: {
 						discord_id: true,
 						avatar_id: true,
 					},
 				},
 
-				TelegramAuth: {
+				telegram_auth: {
 					select: {
 						avatar_id: true,
 					},
@@ -195,9 +195,9 @@ export const avatarRoutes = createElysia().get(
 			)
 		}
 
-		if (user.customization?.avatarImage) {
+		if (user.customization?.avatar_image) {
 			const uploaded = await serveUploadedAvatar(
-				user.customization.avatarImage
+				user.customization.avatar_image
 			)
 			if (uploaded) return uploaded
 		}

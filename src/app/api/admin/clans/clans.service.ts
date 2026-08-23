@@ -13,7 +13,7 @@ export interface AdminClanUpdateInput {
 	is_public?: boolean
 	recruiting?: boolean
 	region?: string
-	schedule?: { brawlsPerWeek?: number; brawlsMandatory?: boolean }
+	schedule?: { brawls_per_week?: number; brawls_mandatory?: boolean }
 }
 
 class AdminClanService {
@@ -64,12 +64,12 @@ class AdminClanService {
 			prisma.clan.count({ where }),
 		])
 
-		return { data, total: totalCount }
+		return { data, total_count: totalCount, page: page + 1, take }
 	}
 
-	async get(clanId: string) {
+	async get(clan_id: string) {
 		const clan = await prisma.clan.findUnique({
-			where: { id: clanId },
+			where: { id: clan_id },
 			include: {
 				_count: {
 					select: { members: true, squads: true, sessions: true },
@@ -80,9 +80,9 @@ class AdminClanService {
 		return { ...clan, schedule: normalizeSchedule(clan.schedule) }
 	}
 
-	async getMembers(clanId: string) {
+	async getMembers(clan_id: string) {
 		return prisma.clanMember.findMany({
-			where: { clanId },
+			where: { clan_id },
 			include: {
 				user: { select: { id: true, username: true, name: true } },
 			},
@@ -90,24 +90,24 @@ class AdminClanService {
 		})
 	}
 
-	async update(clanId: string, data: AdminClanUpdateInput) {
-		const existing = await prisma.clan.findUnique({ where: { id: clanId } })
+	async update(clan_id: string, data: AdminClanUpdateInput) {
+		const existing = await prisma.clan.findUnique({ where: { id: clan_id } })
 		if (!existing) return null
 
 		const schedule = data.schedule
 			? {
 					...normalizeSchedule(existing.schedule),
-					...(data.schedule.brawlsPerWeek !== undefined && {
-						brawlsPerWeek: data.schedule.brawlsPerWeek,
+					...(data.schedule.brawls_per_week !== undefined && {
+						brawls_per_week: data.schedule.brawls_per_week,
 					}),
-					...(data.schedule.brawlsMandatory !== undefined && {
-						brawlsMandatory: data.schedule.brawlsMandatory,
+					...(data.schedule.brawls_mandatory !== undefined && {
+						brawls_mandatory: data.schedule.brawls_mandatory,
 					}),
 				}
 			: undefined
 
 		return prisma.clan.update({
-			where: { id: clanId },
+			where: { id: clan_id },
 			data: {
 				...(data.name !== undefined && { name: data.name }),
 				...(data.tag !== undefined && { tag: data.tag }),
@@ -132,12 +132,12 @@ class AdminClanService {
 		})
 	}
 
-	async block(clanId: string, reason?: string) {
-		const existing = await prisma.clan.findUnique({ where: { id: clanId } })
+	async block(clan_id: string, reason?: string) {
+		const existing = await prisma.clan.findUnique({ where: { id: clan_id } })
 		if (!existing) return null
 
 		return prisma.clan.update({
-			where: { id: clanId },
+			where: { id: clan_id },
 			data: {
 				blocked: true,
 				block_reason: reason ?? null,
@@ -146,12 +146,12 @@ class AdminClanService {
 		})
 	}
 
-	async unblock(clanId: string) {
-		const existing = await prisma.clan.findUnique({ where: { id: clanId } })
+	async unblock(clan_id: string) {
+		const existing = await prisma.clan.findUnique({ where: { id: clan_id } })
 		if (!existing) return null
 
 		return prisma.clan.update({
-			where: { id: clanId },
+			where: { id: clan_id },
 			data: {
 				blocked: false,
 				block_reason: null,
@@ -160,27 +160,27 @@ class AdminClanService {
 		})
 	}
 
-	async remove(clanId: string) {
-		const existing = await prisma.clan.findUnique({ where: { id: clanId } })
+	async remove(clan_id: string) {
+		const existing = await prisma.clan.findUnique({ where: { id: clan_id } })
 		if (!existing) return false
 
-		await prisma.clan.delete({ where: { id: clanId } })
+		await prisma.clan.delete({ where: { id: clan_id } })
 		return true
 	}
 
-	async sync(clanId: string) {
-		const clan = await prisma.clan.findUnique({ where: { id: clanId } })
+	async sync(clan_id: string) {
+		const clan = await prisma.clan.findUnique({ where: { id: clan_id } })
 		if (!clan) return null
 
-		return clanService.sync(clanId, clan.region)
+		return clanService.sync(clan_id, clan.region)
 	}
 
-	async listSessions(clanId: string) {
-		const clan = await prisma.clan.findUnique({ where: { id: clanId } })
+	async listSessions(clan_id: string) {
+		const clan = await prisma.clan.findUnique({ where: { id: clan_id } })
 		if (!clan) return null
 
 		return prisma.stageSession.findMany({
-			where: { clanId },
+			where: { clan_id },
 			orderBy: { started_at: 'desc' },
 			include: {
 				_count: { select: { screenshots: true, attendance: true } },
@@ -188,9 +188,9 @@ class AdminClanService {
 		})
 	}
 
-	async getSession(sessionId: number) {
+	async getSession(session_id: number) {
 		return prisma.stageSession.findUnique({
-			where: { id: sessionId },
+			where: { id: session_id },
 			include: {
 				_count: { select: { screenshots: true, attendance: true } },
 			},
@@ -198,7 +198,7 @@ class AdminClanService {
 	}
 
 	async updateSession(
-		sessionId: number,
+		session_id: number,
 		data: {
 			map_name?: string
 			type?: string
@@ -209,7 +209,7 @@ class AdminClanService {
 		}
 	) {
 		const existing = await prisma.stageSession.findUnique({
-			where: { id: sessionId },
+			where: { id: session_id },
 		})
 		if (!existing) return null
 
@@ -240,7 +240,7 @@ class AdminClanService {
 		}
 
 		return prisma.stageSession.update({
-			where: { id: sessionId },
+			where: { id: session_id },
 			data: updateData,
 			include: {
 				_count: { select: { screenshots: true, attendance: true } },
@@ -248,9 +248,9 @@ class AdminClanService {
 		})
 	}
 
-	async removeSession(sessionId: number) {
+	async removeSession(session_id: number) {
 		const session = await prisma.stageSession.findUnique({
-			where: { id: sessionId },
+			where: { id: session_id },
 			include: { screenshots: { select: { file_path: true } } },
 		})
 		if (!session) return null
@@ -260,7 +260,7 @@ class AdminClanService {
 				await rm(shot.file_path, { force: true })
 			} catch {}
 		}
-		await prisma.stageSession.delete({ where: { id: sessionId } })
+		await prisma.stageSession.delete({ where: { id: session_id } })
 		return { ok: true }
 	}
 }

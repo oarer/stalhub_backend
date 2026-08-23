@@ -66,7 +66,7 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 			async ({ params, body }) => {
 				const result = await roleService.addPermissions(
 					Number(params.id),
-					body.permissionIds
+					body.permission_ids
 				)
 				if (!result) return { error: 'Role not found' }
 				return result
@@ -75,8 +75,8 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
-					permissionIds: t.Array(t.Numeric(), {
-						error: 'permissionIds is required',
+					permission_ids: t.Array(t.Numeric(), {
+						error: 'permission_ids is required',
 					}),
 				}),
 				detail: { tags: ['Admin'] },
@@ -88,7 +88,7 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 			async ({ params, body }) => {
 				const result = await roleService.removePermissions(
 					Number(params.id),
-					body.permissionIds
+					body.permission_ids
 				)
 				if (!result) return { error: 'Role not found' }
 				return result
@@ -97,8 +97,8 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
-					permissionIds: t.Array(t.Numeric(), {
-						error: 'permissionIds is required',
+					permission_ids: t.Array(t.Numeric(), {
+						error: 'permission_ids is required',
 					}),
 				}),
 				detail: { tags: ['Admin'] },

@@ -11,7 +11,7 @@ export enum ArtQuality {
 
 export type Art = {
 	instanceId: string
-	itemId: string
+	item_id: string
 	percent: number
 	potential: number
 	selectedStats: (string | null)[]

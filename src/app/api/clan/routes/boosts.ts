@@ -9,7 +9,7 @@ export const boostOrderRoutes = clanContext.group('/boosts', (app) =>
 		.get(
 			'',
 			({ store }) =>
-				boostOrderService.getOrders(store.clanId!),
+				boostOrderService.getOrders(store.clan_id!),
 			{
 				beforeHandle: [requireAuth, requireClanMember],
 				detail: { tags: ['Clan Boosts'] },
@@ -19,18 +19,18 @@ export const boostOrderRoutes = clanContext.group('/boosts', (app) =>
 			'',
 			({ store, body }) =>
 				boostOrderService.addOrder(
-					store.clanId!,
-					body.playerId,
-					body.itemId,
-					body.itemName,
+					store.clan_id!,
+					body.player_id,
+					body.item_id,
+					body.item_name,
 					body.count
 				),
 			{
 				beforeHandle: [requireAuth, requireClanMember],
 				body: t.Object({
-					playerId: t.Numeric(),
-					itemId: t.String(),
-					itemName: t.String(),
+					player_id: t.Numeric(),
+					item_id: t.String(),
+					item_name: t.String(),
 					count: t.Numeric({ minimum: 1 }),
 				}),
 				detail: { tags: ['Clan Boosts'] },
@@ -40,7 +40,7 @@ export const boostOrderRoutes = clanContext.group('/boosts', (app) =>
 			'/:index',
 			({ params, store }) =>
 				boostOrderService.removeOrder(
-					store.clanId!,
+					store.clan_id!,
 					params.index
 				),
 			{

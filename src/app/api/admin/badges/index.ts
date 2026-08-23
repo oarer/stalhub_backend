@@ -96,10 +96,10 @@ export const badgesRoutes = createElysia().group('/badges', (app) =>
 		)
 
 		.post(
-			'/:id/users/:userId',
+			'/:id/users/:user_id',
 			async ({ params, set }) => {
 				const result = await badgesService.assignToUser(
-					Number(params.userId),
+					Number(params.user_id),
 					Number(params.id)
 				)
 				if (!result) {
@@ -113,17 +113,17 @@ export const badgesRoutes = createElysia().group('/badges', (app) =>
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({
 					id: t.Numeric(),
-					userId: t.Numeric(),
+					user_id: t.Numeric(),
 				}),
 				detail: { tags: ['Admin'] },
 			}
 		)
 
 		.delete(
-			'/:id/users/:userId',
+			'/:id/users/:user_id',
 			async ({ params, set }) => {
 				const result = await badgesService.removeFromUser(
-					Number(params.userId),
+					Number(params.user_id),
 					Number(params.id)
 				)
 				if (!result) {
@@ -136,17 +136,17 @@ export const badgesRoutes = createElysia().group('/badges', (app) =>
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({
 					id: t.Numeric(),
-					userId: t.Numeric(),
+					user_id: t.Numeric(),
 				}),
 				detail: { tags: ['Admin'] },
 			}
 		)
 
 		.get(
-			'/user/:userId',
+			'/user/:user_id',
 			async ({ params, set }) => {
 				const result = await badgesService.getUserBadges(
-					Number(params.userId)
+					Number(params.user_id)
 				)
 				if (!result) {
 					set.status = 404
@@ -156,7 +156,7 @@ export const badgesRoutes = createElysia().group('/badges', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ userId: t.Numeric() }),
+				params: t.Object({ user_id: t.Numeric() }),
 				detail: { tags: ['Admin'] },
 			}
 		)

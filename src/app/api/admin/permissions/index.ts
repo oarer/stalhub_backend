@@ -19,14 +19,14 @@ export const permissionsRoutes = createElysia().group('/permissions', (app) =>
 				permissionService.create(
 					body.name,
 					body.description,
-					body.roleId
+					body.role_id
 				),
 			{
 				beforeHandle: [requireAuth, requireAdmin],
 				body: t.Object({
 					name: t.String({ error: 'name is required' }),
 					description: t.Optional(t.String()),
-					roleId: t.Optional(t.Numeric()),
+					role_id: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Admin'] },
 			}
@@ -48,7 +48,7 @@ export const permissionsRoutes = createElysia().group('/permissions', (app) =>
 				body: t.Object({
 					name: t.Optional(t.String()),
 					description: t.Optional(t.String()),
-					roleId: t.Optional(t.Nullable(t.Numeric())),
+					role_id: t.Optional(t.Nullable(t.Numeric())),
 				}),
 				detail: { tags: ['Admin'] },
 			}

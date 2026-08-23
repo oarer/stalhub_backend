@@ -48,36 +48,36 @@ class RoleService {
 		return true
 	}
 
-	async addPermissions(roleId: number, permissionIds: number[]) {
-		const role = await prisma.role.findUnique({ where: { id: roleId } })
+	async addPermissions(role_id: number, permission_ids: number[]) {
+		const role = await prisma.role.findUnique({ where: { id: role_id } })
 		if (!role) return null
 
 		await prisma.role.update({
-			where: { id: roleId },
+			where: { id: role_id },
 			data: {
 				permissions: {
-					connect: permissionIds.map((id) => ({ id })),
+					connect: permission_ids.map((id) => ({ id })),
 				},
 			},
 		})
 
-		return this.list().then((roles) => roles.find((r) => r.id === roleId))
+		return this.list().then((roles) => roles.find((r) => r.id === role_id))
 	}
 
-	async removePermissions(roleId: number, permissionIds: number[]) {
-		const role = await prisma.role.findUnique({ where: { id: roleId } })
+	async removePermissions(role_id: number, permission_ids: number[]) {
+		const role = await prisma.role.findUnique({ where: { id: role_id } })
 		if (!role) return null
 
 		await prisma.role.update({
-			where: { id: roleId },
+			where: { id: role_id },
 			data: {
 				permissions: {
-					disconnect: permissionIds.map((id) => ({ id })),
+					disconnect: permission_ids.map((id) => ({ id })),
 				},
 			},
 		})
 
-		return this.list().then((roles) => roles.find((r) => r.id === roleId))
+		return this.list().then((roles) => roles.find((r) => r.id === role_id))
 	}
 }
 

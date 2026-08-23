@@ -64,8 +64,8 @@ export const normalizeTitles = (
 
 export const getItemInfo = (
 	listing: Record<string, ListingItem>,
-	itemId: string
-) => listing[itemId]
+	item_id: string
+) => listing[item_id]
 
 export const transformOffer = (
 	offer: BarterOffer,
@@ -107,7 +107,7 @@ export const transformRecipe = (
 
 export const collectUsedIn = (
 	barterData: BarterEntry[],
-	itemId: string,
+	item_id: string,
 	listing: Record<string, ListingItem>
 ): UsedInItem[] => {
 	const set = new Map<string, UsedInItem>()
@@ -115,7 +115,7 @@ export const collectUsedIn = (
 	for (const settlement of barterData) {
 		for (const recipe of settlement.recipes) {
 			const isUsed = recipe.offers.some((o) =>
-				o.requiredItems.some((ri) => ri.item === itemId)
+				o.requiredItems.some((ri) => ri.item === item_id)
 			)
 
 			if (!isUsed) continue

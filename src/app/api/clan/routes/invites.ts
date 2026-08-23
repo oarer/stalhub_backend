@@ -7,7 +7,7 @@ import { clanInviteService } from '../services/invites'
 export const inviteRoutes = clanContext
 	.get(
 		'/invites',
-		({ store }) => clanInviteService.listByClan(store.clanId!),
+		({ store }) => clanInviteService.listByClan(store.clan_id!),
 		{
 			beforeHandle: [requireAuth, requireClanLeader],
 			detail: { tags: ['Clan'] },
@@ -17,7 +17,7 @@ export const inviteRoutes = clanContext
 		'/invites',
 		async ({ store, body }) =>
 			clanInviteService.createGuestAccount(
-				store.clanId!,
+				store.clan_id!,
 				`user:${store.authUserId}`,
 				body.nickname
 			),
@@ -31,7 +31,7 @@ export const inviteRoutes = clanContext
 		'/invites/bulk',
 		async ({ store, body }) =>
 			clanInviteService.createGuestAccountsBulk(
-				store.clanId!,
+				store.clan_id!,
 				`user:${store.authUserId}`,
 				body.nicknames
 			),
@@ -56,12 +56,12 @@ export const inviteRoutes = clanContext
 		}
 	)
 	.delete(
-		'/invites/guest/:userId',
+		'/invites/guest/:user_id',
 		({ store, params }) =>
-			clanInviteService.kickGuest(store.clanId!, params.userId),
+			clanInviteService.kickGuest(store.clan_id!, params.user_id),
 		{
 			beforeHandle: [requireAuth, requireClanLeader],
-			params: t.Object({ userId: t.Numeric() }),
+			params: t.Object({ user_id: t.Numeric() }),
 			detail: { tags: ['Clan'] },
 		}
 	)

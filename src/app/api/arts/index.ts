@@ -14,10 +14,10 @@ import { artsService } from './arts.service'
 import { artCommentsRoutes } from './comments'
 
 async function requireArtAuthor({ store, set }: AuthContext) {
-	const userId = store.authUserId as number
-	const isAuthor = await checkPermission(userId, 'art:author')
-	const isAdmin = await checkPermission(userId, 'art:manage')
-	if (!isAuthor && !isAdmin) {
+	const user_id = store.authUserId as number
+	const isAuthor = await checkPermission(user_id, 'art:author')
+	const is_admin = await checkPermission(user_id, 'art:manage')
+	if (!isAuthor && !is_admin) {
 		set.status = 403
 		return { error: 'Forbidden' }
 	}
@@ -32,10 +32,10 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 			async ({ query, store }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
-				const { userId } = fromStore(store)
-				const isAdmin = await checkPermission(userId, 'art:manage')
+				const { user_id } = fromStore(store)
+				const is_admin = await checkPermission(user_id, 'art:manage')
 				return artsService.list(take, page, {
-					...(!isAdmin && { authorId: userId }),
+					...(!is_admin && { author_id: user_id }),
 				})
 			},
 			{
@@ -80,7 +80,7 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 			async ({ params, store }) => {
 				return artsService.getById(
 					params.id,
-					fromStoreOpt(store).userId
+					fromStoreOpt(store).user_id
 				)
 			},
 			{
@@ -128,7 +128,7 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 		.post(
 			'',
 			async ({ body, store }) => {
-				return artsService.create(fromStore(store).userId, {
+				return artsService.create(fromStore(store).user_id, {
 					title: body.title,
 					type: body.type,
 					image_url: body.image_url,
@@ -153,12 +153,12 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 		.patch(
 			'/:id',
 			async ({ params, body, store, set }) => {
-				const { userId } = fromStore(store)
-				const isAdmin = await checkPermission(userId, 'art:manage')
+				const { user_id } = fromStore(store)
+				const is_admin = await checkPermission(user_id, 'art:manage')
 				const result = await artsService.update(
 					Number(params.id),
-					userId,
-					isAdmin,
+					user_id,
+					is_admin,
 					{
 						...(body.title !== undefined && { title: body.title }),
 						...(body.type !== undefined && { type: body.type }),
@@ -198,12 +198,12 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 		.delete(
 			'/:id',
 			async ({ params, store, set }) => {
-				const { userId } = fromStore(store)
-				const isAdmin = await checkPermission(userId, 'art:manage')
+				const { user_id } = fromStore(store)
+				const is_admin = await checkPermission(user_id, 'art:manage')
 				const ok = await artsService.delete(
 					Number(params.id),
-					userId,
-					isAdmin
+					user_id,
+					is_admin
 				)
 
 				if (!ok) {
@@ -225,7 +225,7 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 			async ({ params, store }) => {
 				await artsService.addStar(
 					Number(params.id),
-					fromStore(store).userId
+					fromStore(store).user_id
 				)
 				return { success: true }
 			},
@@ -241,7 +241,7 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 			async ({ params, store }) => {
 				await artsService.removeStar(
 					Number(params.id),
-					fromStore(store).userId
+					fromStore(store).user_id
 				)
 				return { success: true }
 			},

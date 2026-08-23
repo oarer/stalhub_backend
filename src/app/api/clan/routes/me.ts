@@ -17,10 +17,10 @@ export const meRoutes = clanContext
 	.post(
 		'/switch',
 		({ store, body }) =>
-			clanService.switchClan(store.authUserId!, body.clanId),
+			clanService.switchClan(store.authUserId!, body.clan_id),
 		{
 			beforeHandle: [requireAuth],
-			body: t.Object({ clanId: t.String() }),
+			body: t.Object({ clan_id: t.String() }),
 			detail: { tags: ['Clan'] },
 		}
 	)
@@ -30,28 +30,28 @@ export const meRoutes = clanContext
 	})
 	.post(
 		'/sync',
-		({ store, body }) => clanService.sync(store.clanId!, body.region),
+		({ store, body }) => clanService.sync(store.clan_id!, body.region),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			body: t.Object({ region: t.Optional(t.Enum(Regions)) }),
 			detail: { tags: ['Clan'] },
 		}
 	)
-	.post('/freeze', ({ store }) => clanService.freeze(store.clanId!), {
+	.post('/freeze', ({ store }) => clanService.freeze(store.clan_id!), {
 		beforeHandle: [requireAuth, requireClanLeader],
 		detail: { tags: ['Clan'] },
 	})
-	.get('/:clanId', ({ params }) => clanService.getClan(params.clanId), {
+	.get('/:clan_id', ({ params }) => clanService.getClan(params.clan_id), {
 		beforeHandle: [requireAuth],
-		params: t.Object({ clanId: t.String() }),
+		params: t.Object({ clan_id: t.String() }),
 		detail: { tags: ['Clan'] },
 	})
 	.get(
-		'/members/:clanId',
-		({ params }) => clanService.listMembers(params.clanId),
+		'/members/:clan_id',
+		({ params }) => clanService.listMembers(params.clan_id),
 		{
 			beforeHandle: [requireAuth],
-			params: t.Object({ clanId: t.String() }),
+			params: t.Object({ clan_id: t.String() }),
 			detail: { tags: ['Clan'] },
 		}
 	)

@@ -61,7 +61,7 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 						type: body.type,
 						image_url: body.image_url,
 						tags: body.tags?.join(','),
-						authorId: body.authorId,
+						author_id: body.author_id,
 						author_name: body.author_name,
 						author_social_links: body.author_social_links,
 					})
@@ -80,7 +80,7 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 					type: t.Optional(t.Enum(ArtType)),
 					image_url: t.Optional(t.String()),
 					tags: t.Optional(t.Array(t.String())),
-					authorId: t.Optional(t.Numeric()),
+					author_id: t.Optional(t.Numeric()),
 					author_name: t.Optional(t.String({ maxLength: 100 })),
 					author_social_links: t.Optional(
 						t.Record(t.String(), t.String())
@@ -121,8 +121,8 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 						...(body.tags !== undefined && {
 							tags: body.tags.join(','),
 						}),
-						...(body.authorId !== undefined && {
-							authorId: body.authorId,
+						...(body.author_id !== undefined && {
+							author_id: body.author_id,
 						}),
 						...(body.author_name !== undefined && {
 							author_name: body.author_name,
@@ -146,7 +146,7 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 					type: t.Optional(t.Enum(ArtType)),
 					image_url: t.Optional(t.Nullable(t.String())),
 					tags: t.Optional(t.Array(t.String())),
-					authorId: t.Optional(t.Nullable(t.Numeric())),
+					author_id: t.Optional(t.Nullable(t.Numeric())),
 					author_name: t.Optional(t.Nullable(t.String())),
 					author_social_links: t.Optional(
 						t.Nullable(t.Record(t.String(), t.String()))

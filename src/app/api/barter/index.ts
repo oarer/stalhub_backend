@@ -33,8 +33,8 @@ export const routeBarter = createElysia()
 			)
 		}
 	})
-	.get('/barter/:itemId', async ({ params, status }) => {
-		const { itemId } = params
+	.get('/barter/:item_id', async ({ params, status }) => {
+		const { item_id } = params
 
 		const [barterData, listing] = await Promise.all([
 			loadBarter(),
@@ -44,14 +44,14 @@ export const routeBarter = createElysia()
 		const matched = barterData
 			.map((settlement) => ({
 				settlement,
-				recipe: settlement.recipes.find((r) => r.item === itemId),
+				recipe: settlement.recipes.find((r) => r.item === item_id),
 			}))
 			.filter(
 				(x): x is { settlement: BarterEntry; recipe: BarterRecipe } =>
 					x.recipe !== undefined
 			)
 
-		const usedIn = collectUsedIn(barterData, itemId, listing)
+		const usedIn = collectUsedIn(barterData, item_id, listing)
 
 		if (!matched.length) {
 			return status(404, {

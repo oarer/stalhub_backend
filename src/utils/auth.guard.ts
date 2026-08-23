@@ -27,11 +27,11 @@ const GUEST_ALLOWED_PREFIXES = [
 ]
 
 export async function checkPermission(
-	userId: number,
+	user_id: number,
 	permission: string
 ): Promise<boolean> {
 	const user = await prisma.user.findUnique({
-		where: { id: userId },
+		where: { id: user_id },
 		include: {
 			roles: {
 				include: {
@@ -49,11 +49,11 @@ export async function checkPermission(
 }
 
 export async function checkRole(
-	userId: number,
+	user_id: number,
 	role: string
 ): Promise<boolean> {
 	const user = await prisma.user.findUnique({
-		where: { id: userId },
+		where: { id: user_id },
 		include: { roles: { select: { name: true } } },
 	})
 
@@ -64,30 +64,30 @@ export async function checkRole(
 
 export function fromStore(store: Record<string, unknown>) {
 	return {
-		userId: store.authUserId as number,
-		sessionId: store.authSessionId as string,
+		user_id: store.authUserId as number,
+		session_id: store.authSessionId as string,
 	}
 }
 
 // requireOptionalAuth
 export function fromStoreOpt(store: Record<string, unknown>) {
 	return {
-		userId: store.authUserId as number | undefined,
-		sessionId: store.authSessionId as string | undefined,
+		user_id: store.authUserId as number | undefined,
+		session_id: store.authSessionId as string | undefined,
 	}
 }
 
-async function findSession(sessionId: string) {
+async function findSession(session_id: string) {
 	const session = await prisma.sessions.findUnique({
-		where: { sessionId },
+		where: { session_id },
 		select: { id: true, revoked: true },
 	})
 	return session !== null && !session.revoked
 }
 
-async function isUserBanned(userId: number) {
+async function isUserBanned(user_id: number) {
 	const settings = await prisma.userSettings.findUnique({
-		where: { userId },
+		where: { user_id },
 		select: {
 			banned: true,
 			ban_reason: true,
@@ -101,7 +101,7 @@ async function isUserBanned(userId: number) {
 
 	if (settings.ban_expires_at && settings.ban_expires_at < new Date()) {
 		await prisma.userSettings.update({
-			where: { userId },
+			where: { user_id },
 			data: {
 				banned: false,
 				ban_reason: null,
@@ -144,14 +144,14 @@ export async function requireAuth({
 		set.status = 401
 		return { error: 'Unauthorized' }
 	}
-	const userId = Number(payload.sub)
+	const user_id = Number(payload.sub)
 	const valid = await findSession(payload.sid)
 	if (!valid) {
 		set.status = 401
 		return { error: 'Session expired' }
 	}
 
-	const ban = await isUserBanned(userId)
+	const ban = await isUserBanned(user_id)
 	if (ban.banned) {
 		set.status = 403
 		return {
@@ -161,7 +161,7 @@ export async function requireAuth({
 		}
 	}
 
-	store.authUserId = userId
+	store.authUserId = user_id
 	store.authSessionId = payload.sid
 
 	const isGuest =

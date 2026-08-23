@@ -3,9 +3,9 @@ import { prisma } from '@/lib/prisma'
 export class BoostOrderService {
 	private static readonly PERMANENT_DATE = 'permanent'
 
-	async getOrders(clanId: string) {
+	async getOrders(clan_id: string) {
 		const orders = await prisma.clanBoostOrder.findMany({
-			where: { clanId, date: BoostOrderService.PERMANENT_DATE },
+			where: { clan_id, date: BoostOrderService.PERMANENT_DATE },
 			include: {
 				player: {
 					select: { id: true, name: true },
@@ -17,16 +17,16 @@ export class BoostOrderService {
 	}
 
 	async addOrder(
-		clanId: string,
-		playerId: number,
-		itemId: string,
-		itemName: string,
+		clan_id: string,
+		player_id: number,
+		item_id: string,
+		item_name: string,
 		count: number
 	) {
 		const date = BoostOrderService.PERMANENT_DATE
 
 		const clan = await prisma.clan.findUnique({
-			where: { id: clanId },
+			where: { id: clan_id },
 			select: { boost_mode: true },
 		})
 		if (!clan) throw new Error('Clan not found')
@@ -35,12 +35,12 @@ export class BoostOrderService {
 		}
 
 		const member = await prisma.clanMember.findFirst({
-			where: { id: playerId, clanId },
+			where: { id: player_id, clan_id },
 		})
 		if (!member) throw new Error('Member not found in clan')
 
 		const existing = await prisma.clanBoostOrder.findFirst({
-			where: { clanId, playerId, itemId, date },
+			where: { clan_id, player_id, item_id, date },
 		})
 
 		if (existing) {
@@ -51,22 +51,22 @@ export class BoostOrderService {
 		} else {
 			await prisma.clanBoostOrder.create({
 				data: {
-					clanId,
-					playerId,
-					itemId,
-					itemName: itemName.slice(0, 200),
+					clan_id,
+					player_id,
+					item_id,
+					item_name: item_name.slice(0, 200),
 					count,
 					date,
 				},
 			})
 		}
 
-		return this.getOrders(clanId)
+		return this.getOrders(clan_id)
 	}
 
-	async removeOrder(clanId: string, index: number) {
+	async removeOrder(clan_id: string, index: number) {
 		const orders = await prisma.clanBoostOrder.findMany({
-			where: { clanId, date: BoostOrderService.PERMANENT_DATE },
+			where: { clan_id, date: BoostOrderService.PERMANENT_DATE },
 			orderBy: { created_at: 'asc' },
 		})
 		if (orders[index]) {
@@ -74,7 +74,7 @@ export class BoostOrderService {
 				where: { id: orders[index].id },
 			})
 		}
-		return this.getOrders(clanId)
+		return this.getOrders(clan_id)
 	}
 }
 

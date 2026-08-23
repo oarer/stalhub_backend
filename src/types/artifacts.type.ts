@@ -11,7 +11,7 @@ export type ArtifactRow = {
 }
 
 export type ArtifactAggregate = {
-	updatedAt: string
+	updated_at: string
 	items: Record<string, (ArtifactRow | null)[] | undefined>
 	curves: Record<string, Record<string, number> | undefined>
 	qualityRatios: Record<string, number | undefined>
@@ -19,7 +19,7 @@ export type ArtifactAggregate = {
 }
 
 export type ArtifactPriceQuery = {
-	itemId: string
+	item_id: string
 	qlt: number
 	ptn: number
 }
@@ -31,7 +31,7 @@ export type ArtifactPriceResult = ArtifactPriceQuery & {
 }
 
 export type ArtifactPricesResponse = {
-	updatedAt: string | null
+	updated_at: string | null
 	region: string
 	prices: ArtifactPriceResult[]
 }

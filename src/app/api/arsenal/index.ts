@@ -14,7 +14,7 @@ export const routeArsenal = createElysia()
 	)
 	.onStart(async () => {
 		const cached = await getCache()
-		if (!cached || shouldRevalidate(cached.updatedAt)) {
+		if (!cached || shouldRevalidate(cached.updated_at)) {
 			await updatePrices()
 		}
 	})
@@ -26,18 +26,18 @@ export const routeArsenal = createElysia()
 			const fresh = await getCache()
 
 			return {
-				updatedAt: fresh?.updatedAt,
+				updated_at: fresh?.updated_at,
 				total: fresh?.items.length ?? 0,
 				items: fresh?.items ?? [],
 			}
 		}
 
-		if (shouldRevalidate(cached.updatedAt)) {
+		if (shouldRevalidate(cached.updated_at)) {
 			updatePrices()
 		}
 
 		return {
-			updatedAt: cached.updatedAt,
+			updated_at: cached.updated_at,
 			total: cached.items.length,
 			items: cached.items,
 		}

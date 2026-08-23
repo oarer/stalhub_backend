@@ -106,17 +106,17 @@ async function validateIdToken(idToken: string) {
 
 const stateStore = new Map<
 	string,
-	{ verifier: string; expiresAt: number; userId?: number }
+	{ verifier: string; expiresAt: number; user_id?: number }
 >()
 
 export function storeTelegramState(
 	state: string,
 	verifier: string,
-	userId?: number
+	user_id?: number
 ) {
 	stateStore.set(state, {
 		verifier,
-		userId,
+		user_id,
 		expiresAt: Date.now() + 10 * 60 * 1000,
 	})
 }
@@ -219,7 +219,7 @@ export const telegramAuth = createElysia()
 						return { error: 'Invalid id_token' }
 					}
 
-					if (stored.userId) {
+					if (stored.user_id) {
 						const existing = await prisma.telegramAuth.findUnique({
 							where: { telegram_id: user.id },
 						})
@@ -236,7 +236,7 @@ export const telegramAuth = createElysia()
 								name: user.name,
 								login: user.username,
 								avatar_id: user.avatar,
-								userid: stored.userId,
+								userid: stored.user_id,
 							},
 						})
 
@@ -247,15 +247,15 @@ export const telegramAuth = createElysia()
 						where: { telegram_id: user.id },
 					})
 
-					let userId: number
+					let user_id: number
 					if (existing) {
-						userId = existing.userid
+						user_id = existing.userid
 					} else {
 						const created = await prisma.user.create({
 							data: {
 								username: user.username,
 								name: user.name,
-								TelegramAuth: {
+								telegram_auth: {
 									create: {
 										telegram_id: user.id,
 										name: user.name,
@@ -265,12 +265,12 @@ export const telegramAuth = createElysia()
 								},
 							},
 						})
-						userId = created.id
-						await assignDefaultRole(userId)
+						user_id = created.id
+						await assignDefaultRole(user_id)
 					}
 
 					const userData = await prisma.user.findUnique({
-						where: { id: userId },
+						where: { id: user_id },
 						include: { roles: true },
 					})
 					const roleNames =
@@ -281,18 +281,18 @@ export const telegramAuth = createElysia()
 						] ?? ''
 					const h = headers as Record<string, string | undefined>
 					const ip = (h['x-forwarded-for']?.split(',')[0]?.trim() ?? h['x-real-ip'] ?? '')
-					const session = await createSession(userId, ua, ip)
-					const accessToken = await jwt.sign({
-						sub: String(userId),
-						sid: session.sessionId,
+					const session = await createSession(user_id, ua, ip)
+					const access_token_value = await jwt.sign({
+						sub: String(user_id),
+						sid: session.session_id,
 						name: userData?.name ?? '',
 						username: userData?.username ?? '',
 						role: roleNames,
 						exp: Math.floor(Date.now() / 1000) + 5 * 60,
 					})
 					const refreshToken = await jwt.sign({
-						sub: String(userId),
-						sid: session.sessionId,
+						sub: String(user_id),
+						sid: session.session_id,
 						exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
 					})
 
@@ -301,7 +301,7 @@ export const telegramAuth = createElysia()
 						...refreshCookie,
 					})
 					access_token.set({
-						value: accessToken,
+						value: access_token_value,
 						...accessCookie,
 					})
 
@@ -337,15 +337,15 @@ export const telegramAuth = createElysia()
 						where: { telegram_id: user.id },
 					})
 
-					let userId: number
+					let user_id: number
 					if (existing) {
-						userId = existing.userid
+						user_id = existing.userid
 					} else {
 						const created = await prisma.user.create({
 							data: {
 								username: user.username,
 								name: user.name,
-								TelegramAuth: {
+								telegram_auth: {
 									create: {
 										telegram_id: user.id,
 										name: user.name,
@@ -355,12 +355,12 @@ export const telegramAuth = createElysia()
 								},
 							},
 						})
-						userId = created.id
-						await assignDefaultRole(userId)
+						user_id = created.id
+						await assignDefaultRole(user_id)
 					}
 
 					const userData = await prisma.user.findUnique({
-						where: { id: userId },
+						where: { id: user_id },
 						include: { roles: true },
 					})
 					const roleNames =
@@ -371,18 +371,18 @@ export const telegramAuth = createElysia()
 						] ?? ''
 					const h = headers as Record<string, string | undefined>
 					const ip = (h['x-forwarded-for']?.split(',')[0]?.trim() ?? h['x-real-ip'] ?? '')
-					const session = await createSession(userId, ua, ip)
-					const accessToken = await jwt.sign({
-						sub: String(userId),
-						sid: session.sessionId,
+					const session = await createSession(user_id, ua, ip)
+					const access_token_value = await jwt.sign({
+						sub: String(user_id),
+						sid: session.session_id,
 						name: userData?.name ?? '',
 						username: userData?.username ?? '',
 						role: roleNames,
 						exp: Math.floor(Date.now() / 1000) + 5 * 60,
 					})
 					const refreshToken = await jwt.sign({
-						sub: String(userId),
-						sid: session.sessionId,
+						sub: String(user_id),
+						sid: session.session_id,
 						exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
 					})
 
@@ -391,7 +391,7 @@ export const telegramAuth = createElysia()
 						...refreshCookie,
 					})
 					access_token.set({
-						value: accessToken,
+						value: access_token_value,
 						...accessCookie,
 					})
 
@@ -410,9 +410,9 @@ export const telegramAuth = createElysia()
 			.get(
 				'/link',
 				async ({ store }) => {
-					const { userId } = fromStore(store)
+					const { user_id } = fromStore(store)
 					const existing = await prisma.telegramAuth.findUnique({
-						where: { userid: userId },
+						where: { userid: user_id },
 					})
 					if (existing) {
 						return { error: 'Telegram already linked' }
@@ -428,7 +428,7 @@ export const telegramAuth = createElysia()
 						)
 					)
 					const state = crypto.randomUUID()
-					storeTelegramState(state, verifier, userId)
+					storeTelegramState(state, verifier, user_id)
 
 					const url = new URL(`${TELEGRAM_ISS}/auth`)
 					url.searchParams.set('client_id', env.TELEGRAM_CLIENT_ID)
@@ -452,9 +452,9 @@ export const telegramAuth = createElysia()
 			.delete(
 				'/link',
 				async ({ store }) => {
-					const { userId } = fromStore(store)
+					const { user_id } = fromStore(store)
 					await prisma.telegramAuth.deleteMany({
-						where: { userid: userId },
+						where: { userid: user_id },
 					})
 					return { success: true }
 				},

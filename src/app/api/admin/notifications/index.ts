@@ -30,10 +30,10 @@ export const notificationsRoutes = createElysia().group(
 			)
 
 			.post(
-				'/user/:userId',
+				'/user/:user_id',
 				async ({ params, body, set }) => {
 					const result = await adminNotificationService.sendToUser(
-						Number(params.userId),
+						Number(params.user_id),
 						body
 					)
 					if (!result) {
@@ -44,7 +44,7 @@ export const notificationsRoutes = createElysia().group(
 				},
 				{
 					beforeHandle: [requireAuth, requireAdmin],
-					params: t.Object({ userId: t.String() }),
+					params: t.Object({ user_id: t.String() }),
 					body: notificationBody,
 					detail: { tags: ['Admin'] },
 				}
@@ -53,7 +53,7 @@ export const notificationsRoutes = createElysia().group(
 			.post(
 				'/batch',
 				async ({ body }) => {
-					return adminNotificationService.sendToUsers(body.userIds, {
+					return adminNotificationService.sendToUsers(body.user_ids, {
 						title: body.title,
 						content: body.content,
 						type: body.type,
@@ -63,7 +63,7 @@ export const notificationsRoutes = createElysia().group(
 				{
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
-						userIds: t.Array(t.Number()),
+						user_ids: t.Array(t.Number()),
 						title: t.String({ error: 'title is required' }),
 						content: t.String({
 							error: 'content is required',

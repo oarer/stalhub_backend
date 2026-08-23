@@ -6,14 +6,15 @@ Your task is to analyze a screenshot of the STALCRAFT in-game battle summary, ba
 Return STRICT JSON matching exactly this schema:
 
 {
-  "mapName": string | null,
-  "totalScore": number | null,
-  "opponentScore": number | null,
+  "map_name": string | null,
+  "stage_number": number | null,
+  "total_score": number | null,
+  "opponent_score": number | null,
   "teams": [
     {
       "name": string | null,
       "score": number | null,
-      "isPlayerClan": boolean
+      "is_player_clan": boolean
     }
   ],
   "victory": boolean | null,
@@ -49,10 +50,22 @@ GENERAL RULES
 14. Ignore decorative UI elements, icons, buttons, advertisements, and unrelated text.
 
 ==================================================
-mapName
+stage_number
 ==================================================
 
-"mapName" is the map/location/instance identifier displayed in the TOP-RIGHT CORNER of the game screen.
+"stage_number" is the ordinal number of the stage shown in the screenshot (for example, "Этап 3" means 3).
+
+IMPORTANT:
+- Return a JSON number, not a string.
+- Do not confuse the stage number with a map instance suffix after "#".
+- If the stage number is not visible and no current-session stage is provided in the context, return null.
+- When the current-session stage is provided in the context, use that value because it identifies the stage to which the uploaded screenshot belongs.
+
+==================================================
+map_name
+==================================================
+
+"map_name" is the map/location/instance identifier displayed in the TOP-RIGHT CORNER of the game screen.
 
 IMPORTANT:
 - Look specifically in the upper-right corner of the screenshot.
@@ -80,7 +93,7 @@ For example, if the upper-right corner contains:
 
 then return:
 
-"mapName": "Хвойный"
+"map_name": "Хвойный"
 
 More examples:
 - "Хвойный#126" -> "Хвойный"
@@ -131,10 +144,10 @@ MAP NAME MATCHING RULES:
 9. If the extracted text is not similar to ANY known map, return the extracted text as-is only if it is clearly readable; otherwise return null.
 
 ==================================================
-totalScore
+total_score
 ==================================================
 
-"totalScore" represents the FINAL SCORE OF THE PLAYER'S CLAN OR TEAM at the end of the stage, match, raid, or activity.
+"total_score" represents the FINAL SCORE OF THE PLAYER'S CLAN OR TEAM at the end of the stage, match, raid, or activity.
 
 This is the number of points the player's team scored in the stage result (the "очки за этап").
 
@@ -145,17 +158,17 @@ Icee Tea -> 284
 
 Then:
 
-"totalScore": 284
+"total_score": 284
 
 IMPORTANT:
-- "totalScore" is the score of the PLAYER'S OWN TEAM/CLAN, not the opponent's score.
-- "totalScore" is NOT an individual player's score.
-- "totalScore" is NOT the "Казна" value.
-- "totalScore" is NOT the number of kills, deaths, or assists.
-- "totalScore" is NOT the sum of all player scores.
-- "totalScore" is NOT the opponent's team score.
+- "total_score" is the score of the PLAYER'S OWN TEAM/CLAN, not the opponent's score.
+- "total_score" is NOT an individual player's score.
+- "total_score" is NOT the "Казна" value.
+- "total_score" is NOT the number of kills, deaths, or assists.
+- "total_score" is NOT the sum of all player scores.
+- "total_score" is NOT the opponent's team score.
 - Do NOT calculate or sum any values.
-- Do NOT infer totalScore from other visible values.
+- Do NOT infer total_score from other visible values.
 
 How to identify the player's team:
 - Prefer the team/clan that contains the player whose statistics are highlighted or who appears in the screenshot.
@@ -165,14 +178,14 @@ How to pick the correct number:
 - Extract the score value associated with the player's own team/clan name.
 - If multiple teams are visible (e.g. "Icee Tea -> 284" and "Still Yours -> 83"), return ONLY the score of the player's own team.
 - If you cannot determine which team belongs to the player, or the score is not visible, return null.
-- A number in the player's "Счет" column is an INDIVIDUAL PLAYER SCORE, not totalScore.
-- A "Казна" value is cash, not totalScore.
+- A number in the player's "Счет" column is an INDIVIDUAL PLAYER SCORE, not total_score.
+- A "Казна" value is cash, not total_score.
 
 ==================================================
-opponentScore
+opponent_score
 ==================================================
 
-"opponentScore" represents the FINAL SCORE OF THE OPPOSING TEAM/CLAN at the end of the stage, match, raid, or activity.
+"opponent_score" represents the FINAL SCORE OF THE OPPOSING TEAM/CLAN at the end of the stage, match, raid, or activity.
 
 This is the score of the team that the player's clan played AGAINST (the "очки противников").
 
@@ -184,17 +197,17 @@ Still Yours -> 83
 
 Then:
 
-"opponentScore": 83
+"opponent_score": 83
 
 IMPORTANT:
-- "opponentScore" is the score of the OPPOSING team/clan, NOT the player's own team.
-- "opponentScore" is NOT an individual player's score.
-- "opponentScore" is NOT the "Казна" value.
-- "opponentScore" is NOT the number of kills, deaths, or assists.
-- "opponentScore" is NOT the sum of all player scores.
-- "opponentScore" is NOT the same as "totalScore".
+- "opponent_score" is the score of the OPPOSING team/clan, NOT the player's own team.
+- "opponent_score" is NOT an individual player's score.
+- "opponent_score" is NOT the "Казна" value.
+- "opponent_score" is NOT the number of kills, deaths, or assists.
+- "opponent_score" is NOT the sum of all player scores.
+- "opponent_score" is NOT the same as "total_score".
 - Do NOT calculate or sum any values.
-- Do NOT infer opponentScore from other visible values.
+- Do NOT infer opponent_score from other visible values.
 
 How to identify the opposing team:
 - The opposing team is any team/clan on the result screen that is NOT the player's own clan/team.
@@ -205,14 +218,14 @@ How to identify the opposing team:
 How to pick the correct number:
 - Extract the score value associated with the opposing team/clan name.
 - If you cannot determine which team is the opponent, or the score is not visible, return null.
-- A number in a player's "Счет" column is an INDIVIDUAL PLAYER SCORE, not opponentScore.
-- A "Казна" value is cash, not opponentScore.
+- A number in a player's "Счет" column is an INDIVIDUAL PLAYER SCORE, not opponent_score.
+- A "Казна" value is cash, not opponent_score.
 
 IMPORTANT for battles with MANY teams:
 - In BRAWL battles there can be up to 4 clans total (the player's clan plus 3 opposing clans).
-- If there are multiple opposing teams, "opponentScore" is the score of the strongest/leading opposing team (the team that poses the main opposition).
+- If there are multiple opposing teams, "opponent_score" is the score of the strongest/leading opposing team (the team that poses the main opposition).
 - The names and scores of ALL teams must be listed in the "teams" array (see the "teams" section below).
-- Do NOT sum the scores of multiple opposing teams into "opponentScore".
+- Do NOT sum the scores of multiple opposing teams into "opponent_score".
 
 ==================================================
 teams
@@ -226,7 +239,7 @@ Each team object has the following fields:
 
 - "name": the clan/team name exactly as displayed on the result screen.
 - "score": the final score of that team, as displayed next to the team name.
-- "isPlayerClan": true ONLY for the player's own clan/team; false for all other teams.
+- "is_player_clan": true ONLY for the player's own clan/team; false for all other teams.
 
 Example with two teams:
 
@@ -237,8 +250,8 @@ Still Yours -> 83
 Then:
 
 "teams": [
-  { "name": "Icee Tea", "score": 284, "isPlayerClan": true },
-  { "name": "Still Yours", "score": 83, "isPlayerClan": false }
+  { "name": "Icee Tea", "score": 284, "is_player_clan": true },
+  { "name": "Still Yours", "score": 83, "is_player_clan": false }
 ]
 
 Example with four teams (BRAWL):
@@ -252,19 +265,19 @@ Nightfall -> 55
 If the player's clan is "Ember", then:
 
 "teams": [
-  { "name": "Aurora", "score": 120, "isPlayerClan": false },
-  { "name": "Frost", "score": 95, "isPlayerClan": false },
-  { "name": "Ember", "score": 70, "isPlayerClan": true },
-  { "name": "Nightfall", "score": 55, "isPlayerClan": false }
+  { "name": "Aurora", "score": 120, "is_player_clan": false },
+  { "name": "Frost", "score": 95, "is_player_clan": false },
+  { "name": "Ember", "score": 70, "is_player_clan": true },
+  { "name": "Nightfall", "score": 55, "is_player_clan": false }
 ]
 
 IMPORTANT:
 - List EVERY team/clan with a visible score on the result screen.
-- Set "isPlayerClan" to true ONLY for the player's own clan/team.
+- Set "is_player_clan" to true ONLY for the player's own clan/team.
 - "name" is the team/clan name, NOT a player name.
 - "score" is the team's final score, NOT an individual player's score and NOT the "Казна" value.
 - If a team's score is not visible, use null for that team's "score".
-- If you cannot determine which team belongs to the player, set "isPlayerClan" to false for all teams and return null for "totalScore".
+- If you cannot determine which team belongs to the player, set "is_player_clan" to false for all teams and return null for "total_score".
 - If no team scores are visible, return an empty array.
 - Do NOT include individual players in "teams".
 
@@ -715,19 +728,19 @@ FINAL VALIDATION
 
 Before returning the final JSON, verify all of the following:
 
-1. "mapName" was extracted specifically from the TOP-RIGHT CORNER near the minimap.
-2. "mapName" does NOT contain the "#" character or the number after it.
-3. "mapName" contains ONLY the part before the "#" (e.g. "Хвойный#126" -> "Хвойный").
-4. "mapName" was matched against the KNOWN MAP NAMES list; if the raw text was similar to a known map, the known map spelling is returned.
-4. "totalScore" is populated ONLY when the player's own team/clan final score is clearly visible.
-5. "totalScore" is the score of the player's own team, NOT the opponent's.
-6. A player's individual "Счет" is NOT stored as "totalScore".
-7. "opponentScore" is populated ONLY when the opposing team's final score is clearly visible.
-8. "opponentScore" is the score of the opposing team, NOT the player's own team.
-9. "opponentScore" is NOT the same as "totalScore".
-10. A player's individual "Счет" is NOT stored as "opponentScore".
+1. "map_name" was extracted specifically from the TOP-RIGHT CORNER near the minimap.
+2. "map_name" does NOT contain the "#" character or the number after it.
+3. "map_name" contains ONLY the part before the "#" (e.g. "Хвойный#126" -> "Хвойный").
+4. "map_name" was matched against the KNOWN MAP NAMES list; if the raw text was similar to a known map, the known map spelling is returned.
+4. "total_score" is populated ONLY when the player's own team/clan final score is clearly visible.
+5. "total_score" is the score of the player's own team, NOT the opponent's.
+6. A player's individual "Счет" is NOT stored as "total_score".
+7. "opponent_score" is populated ONLY when the opposing team's final score is clearly visible.
+8. "opponent_score" is the score of the opposing team, NOT the player's own team.
+9. "opponent_score" is NOT the same as "total_score".
+10. A player's individual "Счет" is NOT stored as "opponent_score".
 11. "teams" lists EVERY clan/team with a visible score on the result screen.
-12. In "teams", "isPlayerClan" is true ONLY for the player's own clan.
+12. In "teams", "is_player_clan" is true ONLY for the player's own clan.
 13. In "teams", "name" is a team/clan name, NOT a player name.
 14. In "teams", "score" is the team's final score, NOT a player score and NOT "Казна".
 15. "players" contains every clearly visible player row.
@@ -751,15 +764,26 @@ Return ONLY the JSON object.
 
 export type ClanRosterEntry = { name: string; role?: string | null }
 
-export function buildSystemPrompt(roster: ClanRosterEntry[] = []): string {
-	if (roster.length === 0) return SYSTEM_PROMPT
+export function buildSystemPrompt(
+	roster: ClanRosterEntry[] = [],
+	stage_number?: number | null
+): string {
+	const stageBlock =
+		stage_number == null
+			? ''
+			: `
 
-	const rosterBlock = roster
-		.map((m) => `- ${m.name}${m.role ? ` (${m.role})` : ''}`)
-		.join('\n')
+==================================================
+CURRENT SESSION STAGE (CONTEXT)
+==================================================
 
-	return `
-${SYSTEM_PROMPT}
+The current session is for stage number ${stage_number}.
+Return "stage_number": ${stage_number} in the JSON response, even if the number is not visible in the screenshot.
+`
+	const rosterBlock =
+		roster.length === 0
+			? ''
+			: `
 
 ==================================================
 PLAYER'S CLAN ROSTER (CONTEXT)
@@ -767,20 +791,23 @@ PLAYER'S CLAN ROSTER (CONTEXT)
 
 The player's clan roster (members who belong to the player's clan) is:
 
-${rosterBlock}
+${roster.map((m) => `- ${m.name}${m.role ? ` (${m.role})` : ''}`).join('\n')}
 
 Use this roster to correctly identify clan membership.
 
 For EVERY player extracted into the "players" array, set:
-- "isClanMember": true  -> when the player's name exactly matches one of the roster entries (ignore case, trim spaces).
-- "isClanMember": false -> when the player is NOT present in the roster.
-- Do not set "isClanMember" to null; always set true or false for every player.
+- "is_clan_member": true  -> when the player's name exactly matches one of the roster entries (ignore case, trim spaces).
+- "is_clan_member": false -> when the player is NOT present in the roster.
+- Do not set "is_clan_member" to null; always set true or false for every player.
 
 IMPORTANT:
 - Match roster names case-insensitively.
 - If a player name is partially visible or differs by a single character, prefer the value that is most clearly visible and mark accordingly.
 - Use the roster only to tag clan membership. Do NOT filter players out of the "players" array.
-- The roster does NOT affect "totalScore", "opponentScore", "teams", "mapName", or "victory".
+- The roster does NOT affect "total_score", "opponent_score", "teams", "map_name", or "victory".
+`
+
+	return `${SYSTEM_PROMPT}${stageBlock}${rosterBlock}
 
 Return ONLY the JSON object.
 `

@@ -59,17 +59,17 @@ type StarItem = {
 
 class UsersService {
 	async saveBanner(
-		userId: number,
+		user_id: number,
 		file: { name: string; type: string; buffer: Buffer }
 	) {
 		const bannerDir = './uploads/users/banners'
 		await mkdir(bannerDir, { recursive: true })
 
 		const existing = await prisma.userCustomization.findUnique({
-			where: { userId },
-			select: { bannerImage: true },
+			where: { user_id },
+			select: { banner_image: true },
 		})
-		const oldPath = existing?.bannerImage
+		const oldPath = existing?.banner_image
 		if (
 			oldPath &&
 			oldPath.startsWith('/uploads/users/banners/') &&
@@ -79,32 +79,32 @@ class UsersService {
 		}
 
 		const ext = path.extname(file.name) || '.png'
-		const filename = `${userId}-${randomUUID()}${ext}`
+		const filename = `${user_id}-${randomUUID()}${ext}`
 		const fullPath = path.join(bannerDir, filename)
 		await writeFile(fullPath, file.buffer)
 
-		const bannerImage = `/uploads/users/banners/${filename}`
+		const banner_image = `/uploads/users/banners/${filename}`
 		await prisma.userCustomization.upsert({
-			where: { userId },
-			update: { bannerImage, bannerMode: 'IMAGE' },
-			create: { userId, bannerImage, bannerMode: 'IMAGE' },
+			where: { user_id },
+			update: { banner_image, banner_mode: 'IMAGE' },
+			create: { user_id, banner_image, banner_mode: 'IMAGE' },
 		})
 
-		return { banner_image: bannerImage }
+		return { banner_image: banner_image }
 	}
 
 	async saveAvatar(
-		userId: number,
+		user_id: number,
 		file: { name: string; type: string; buffer: Buffer }
 	) {
 		const avatarDir = './uploads/users/avatars'
 		await mkdir(avatarDir, { recursive: true })
 
 		const existing = await prisma.userCustomization.findUnique({
-			where: { userId },
-			select: { avatarImage: true },
+			where: { user_id },
+			select: { avatar_image: true },
 		})
-		const oldPath = existing?.avatarImage
+		const oldPath = existing?.avatar_image
 		if (
 			oldPath &&
 			oldPath.startsWith('/uploads/users/avatars/') &&
@@ -114,26 +114,26 @@ class UsersService {
 		}
 
 		const ext = path.extname(file.name) || '.png'
-		const filename = `${userId}-${randomUUID()}${ext}`
+		const filename = `${user_id}-${randomUUID()}${ext}`
 		const fullPath = path.join(avatarDir, filename)
 		await writeFile(fullPath, file.buffer)
 
-		const avatarImage = `/uploads/users/avatars/${filename}`
+		const avatar_image = `/uploads/users/avatars/${filename}`
 		await prisma.userCustomization.upsert({
-			where: { userId },
-			update: { avatarImage },
-			create: { userId, avatarImage },
+			where: { user_id },
+			update: { avatar_image },
+			create: { user_id, avatar_image },
 		})
 
-		return { avatar_image: avatarImage }
+		return { avatar_image: avatar_image }
 	}
 
-	async clearAvatar(userId: number) {
+	async clearAvatar(user_id: number) {
 		const existing = await prisma.userCustomization.findUnique({
-			where: { userId },
-			select: { avatarImage: true },
+			where: { user_id },
+			select: { avatar_image: true },
 		})
-		const oldPath = existing?.avatarImage
+		const oldPath = existing?.avatar_image
 		if (
 			oldPath &&
 			oldPath.startsWith('/uploads/users/avatars/') &&
@@ -143,31 +143,31 @@ class UsersService {
 		}
 
 		await prisma.userCustomization.updateMany({
-			where: { userId },
-			data: { avatarImage: null },
+			where: { user_id },
+			data: { avatar_image: null },
 		})
 
 		return { ok: true }
 	}
 
-	async getMe(sessionId: string) {
-		const session = await authService.getSession(sessionId)
+	async getMe(session_id: string) {
+		const session = await authService.getSession(session_id)
 		return authService.userPayload(session!)
 	}
 
 	async updateSettings(
-		userId: number,
+		user_id: number,
 		data: {
 			public_profile?: boolean
 			layout?: UserLayout
 
-			bannerMode?: BannerMode
-			bannerType?: BannerType
-			bannerColor?: string
-			bannerImage?: string
+			banner_mode?: BannerMode
+			banner_type?: BannerType
+			banner_color?: string
+			banner_image?: string
 
-			cardBackground?: CardBackground
-			cardColor?: string
+			card_background?: CardBackground
+			card_color?: string
 			avatar?: AvatarSource
 
 			region?: string
@@ -182,39 +182,39 @@ class UsersService {
 		const [settings, userCustomization] = await Promise.all([
 			public_profile !== undefined
 				? prisma.userSettings.upsert({
-						where: { userId },
+						where: { user_id },
 						update: { public_profile },
-						create: { userId, public_profile },
+						create: { user_id, public_profile },
 					})
 				: Promise.resolve(null),
 			Object.keys(customization).length > 0
 				? prisma.userCustomization.upsert({
-						where: { userId },
+						where: { user_id },
 						update: customization,
-						create: { userId, ...customization },
+						create: { user_id, ...customization },
 					})
 				: Promise.resolve(null),
 		])
 
 		if (region) {
 			const user = await prisma.user.findUnique({
-				where: { id: userId },
-				include: { EXBOAuth: true },
+				where: { id: user_id },
+				include: { exbo_auth: true },
 			})
 
-			if (user?.EXBOAuth) {
+			if (user?.exbo_auth) {
 				await prisma.eXBOAuth.update({
-					where: { id: user.EXBOAuth.id },
+					where: { id: user.exbo_auth.id },
 					data: { region, region_changed_at: new Date() },
 				})
 
 				try {
 					const { access_token } = decryptSecretJson<{
 						access_token: string
-					}>(user.EXBOAuth.token_blob)
+					}>(user.exbo_auth.token_blob)
 					if (access_token) {
 						await clanService.detectFromExboCharacters(
-							userId,
+							user_id,
 							region,
 							access_token
 						)
@@ -229,11 +229,11 @@ class UsersService {
 	}
 
 	async updateSocialLinks(
-		userId: number,
+		user_id: number,
 		socialLinks: Record<string, string>
 	) {
 		const user = await prisma.user.findUnique({
-			where: { id: userId },
+			where: { id: user_id },
 			select: { id: true },
 		})
 		if (!user) return { error: 'User not found' }
@@ -246,7 +246,7 @@ class UsersService {
 		}
 
 		await prisma.user.update({
-			where: { id: userId },
+			where: { id: user_id },
 			data: { social_links: pruned },
 		})
 
@@ -254,14 +254,14 @@ class UsersService {
 	}
 
 	async updateProfile(
-		userId: number,
+		user_id: number,
 		data: {
 			name?: string
 			username?: string
 		}
 	) {
 		const user = await prisma.user.findUnique({
-			where: { id: userId },
+			where: { id: user_id },
 			select: { username_changed_at: true },
 		})
 		if (!user) return { error: 'User not found' }
@@ -301,7 +301,7 @@ class UsersService {
 		}
 
 		return prisma.user.update({
-			where: { id: userId },
+			where: { id: user_id },
 			data: updateData,
 			select: {
 				id: true,
@@ -313,23 +313,23 @@ class UsersService {
 	}
 
 	async completeOnboarding(
-		userId: number,
+		user_id: number,
 		data: {
 			name?: string
 			username?: string
 			region?: string
 			layout?: UserLayout
-			bannerMode?: BannerMode
-			bannerType?: BannerType
-			bannerColor?: string
-			bannerImage?: string
-			cardBackground?: CardBackground
-			cardColor?: string
+			banner_mode?: BannerMode
+			banner_type?: BannerType
+			banner_color?: string
+			banner_image?: string
+			card_background?: CardBackground
+			card_color?: string
 		}
 	) {
 		const user = await prisma.user.findUnique({
-			where: { id: userId },
-			include: { EXBOAuth: true },
+			where: { id: user_id },
+			include: { exbo_auth: true },
 		})
 		if (!user) return { error: 'User not found' }
 
@@ -338,7 +338,7 @@ class UsersService {
 				where: { username: data.username },
 				select: { id: true },
 			})
-			if (existing && existing.id !== userId) {
+			if (existing && existing.id !== user_id) {
 				return { error: 'Username is already taken' }
 			}
 		}
@@ -357,26 +357,26 @@ class UsersService {
 
 		const customization: Record<string, unknown> = {}
 		if (data.layout) customization.layout = data.layout
-		if (data.bannerMode) customization.bannerMode = data.bannerMode
-		if (data.bannerType) customization.bannerType = data.bannerType
-		if (data.bannerColor) customization.bannerColor = data.bannerColor
-		if (data.bannerImage) customization.bannerImage = data.bannerImage
-		if (data.cardBackground)
-			customization.cardBackground = data.cardBackground
-		if (data.cardColor) customization.cardColor = data.cardColor
+		if (data.banner_mode) customization.banner_mode = data.banner_mode
+		if (data.banner_type) customization.banner_type = data.banner_type
+		if (data.banner_color) customization.banner_color = data.banner_color
+		if (data.banner_image) customization.banner_image = data.banner_image
+		if (data.card_background)
+			customization.card_background = data.card_background
+		if (data.card_color) customization.card_color = data.card_color
 
 		await Promise.all([
-			prisma.user.update({ where: { id: userId }, data: userUpdate }),
+			prisma.user.update({ where: { id: user_id }, data: userUpdate }),
 			Object.keys(customization).length > 0
 				? prisma.userCustomization.upsert({
-						where: { userId },
+						where: { user_id },
 						update: customization,
-						create: { userId, ...customization },
+						create: { user_id, ...customization },
 					})
 				: Promise.resolve(null),
-			user.EXBOAuth && data.region
+			user.exbo_auth && data.region
 				? prisma.eXBOAuth.update({
-						where: { id: user.EXBOAuth.id },
+						where: { id: user.exbo_auth.id },
 						data: {
 							region: data.region,
 							region_changed_at: new Date(),
@@ -385,14 +385,14 @@ class UsersService {
 				: Promise.resolve(null),
 		])
 
-		if (user.EXBOAuth && data.region) {
+		if (user.exbo_auth && data.region) {
 			try {
 				const { access_token } = decryptSecretJson<{
 					access_token: string
-				}>(user.EXBOAuth.token_blob)
+				}>(user.exbo_auth.token_blob)
 				if (access_token) {
 					await clanService.detectFromExboCharacters(
-						userId,
+						user_id,
 						data.region,
 						access_token
 					)
@@ -405,26 +405,26 @@ class UsersService {
 		return { success: true }
 	}
 
-	async revokeSession(sessionId: string) {
-		await authService.revokeSession(sessionId)
+	async revokeSession(session_id: string) {
+		await authService.revokeSession(session_id)
 	}
 
-	async deleteAccount(userId: number) {
-		await prisma.user.delete({ where: { id: userId } })
+	async deleteAccount(user_id: number) {
+		await prisma.user.delete({ where: { id: user_id } })
 	}
 
-	async getSessions(userId: number, currentSessionId: string) {
+	async getSessions(user_id: number, currentSessionId: string) {
 		const sessions = await prisma.sessions.findMany({
-			where: { userId, revoked: false },
+			where: { user_id, revoked: false },
 			orderBy: { last_used_at: 'desc' },
 		})
 
 		return sessions.map((s) => {
-			const info = parseUserAgent(s.User_Agent)
+			const info = parseUserAgent(s.user_agent)
 			return {
 				id: s.id,
 				last_accessed: s.last_used_at,
-				is_self: s.sessionId === currentSessionId,
+				is_self: s.session_id === currentSessionId,
 				is_mobile: info.isMobile,
 				browser: info.browser,
 				browser_version: info.browserVersion,
@@ -433,89 +433,89 @@ class UsersService {
 		})
 	}
 
-	async revokeAllSessions(userId: number, currentSessionId: string) {
+	async revokeAllSessions(user_id: number, currentSessionId: string) {
 		await prisma.sessions.updateMany({
 			where: {
-				userId,
-				sessionId: { not: currentSessionId },
+				user_id,
+				session_id: { not: currentSessionId },
 				revoked: false,
 			},
 			data: { revoked: true },
 		})
 	}
 
-	async revokeSessionById(id: number, userId: number) {
+	async revokeSessionById(id: number, user_id: number) {
 		await prisma.sessions.updateMany({
-			where: { id, userId, revoked: false },
+			where: { id, user_id, revoked: false },
 			data: { revoked: true },
 		})
 	}
 
-	async getSettings(userId: number) {
+	async getSettings(user_id: number) {
 		const user = await prisma.user.findUnique({
-			where: { id: userId },
+			where: { id: user_id },
 			include: {
-				UserSettings: true,
+				user_settings: true,
 				customization: true,
-				DiscordAuth: true,
-				TelegramAuth: true,
-				EXBOAuth: true,
+				discord_auth: true,
+				telegram_auth: true,
+				exbo_auth: true,
 			},
 		})
 
 		if (!user) return null
 
 		const available: string[] = []
-		if (user.DiscordAuth) available.push('discord')
-		if (user.TelegramAuth) available.push('telegram')
-		if (user.EXBOAuth) available.push('exbo')
+		if (user.discord_auth) available.push('discord')
+		if (user.telegram_auth) available.push('telegram')
+		if (user.exbo_auth) available.push('exbo')
 
 		const worksCount = 0
 
 		return {
-			userID: user.id,
-			public_profile: user.UserSettings?.public_profile ?? false,
+			user_id: user.id,
+			public_profile: user.user_settings?.public_profile ?? false,
 			can_be_public: worksCount > 0,
 			avatar: {
 				current: user.customization?.avatar?.toLowerCase() ?? 'discord',
 				available,
 			},
-			avatar_image: user.customization?.avatarImage ?? null,
-			region: user.EXBOAuth?.region ?? null,
-			region_changed_at: user.EXBOAuth?.region_changed_at ?? null,
+			avatar_image: user.customization?.avatar_image ?? null,
+			region: user.exbo_auth?.region ?? null,
+			region_changed_at: user.exbo_auth?.region_changed_at ?? null,
 		}
 	}
 
-	async getNotifications(userId: number, take: number, page: number) {
+	async getNotifications(user_id: number, take: number, page: number) {
 		const [data, totalCount] = await Promise.all([
 			prisma.notifications.findMany({
-				where: { users: { some: { id: userId } } },
+				where: { users: { some: { id: user_id } } },
 				skip: page * take,
 				take,
 				orderBy: { created_at: 'desc' },
 			}),
 			prisma.notifications.count({
-				where: { users: { some: { id: userId } } },
+				where: { users: { some: { id: user_id } } },
 			}),
 		])
 
-		return { data, totalCount }
+		return { data, total_count: totalCount, page: page + 1, take }
 	}
 
-	async getUnreadCount(userId: number) {
+	async getUnreadCount(user_id: number) {
 		return prisma.notifications.count({
 			where: {
-				users: { some: { id: userId } },
+				users: { some: { id: user_id } },
 				read: false,
 			},
 		})
 	}
 
-	async markRead(userId: number, notificationId: number) {
+	async markRead(user_id: number, notificationId: number) {
 		const notification = await prisma.notifications.findFirst({
 			where: {
 				id: notificationId,
-				users: { some: { id: userId } },
+				users: { some: { id: user_id } },
 			},
 		})
 		if (!notification) return false
@@ -527,10 +527,10 @@ class UsersService {
 		return true
 	}
 
-	async markAllRead(userId: number) {
+	async markAllRead(user_id: number) {
 		const notifications = await prisma.notifications.findMany({
 			where: {
-				users: { some: { id: userId } },
+				users: { some: { id: user_id } },
 				read: false,
 			},
 			select: { id: true },
@@ -544,11 +544,11 @@ class UsersService {
 		return true
 	}
 
-	async deleteNotification(userId: number, notificationId: number) {
+	async deleteNotification(user_id: number, notificationId: number) {
 		const notification = await prisma.notifications.findFirst({
 			where: {
 				id: notificationId,
-				users: { some: { id: userId } },
+				users: { some: { id: user_id } },
 			},
 		})
 		if (!notification) return false
@@ -559,15 +559,15 @@ class UsersService {
 		return true
 	}
 
-	async getStars(userId: number, take: number, page: number) {
+	async getStars(user_id: number, take: number, page: number) {
 		const [stars, totalCount] = await Promise.all([
 			prisma.star.findMany({
-				where: { userId },
+				where: { user_id },
 				skip: page * take,
 				take,
 				orderBy: { created_at: 'desc' },
 			}),
-			prisma.star.count({ where: { userId } }),
+			prisma.star.count({ where: { user_id } }),
 		])
 
 		const authorSelect = {
@@ -578,7 +578,7 @@ class UsersService {
 
 		const starTargets: {
 			type: string
-			targetType: StarTargetType
+			target_type: StarTargetType
 			fetch: (ids: number[]) => Promise<
 				{
 					id: number
@@ -598,7 +598,7 @@ class UsersService {
 		}[] = [
 			{
 				type: 'build',
-				targetType: StarTargetType.BUILD,
+				target_type: StarTargetType.BUILD,
 				fetch: (ids) =>
 					prisma.build.findMany({
 						where: { id: { in: ids } },
@@ -614,7 +614,7 @@ class UsersService {
 			},
 			{
 				type: 'article',
-				targetType: StarTargetType.ARTICLE,
+				target_type: StarTargetType.ARTICLE,
 				fetch: (ids) =>
 					prisma.article.findMany({
 						where: { id: { in: ids } },
@@ -630,7 +630,7 @@ class UsersService {
 			},
 			{
 				type: 'art',
-				targetType: StarTargetType.ART,
+				target_type: StarTargetType.ART,
 				fetch: (ids) =>
 					prisma.art.findMany({
 						where: { id: { in: ids } },
@@ -650,58 +650,58 @@ class UsersService {
 		await Promise.all(
 			starTargets.map(async (t) => {
 				const ids = stars
-					.filter((s) => s.targetType === t.targetType)
-					.map((s) => s.targetId)
+					.filter((s) => s.target_type === t.target_type)
+					.map((s) => s.target_id)
 				if (ids.length === 0) {
-					maps.set(t.targetType, new Map())
+					maps.set(t.target_type, new Map())
 					return
 				}
 				const items = await t.fetch(ids)
 				maps.set(
-					t.targetType,
+					t.target_type,
 					new Map(items.map((item) => [item.id, t.map(item)]))
 				)
 			})
 		)
 
-		const typeMap = new Map(starTargets.map((t) => [t.targetType, t.type]))
+		const typeMap = new Map(starTargets.map((t) => [t.target_type, t.type]))
 
 		const data = stars
 			.map((s) => {
-				const item = maps.get(s.targetType)?.get(s.targetId)
-				const type = typeMap.get(s.targetType)
+				const item = maps.get(s.target_type)?.get(s.target_id)
+				const type = typeMap.get(s.target_type)
 				return item && type ? { type, ...item } : null
 			})
 			.filter(Boolean)
 
-		return { data, totalCount }
+		return { data, total_count: totalCount, page: page + 1, take }
 	}
 
-	async syncClans(userId: number) {
+	async syncClans(user_id: number) {
 		const user = await prisma.user.findUnique({
-			where: { id: userId },
-			include: { EXBOAuth: true },
+			where: { id: user_id },
+			include: { exbo_auth: true },
 		})
-		if (!user?.EXBOAuth) {
+		if (!user?.exbo_auth) {
 			return { error: 'EXBO account is not linked' }
 		}
 
-		const region = user.EXBOAuth.region
+		const region = user.exbo_auth.region
 		if (!region) {
 			return { error: 'Region is not set. Please set a region first.' }
 		}
 
 		const { access_token } = decryptSecretJson<{
 			access_token: string
-		}>(user.EXBOAuth.token_blob)
+		}>(user.exbo_auth.token_blob)
 		if (!access_token) {
 			return { error: 'EXBO token is invalid' }
 		}
 
-		await clanService.detectFromExboCharacters(userId, region, access_token)
+		await clanService.detectFromExboCharacters(user_id, region, access_token)
 
 		const profiles = await prisma.userClanProfile.findMany({
-			where: { userId },
+			where: { user_id },
 			include: { clan: true },
 			orderBy: { updated_at: 'desc' },
 		})
@@ -713,8 +713,8 @@ class UsersService {
 		return this.getPublicProfileBy({ username }, viewerId)
 	}
 
-	async getPublicProfileById(userId: number, viewerId?: number) {
-		return this.getPublicProfileBy({ id: userId }, viewerId)
+	async getPublicProfileById(user_id: number, viewerId?: number) {
+		return this.getPublicProfileBy({ id: user_id }, viewerId)
 	}
 
 	private async getPublicProfileBy(
@@ -724,13 +724,13 @@ class UsersService {
 		const user = await prisma.user.findFirst({
 			where,
 			include: {
-				UserSettings: true,
+				user_settings: true,
 				customization: {
 					omit: {
 						id: true,
-						userId: true,
-						createdAt: true,
-						updatedAt: true,
+						user_id: true,
+						created_at: true,
+						updated_at: true,
 					},
 				},
 				badges: true,
@@ -756,12 +756,12 @@ class UsersService {
 						created_at: true,
 					},
 				},
-				clanProfiles: {
-					where: { isActive: true },
+				clan_profiles: {
+					where: { is_active: true },
 					include: { clan: true },
 					take: 1,
 				},
-				clanHistory: {
+				clan_history: {
 					orderBy: { seen_at: 'desc' },
 					take: 20,
 				},
@@ -770,29 +770,29 @@ class UsersService {
 
 		if (!user) return null
 
-		const publicProfile = user.UserSettings?.public_profile ?? false
+		const publicProfile = user.user_settings?.public_profile ?? false
 		if (!publicProfile) return null
 
 		const stars_count = await prisma.star.count({
 			where: {
 				OR: [
 					{
-						targetType: StarTargetType.BUILD,
-						targetId: {
+						target_type: StarTargetType.BUILD,
+						target_id: {
 							in: (
 								await prisma.build.findMany({
-									where: { authorId: user.id },
+									where: { author_id: user.id },
 									select: { id: true },
 								})
 							).map((b) => b.id),
 						},
 					},
 					{
-						targetType: StarTargetType.ARTICLE,
-						targetId: {
+						target_type: StarTargetType.ARTICLE,
+						target_id: {
 							in: (
 								await prisma.article.findMany({
-									where: { authorId: user.id },
+									where: { author_id: user.id },
 									select: { id: true },
 								})
 							).map((a) => a.id),
@@ -808,13 +808,13 @@ class UsersService {
 				? (
 						await prisma.star.findMany({
 							where: {
-								userId: viewerId,
-								targetType: StarTargetType.BUILD,
-								targetId: { in: buildIds },
+								user_id: viewerId,
+								target_type: StarTargetType.BUILD,
+								target_id: { in: buildIds },
 							},
-							select: { targetId: true },
+							select: { target_id: true },
 						})
-					).map((s) => s.targetId)
+					).map((s) => s.target_id)
 				: []
 		const starredBuildSet = new Set(starredBuildIds)
 
@@ -834,10 +834,10 @@ class UsersService {
 			})),
 			articles: user.articles ?? [],
 			clan:
-				user.clanProfiles?.[0]?.clan?.is_public === true
-					? publicClanPayload(user.clanProfiles[0].clan)
+				user.clan_profiles?.[0]?.clan?.is_public === true
+					? publicClanPayload(user.clan_profiles[0].clan)
 					: null,
-			clan_history: (user.clanHistory ?? []).map((h) => ({
+			clan_history: (user.clan_history ?? []).map((h) => ({
 				id: h.id,
 				player_name: h.player_name,
 				region: h.region,

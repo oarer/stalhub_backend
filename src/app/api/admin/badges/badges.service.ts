@@ -95,16 +95,16 @@ class BadgesService {
 		return true
 	}
 
-	async assignToUser(userId: number, badgeId: number) {
+	async assignToUser(user_id: number, badgeId: number) {
 		const [user, badge] = await Promise.all([
-			prisma.user.findUnique({ where: { id: userId } }),
+			prisma.user.findUnique({ where: { id: user_id } }),
 			prisma.userBadges.findUnique({ where: { id: badgeId } }),
 		])
 
 		if (!user || !badge) return null
 
 		const userBadges = await prisma.user.findUnique({
-			where: { id: userId },
+			where: { id: user_id },
 			include: { badges: true },
 		})
 
@@ -115,28 +115,28 @@ class BadgesService {
 		}
 
 		await prisma.user.update({
-			where: { id: userId },
+			where: { id: user_id },
 			data: { badges: { connect: { id: badgeId } } },
 		})
 
-		return this.getUserBadges(userId)
+		return this.getUserBadges(user_id)
 	}
 
-	async removeFromUser(userId: number, badgeId: number) {
-		const user = await prisma.user.findUnique({ where: { id: userId } })
+	async removeFromUser(user_id: number, badgeId: number) {
+		const user = await prisma.user.findUnique({ where: { id: user_id } })
 		if (!user) return null
 
 		await prisma.user.update({
-			where: { id: userId },
+			where: { id: user_id },
 			data: { badges: { disconnect: { id: badgeId } } },
 		})
 
-		return this.getUserBadges(userId)
+		return this.getUserBadges(user_id)
 	}
 
-	async getUserBadges(userId: number) {
+	async getUserBadges(user_id: number) {
 		const user = await prisma.user.findUnique({
-			where: { id: userId },
+			where: { id: user_id },
 			include: { badges: true },
 		})
 

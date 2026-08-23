@@ -27,9 +27,9 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 		)
 
 		.get(
-			'/:clanId',
+			'/:clan_id',
 			async ({ params, set }) => {
-				const result = await adminClanService.get(params.clanId)
+				const result = await adminClanService.get(params.clan_id)
 				if (!result) {
 					set.status = 404
 					return { error: 'Clan not found' }
@@ -38,28 +38,28 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ clanId: t.String() }),
+				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Admin'] },
 			}
 		)
 
 		.get(
-			'/:clanId/members',
+			'/:clan_id/members',
 			async ({ params }) => {
-				return adminClanService.getMembers(params.clanId)
+				return adminClanService.getMembers(params.clan_id)
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ clanId: t.String() }),
+				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Admin'] },
 			}
 		)
 
 		.patch(
-			'/:clanId',
+			'/:clan_id',
 			async ({ params, body, set }) => {
 				const result = await adminClanService.update(
-					params.clanId,
+					params.clan_id,
 					body
 				)
 				if (!result) {
@@ -70,7 +70,7 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ clanId: t.String() }),
+				params: t.Object({ clan_id: t.String() }),
 				body: t.Object({
 					name: t.Optional(t.String()),
 					tag: t.Optional(t.String()),
@@ -83,8 +83,8 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 					region: t.Optional(t.String()),
 					schedule: t.Optional(
 						t.Object({
-							brawlsPerWeek: t.Optional(t.Numeric()),
-							brawlsMandatory: t.Optional(t.Boolean()),
+							brawls_per_week: t.Optional(t.Numeric()),
+							brawls_mandatory: t.Optional(t.Boolean()),
 						})
 					),
 				}),
@@ -93,10 +93,10 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 		)
 
 		.post(
-			'/:clanId/block',
+			'/:clan_id/block',
 			async ({ params, body, set }) => {
 				const result = await adminClanService.block(
-					params.clanId,
+					params.clan_id,
 					body.reason
 				)
 				if (!result) {
@@ -107,7 +107,7 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ clanId: t.String() }),
+				params: t.Object({ clan_id: t.String() }),
 				body: t.Object({
 					reason: t.Optional(t.String()),
 				}),
@@ -116,9 +116,9 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 		)
 
 		.delete(
-			'/:clanId/block',
+			'/:clan_id/block',
 			async ({ params, set }) => {
-				const result = await adminClanService.unblock(params.clanId)
+				const result = await adminClanService.unblock(params.clan_id)
 				if (!result) {
 					set.status = 404
 					return { error: 'Clan not found' }
@@ -127,15 +127,15 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ clanId: t.String() }),
+				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Admin'] },
 			}
 		)
 
 		.delete(
-			'/:clanId',
+			'/:clan_id',
 			async ({ params, set }) => {
-				const ok = await adminClanService.remove(params.clanId)
+				const ok = await adminClanService.remove(params.clan_id)
 				if (!ok) {
 					set.status = 404
 					return { error: 'Clan not found' }
@@ -144,15 +144,15 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ clanId: t.String() }),
+				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Admin'] },
 			}
 		)
 
 		.post(
-			'/:clanId/sync',
+			'/:clan_id/sync',
 			async ({ params, set }) => {
-				const result = await adminClanService.sync(params.clanId)
+				const result = await adminClanService.sync(params.clan_id)
 				if (!result) {
 					set.status = 404
 					return { error: 'Clan not found' }
@@ -161,16 +161,16 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ clanId: t.String() }),
+				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Admin'] },
 			}
 		)
 
 		.get(
-			'/:clanId/sessions',
+			'/:clan_id/sessions',
 			async ({ params, set }) => {
 				const result = await adminClanService.listSessions(
-					params.clanId
+					params.clan_id
 				)
 				if (!result) {
 					set.status = 404
@@ -180,16 +180,16 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ clanId: t.String() }),
+				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Admin'] },
 			}
 		)
 
 		.patch(
-			'/sessions/:sessionId',
+			'/sessions/:session_id',
 			async ({ params, body, set }) => {
 				const result = await adminClanService.updateSession(
-					params.sessionId,
+					params.session_id,
 					body
 				)
 				if (!result) {
@@ -200,7 +200,7 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ sessionId: t.Numeric() }),
+				params: t.Object({ session_id: t.Numeric() }),
 				body: t.Object({
 					map_name: t.Optional(t.String()),
 					type: t.Optional(
@@ -220,10 +220,10 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 		)
 
 		.delete(
-			'/sessions/:sessionId',
+			'/sessions/:session_id',
 			async ({ params, set }) => {
 				const result = await adminClanService.removeSession(
-					params.sessionId
+					params.session_id
 				)
 				if (!result) {
 					set.status = 404
@@ -233,7 +233,7 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ sessionId: t.Numeric() }),
+				params: t.Object({ session_id: t.Numeric() }),
 				detail: { tags: ['Admin'] },
 			}
 		)

@@ -6,23 +6,23 @@ import { absenceService } from '../services/absence'
 
 export const absencesRoutes = clanContext
 	.get(
-		'/absences/:clanId',
+		'/absences/:clan_id',
 		({ params, query }) =>
-			absenceService.listForDate(params.clanId, query.date),
+			absenceService.listForDate(params.clan_id, query.date),
 		{
 			beforeHandle: [requireAuth],
-			params: t.Object({ clanId: t.String() }),
+			params: t.Object({ clan_id: t.String() }),
 			query: t.Object({ date: t.String({ format: 'date' }) }),
 			detail: { tags: ['Clan'] },
 		}
 	)
 	.get(
-		'/absences/:clanId/range',
+		'/absences/:clan_id/range',
 		({ params, query }) =>
-			absenceService.listRange(params.clanId, query.from, query.to),
+			absenceService.listRange(params.clan_id, query.from, query.to),
 		{
 			beforeHandle: [requireAuth],
-			params: t.Object({ clanId: t.String() }),
+			params: t.Object({ clan_id: t.String() }),
 			query: t.Object({
 				from: t.String({ format: 'date' }),
 				to: t.String({ format: 'date' }),
@@ -35,7 +35,7 @@ export const absencesRoutes = clanContext
 		({ body, store }) =>
 			absenceService.upsert(
 				store.authUserId!,
-				store.clanId!,
+				store.clan_id!,
 				body.date,
 				body.events,
 				body.note
@@ -46,7 +46,7 @@ export const absencesRoutes = clanContext
 				date: t.String({ format: 'date' }),
 				events: t.Array(
 					t.Object({
-						eventType: t.Enum({
+						event_type: t.Enum({
 							TOURNAMENT: 'TOURNAMENT',
 							BRAWL: 'BRAWL',
 							BASE_CAPTURE: 'BASE_CAPTURE',
@@ -68,7 +68,7 @@ export const absencesRoutes = clanContext
 		({ params, store }) =>
 			absenceService.remove(
 				store.authUserId!,
-				store.clanId!,
+				store.clan_id!,
 				params.date
 			),
 		{

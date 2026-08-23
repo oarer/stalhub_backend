@@ -8,19 +8,19 @@ class PermissionService {
 		})
 	}
 
-	async create(name: string, description?: string, roleId?: number) {
+	async create(name: string, description?: string, role_id?: number) {
 		return prisma.permission.create({
 			data: {
 				name,
 				description: description ?? '',
-				...(roleId !== undefined && { roleId }),
+				...(role_id !== undefined && { role_id }),
 			},
 		})
 	}
 
 	async update(
 		id: number,
-		data: { name?: string; description?: string; roleId?: number | null }
+		data: { name?: string; description?: string; role_id?: number | null }
 	) {
 		const existing = await prisma.permission.findUnique({ where: { id } })
 		if (!existing) return null
@@ -32,7 +32,7 @@ class PermissionService {
 				...(data.description !== undefined && {
 					description: data.description,
 				}),
-				...(data.roleId !== undefined && { roleId: data.roleId }),
+				...(data.role_id !== undefined && { role_id: data.role_id }),
 			},
 		})
 	}

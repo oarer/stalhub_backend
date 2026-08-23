@@ -21,11 +21,11 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			async ({ query, store }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
-				const { userId } = fromStore(store)
-				const isAdmin = await checkPermission(userId, 'articles:manage')
+				const { user_id } = fromStore(store)
+				const is_admin = await checkPermission(user_id, 'articles:manage')
 				return articlesService.list(take, page, {
-					all: isAdmin,
-					...(!isAdmin && { authorId: userId }),
+					all: is_admin,
+					...(!is_admin && { author_id: user_id }),
 				})
 			},
 			{
@@ -59,7 +59,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			async ({ params, store }) => {
 				return articlesService.getById(
 					params.id,
-					fromStoreOpt(store).userId
+					fromStoreOpt(store).user_id
 				)
 			},
 			{
@@ -73,11 +73,11 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			'',
 			async ({ body, store, set }) => {
 				if (body.type === ArticleType.STALHUB) {
-					const isAdmin = await checkPermission(
-						fromStore(store).userId,
+					const is_admin = await checkPermission(
+						fromStore(store).user_id,
 						'articles:manage'
 					)
-					if (!isAdmin) {
+					if (!is_admin) {
 						set.status = 403
 						return {
 							error: 'Only admins can create STALHUB articles',
@@ -85,7 +85,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					}
 				}
 
-				return articlesService.create(fromStore(store).userId, {
+				return articlesService.create(fromStore(store).user_id, {
 					title: body.title,
 					content: body.content,
 					type: body.type,
@@ -124,12 +124,12 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 		.patch(
 			'/:id',
 			async ({ params, body, store, set }) => {
-				const { userId } = fromStore(store)
-				const isAdmin = await checkPermission(userId, 'articles:manage')
+				const { user_id } = fromStore(store)
+				const is_admin = await checkPermission(user_id, 'articles:manage')
 				const result = await articlesService.update(
 					Number(params.id),
-					userId,
-					isAdmin,
+					user_id,
+					is_admin,
 					{
 						...(body.title !== undefined && { title: body.title }),
 						...(body.content !== undefined && {
@@ -184,12 +184,12 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 		.delete(
 			'/:id',
 			async ({ params, store, set }) => {
-				const { userId } = fromStore(store)
-				const isAdmin = await checkPermission(userId, 'articles:manage')
+				const { user_id } = fromStore(store)
+				const is_admin = await checkPermission(user_id, 'articles:manage')
 				const ok = await articlesService.delete(
 					Number(params.id),
-					userId,
-					isAdmin
+					user_id,
+					is_admin
 				)
 
 				if (!ok) {
@@ -209,9 +209,9 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 		.patch(
 			'/:id/status',
 			async ({ params, body, store, set }) => {
-				const { userId } = fromStore(store)
-				const isAdmin = await checkPermission(userId, 'articles:manage')
-				if (!isAdmin) {
+				const { user_id } = fromStore(store)
+				const is_admin = await checkPermission(user_id, 'articles:manage')
+				if (!is_admin) {
 					set.status = 403
 					return { error: 'Forbidden' }
 				}
@@ -243,10 +243,10 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 		.post(
 			'/:id/submit',
 			async ({ params, store, set }) => {
-				const { userId } = fromStore(store)
+				const { user_id } = fromStore(store)
 				const result = await articlesService.submitForReview(
 					Number(params.id),
-					userId
+					user_id
 				)
 
 				if (!result) {
@@ -286,10 +286,10 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 		)
 
 		.get(
-			'/:id/versions/:versionId',
+			'/:id/versions/:version_id',
 			async ({ params, set }) => {
 				const version = await articlesService.getVersion(
-					Number(params.versionId)
+					Number(params.version_id)
 				)
 				if (!version) {
 					set.status = 404
@@ -298,7 +298,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				return version
 			},
 			{
-				params: t.Object({ id: t.String(), versionId: t.String() }),
+				params: t.Object({ id: t.String(), version_id: t.String() }),
 				detail: { tags: ['Articles'] },
 			}
 		)
@@ -308,7 +308,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			async ({ params, store }) => {
 				await articlesService.addStar(
 					Number(params.id),
-					fromStore(store).userId
+					fromStore(store).user_id
 				)
 				return { success: true }
 			},
@@ -324,7 +324,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			async ({ params, store }) => {
 				await articlesService.removeStar(
 					Number(params.id),
-					fromStore(store).userId
+					fromStore(store).user_id
 				)
 				return { success: true }
 			},

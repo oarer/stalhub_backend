@@ -62,10 +62,10 @@ export const interpolateRatio = (
 
 const rowBase0 = (
 	aggregate: ArtifactAggregate,
-	itemId: string,
+	item_id: string,
 	qlt: number
 ): number | null => {
-	const row = aggregate.items[itemId]?.[qlt]
+	const row = aggregate.items[item_id]?.[qlt]
 	if (!row) return null
 
 	const factor = interpolateRatio(aggregate.curves[String(qlt)], row.basePtn)
@@ -76,9 +76,9 @@ const rowBase0 = (
 
 const lowestAvailableQlt = (
 	aggregate: ArtifactAggregate,
-	itemId: string
+	item_id: string
 ): number | null => {
-	const rows = aggregate.items[itemId]
+	const rows = aggregate.items[item_id]
 	if (!rows) return null
 
 	for (let q = 0; q < QUALITY_LEVELS; q++) {
@@ -114,12 +114,12 @@ const qualityRatioFor = (
 
 export const resolveArtifactPrice = (
 	aggregate: ArtifactAggregate,
-	itemId: string,
+	item_id: string,
 	qlt: number,
 	ptn: number
 ): ArtifactPriceResult => {
 	const base: ArtifactPriceResult = {
-		itemId,
+		item_id,
 		qlt,
 		ptn,
 		price: null,
@@ -133,7 +133,7 @@ export const resolveArtifactPrice = (
 
 	const ratio = interpolateRatio(aggregate.curves[String(qlt)], ptn)
 
-	const rows = aggregate.items[itemId]
+	const rows = aggregate.items[item_id]
 	const row = rows?.[qlt]
 
 	if (row) {
@@ -147,7 +147,7 @@ export const resolveArtifactPrice = (
 			}
 		}
 
-		const base0 = rowBase0(aggregate, itemId, qlt)
+		const base0 = rowBase0(aggregate, item_id, qlt)
 		if (base0 != null) {
 			return {
 				...base,
@@ -159,9 +159,9 @@ export const resolveArtifactPrice = (
 	}
 
 	if (rows) {
-		const anchorQlt = lowestAvailableQlt(aggregate, itemId)
+		const anchorQlt = lowestAvailableQlt(aggregate, item_id)
 		if (anchorQlt != null) {
-			const anchorBase0 = rowBase0(aggregate, itemId, anchorQlt)
+			const anchorBase0 = rowBase0(aggregate, item_id, anchorQlt)
 			if (anchorBase0 != null) {
 				const price =
 					anchorBase0 *

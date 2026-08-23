@@ -36,7 +36,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.get(
 			'/@me',
 			async ({ store }) => {
-				return usersService.getMe(fromStore(store).sessionId)
+				return usersService.getMe(fromStore(store).session_id)
 			},
 			{
 				beforeHandle: [requireAuth],
@@ -48,10 +48,10 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			'/@me',
 			async ({ body, store, set }) => {
 				const { name, username, social_links, ...settingsData } = body
-				const userId = fromStore(store).userId
+				const user_id = fromStore(store).user_id
 
 				if (name !== undefined || username !== undefined) {
-					const result = await usersService.updateProfile(userId, {
+					const result = await usersService.updateProfile(user_id, {
 						name,
 						username,
 					})
@@ -63,7 +63,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 
 				if (social_links !== undefined) {
 					const result = await usersService.updateSocialLinks(
-						userId,
+						user_id,
 						social_links
 					)
 					if ('error' in result) {
@@ -74,7 +74,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 
 				if (Object.keys(settingsData).length > 0) {
 					const result = await usersService.updateSettings(
-						userId,
+						user_id,
 						settingsData
 					)
 					if ('error' in result) {
@@ -83,7 +83,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					}
 				}
 
-				return usersService.getMe(fromStore(store).sessionId)
+				return usersService.getMe(fromStore(store).session_id)
 			},
 			{
 				beforeHandle: [requireAuth],
@@ -93,13 +93,13 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					avatar: t.Optional(t.Enum(AvatarSource)),
 					region: t.Optional(t.Enum(Regions)),
 
-					bannerMode: t.Optional(t.Enum(BannerMode)),
-					bannerType: t.Optional(t.Enum(BannerType)),
-					bannerColor: t.Optional(t.String()),
-					bannerImage: t.Optional(t.String()),
+					banner_mode: t.Optional(t.Enum(BannerMode)),
+					banner_type: t.Optional(t.Enum(BannerType)),
+					banner_color: t.Optional(t.String()),
+					banner_image: t.Optional(t.String()),
 
-					cardBackground: t.Optional(t.Enum(CardBackground)),
-					cardColor: t.Optional(t.String()),
+					card_background: t.Optional(t.Enum(CardBackground)),
+					card_color: t.Optional(t.String()),
 
 					social_links: t.Optional(t.Record(t.String(), t.String())),
 
@@ -120,7 +120,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			'/@me/onboarding',
 			async ({ body, store, set }) => {
 				const result = await usersService.completeOnboarding(
-					fromStore(store).userId,
+					fromStore(store).user_id,
 					body
 				)
 				if ('error' in result) {
@@ -128,7 +128,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					return result
 				}
 
-				return usersService.getMe(fromStore(store).sessionId)
+				return usersService.getMe(fromStore(store).session_id)
 			},
 			{
 				beforeHandle: [requireAuth],
@@ -145,13 +145,13 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					layout: t.Optional(t.Enum(UserLayout)),
 					avatar: t.Optional(t.Enum(AvatarSource)),
 
-					bannerMode: t.Optional(t.Enum(BannerMode)),
-					bannerType: t.Optional(t.Enum(BannerType)),
-					bannerColor: t.Optional(t.String()),
-					bannerImage: t.Optional(t.String()),
+					banner_mode: t.Optional(t.Enum(BannerMode)),
+					banner_type: t.Optional(t.Enum(BannerType)),
+					banner_color: t.Optional(t.String()),
+					banner_image: t.Optional(t.String()),
 
-					cardBackground: t.Optional(t.Enum(CardBackground)),
-					cardColor: t.Optional(t.String()),
+					card_background: t.Optional(t.Enum(CardBackground)),
+					card_color: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Users'] },
 			}
@@ -161,7 +161,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.delete(
 			'/@me',
 			async ({ cookie: { refresh_token, access_token }, store }) => {
-				await usersService.revokeSession(fromStore(store).sessionId)
+				await usersService.revokeSession(fromStore(store).session_id)
 				refresh_token?.remove()
 				access_token?.remove()
 				return { success: true }
@@ -177,7 +177,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			'/@me/sync-clans',
 			async ({ store, set }) => {
 				const result = await usersService.syncClans(
-					fromStore(store).userId
+					fromStore(store).user_id
 				)
 				if ('error' in result) {
 					set.status = 400
@@ -194,9 +194,9 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.delete(
 			'/@me/delete',
 			async ({ cookie: { refresh_token, access_token }, store }) => {
-				const { userId, sessionId } = fromStore(store)
-				await usersService.revokeSession(sessionId)
-				await usersService.deleteAccount(userId)
+				const { user_id, session_id } = fromStore(store)
+				await usersService.revokeSession(session_id)
+				await usersService.deleteAccount(user_id)
 				refresh_token?.remove()
 				access_token?.remove()
 				return { success: true }
@@ -211,8 +211,8 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.get(
 			'/@me/sessions',
 			async ({ store }) => {
-				const { userId, sessionId } = fromStore(store)
-				return usersService.getSessions(userId, sessionId)
+				const { user_id, session_id } = fromStore(store)
+				return usersService.getSessions(user_id, session_id)
 			},
 			{
 				beforeHandle: [requireAuth],
@@ -223,8 +223,8 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.delete(
 			'/@me/sessions/all',
 			async ({ cookie: { refresh_token, access_token }, store }) => {
-				const { userId, sessionId } = fromStore(store)
-				await usersService.revokeAllSessions(userId, sessionId)
+				const { user_id, session_id } = fromStore(store)
+				await usersService.revokeAllSessions(user_id, session_id)
 				refresh_token?.remove()
 				access_token?.remove()
 				return { success: true }
@@ -241,7 +241,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			async ({ params, store }) => {
 				await usersService.revokeSessionById(
 					params.id,
-					fromStore(store).userId
+					fromStore(store).user_id
 				)
 				return { success: true }
 			},
@@ -256,7 +256,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			'/@me/settings',
 			async ({ store, set }) => {
 				const data = await usersService.getSettings(
-					fromStore(store).userId
+					fromStore(store).user_id
 				)
 				if (!data) {
 					set.status = 404
@@ -276,7 +276,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				return buildsService.list(take, page, {
-					authorId: fromStore(store).userId,
+					author_id: fromStore(store).user_id,
 				})
 			},
 			{
@@ -295,7 +295,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				return usersService.getStars(
-					fromStore(store).userId,
+					fromStore(store).user_id,
 					take,
 					page
 				)
@@ -316,7 +316,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 				const take = query.take ?? 5
 				const page = query.page ?? 0
 				return usersService.getNotifications(
-					fromStore(store).userId,
+					fromStore(store).user_id,
 					take,
 					page
 				)
@@ -334,7 +334,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.get(
 			'/@me/notifications/unread',
 			async ({ store }) => {
-				return usersService.getUnreadCount(fromStore(store).userId)
+				return usersService.getUnreadCount(fromStore(store).user_id)
 			},
 			{
 				beforeHandle: [requireAuth],
@@ -346,7 +346,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			'/@me/notifications/:id/read',
 			async ({ params, store, set }) => {
 				const ok = await usersService.markRead(
-					fromStore(store).userId,
+					fromStore(store).user_id,
 					Number(params.id)
 				)
 				if (!ok) {
@@ -365,7 +365,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.post(
 			'/@me/notifications/read-all',
 			async ({ store }) => {
-				await usersService.markAllRead(fromStore(store).userId)
+				await usersService.markAllRead(fromStore(store).user_id)
 				return { success: true }
 			},
 			{
@@ -378,7 +378,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			'/@me/notifications/:id',
 			async ({ params, store, set }) => {
 				const ok = await usersService.deleteNotification(
-					fromStore(store).userId,
+					fromStore(store).user_id,
 					Number(params.id)
 				)
 				if (!ok) {
@@ -399,7 +399,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			async ({ params, store, set }) => {
 				const data = await usersService.getPublicProfileById(
 					params.id,
-					fromStoreOpt(store).userId
+					fromStoreOpt(store).user_id
 				)
 				if (!data) {
 					set.status = 404
@@ -419,7 +419,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			async ({ params, store, set }) => {
 				const data = await usersService.getPublicProfile(
 					params.username,
-					fromStoreOpt(store).userId
+					fromStoreOpt(store).user_id
 				)
 				if (!data) {
 					set.status = 404
@@ -442,7 +442,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 
 				try {
 					return await usersService.saveBanner(
-						fromStore(store).userId,
+						fromStore(store).user_id,
 						{
 							name: file.name,
 							type: file.type,
@@ -473,7 +473,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 
 				try {
 					return await usersService.saveAvatar(
-						fromStore(store).userId,
+						fromStore(store).user_id,
 						{
 							name: file.name,
 							type: file.type,
@@ -501,7 +501,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			async ({ store, set }) => {
 				try {
 					return await usersService.clearAvatar(
-						fromStore(store).userId
+						fromStore(store).user_id
 					)
 				} catch (err) {
 					set.status = 400

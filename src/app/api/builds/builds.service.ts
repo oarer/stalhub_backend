@@ -53,7 +53,7 @@ const artQualityToQualityIndex: Record<string, number> = {
 
 const priceCache = new Map<
 	number,
-	{ price: number; buildUpdatedAt: Date; aggregateUpdatedAt: string }
+	{ price: number; build_updated_at: Date; aggregate_updated_at: string }
 >()
 
 const PRICE_CACHE_MAX = 3000
@@ -67,8 +67,8 @@ function cachedBuildPrice(
 	const cached = priceCache.get(build.id)
 	if (
 		cached &&
-		cached.buildUpdatedAt.getTime() === build.updated_at.getTime() &&
-		cached.aggregateUpdatedAt === aggregate.updatedAt
+		cached.build_updated_at.getTime() === build.updated_at.getTime() &&
+		cached.aggregate_updated_at === aggregate.updated_at
 	) {
 		return cached.price
 	}
@@ -82,7 +82,7 @@ function cachedBuildPrice(
 
 		const resolved = resolveArtifactPrice(
 			aggregate,
-			art.itemId,
+			art.item_id,
 			qlt,
 			art.potential ?? 0
 		)
@@ -92,8 +92,8 @@ function cachedBuildPrice(
 	if (priceCache.size >= PRICE_CACHE_MAX) priceCache.clear()
 	priceCache.set(build.id, {
 		price: total,
-		buildUpdatedAt: build.updated_at,
-		aggregateUpdatedAt: aggregate.updatedAt,
+		build_updated_at: build.updated_at,
+		aggregate_updated_at: aggregate.updated_at,
 	})
 
 	return total
@@ -106,16 +106,16 @@ class BuildsService {
 		opts: {
 			tags?: string[]
 			sort?: 'newest' | 'stars' | 'price'
-			priceMin?: number
-			priceMax?: number
-			authorId?: number
-			userId?: number
+			price_min?: number
+			price_max?: number
+			author_id?: number
+			user_id?: number
 		} = {}
 	) {
 		const tags = opts.tags ?? []
 		const sort = opts.sort ?? 'newest'
-		const priceMin = opts.priceMin
-		const priceMax = opts.priceMax
+		const price_min = opts.price_min
+		const price_max = opts.price_max
 
 		const where = {
 			...(tags.length && {
@@ -123,10 +123,10 @@ class BuildsService {
 					tags: { contains: tag },
 				})),
 			}),
-			...(opts.authorId !== undefined && { authorId: opts.authorId }),
+			...(opts.author_id !== undefined && { author_id: opts.author_id }),
 		}
 
-		const hasPriceFilter = priceMin != null || priceMax != null
+		const hasPriceFilter = price_min != null || price_max != null
 		const needsFullScan =
 			sort === 'price' || sort === 'stars' || hasPriceFilter
 
@@ -153,10 +153,10 @@ class BuildsService {
 				stars: starCounts.get(row.id) ?? 0,
 			}))
 
-			if (priceMin != null)
-				priced = priced.filter((entry) => entry.price >= priceMin)
-			if (priceMax != null)
-				priced = priced.filter((entry) => entry.price <= priceMax)
+			if (price_min != null)
+				priced = priced.filter((entry) => entry.price >= price_min)
+			if (price_max != null)
+				priced = priced.filter((entry) => entry.price <= price_max)
 
 			if (sort === 'price') priced.sort((a, b) => b.price - a.price)
 			else if (sort === 'stars')
@@ -190,8 +190,8 @@ class BuildsService {
 			: starCounts
 
 		let starredIds = new Set<number>()
-		if (opts.userId) {
-			starredIds = await this.userStarredIds(opts.userId, ids)
+		if (opts.user_id) {
+			starredIds = await this.userStarredIds(opts.user_id, ids)
 		}
 
 		return {
@@ -209,11 +209,13 @@ class BuildsService {
 				created_at: b.created_at,
 				updated_at: b.updated_at,
 			})),
-			totalCount,
+			total_count: totalCount,
+			page: page + 1,
+			take,
 		}
 	}
 
-	async getById(id: string, userId?: number) {
+	async getById(id: string, user_id?: number) {
 		const num = Number(id)
 		const build = await prisma.build.findFirst({
 			where: isNaN(num)
@@ -227,17 +229,17 @@ class BuildsService {
 		if (!build) return null
 
 		const stars_count = await prisma.star.count({
-			where: { targetType: StarTargetType.BUILD, targetId: build.id },
+			where: { target_type: StarTargetType.BUILD, target_id: build.id },
 		})
 
 		let is_starred = false
-		if (userId) {
+		if (user_id) {
 			const star = await prisma.star.findUnique({
 				where: {
-					targetType_targetId_userId: {
-						targetType: StarTargetType.BUILD,
-						targetId: build.id,
-						userId,
+					target_type_target_id_user_id: {
+						target_type: StarTargetType.BUILD,
+						target_id: build.id,
+						user_id,
 					},
 				},
 			})
@@ -260,7 +262,7 @@ class BuildsService {
 	}
 
 	async create(
-		authorId: number,
+		author_id: number,
 		data: {
 			title: string
 			data: BuildData
@@ -280,7 +282,7 @@ class BuildsService {
 				data: compressed,
 				flags: data.flags ?? 0,
 				tags: data.tags ?? '',
-				authorId,
+				author_id,
 			},
 			include: {
 				author: { select: { id: true, name: true, username: true } },
@@ -304,8 +306,8 @@ class BuildsService {
 
 	async update(
 		id: number,
-		authorId: number,
-		isAdmin: boolean,
+		author_id: number,
+		is_admin: boolean,
 		data: {
 			title?: string
 			data?: BuildData
@@ -315,7 +317,7 @@ class BuildsService {
 	) {
 		const existing = await prisma.build.findUnique({ where: { id } })
 		if (!existing) return null
-		if (existing.authorId !== authorId && !isAdmin)
+		if (existing.author_id !== author_id && !is_admin)
 			return { error: 'Forbidden' }
 
 		const updateData: Record<string, unknown> = {}
@@ -339,7 +341,7 @@ class BuildsService {
 		})
 
 		const stars_count = await prisma.star.count({
-			where: { targetType: StarTargetType.BUILD, targetId: build.id },
+			where: { target_type: StarTargetType.BUILD, target_id: build.id },
 		})
 
 		return {
@@ -356,38 +358,38 @@ class BuildsService {
 		}
 	}
 
-	async delete(id: number, authorId: number, isAdmin: boolean) {
+	async delete(id: number, author_id: number, is_admin: boolean) {
 		const existing = await prisma.build.findUnique({ where: { id } })
 		if (!existing) return false
-		if (existing.authorId !== authorId && !isAdmin) return false
+		if (existing.author_id !== author_id && !is_admin) return false
 		await prisma.build.delete({ where: { id } })
 		return true
 	}
 
-	async addStar(buildId: number, userId: number) {
+	async addStar(buildId: number, user_id: number) {
 		await prisma.star.upsert({
 			where: {
-				targetType_targetId_userId: {
-					targetType: StarTargetType.BUILD,
-					targetId: buildId,
-					userId,
+				target_type_target_id_user_id: {
+					target_type: StarTargetType.BUILD,
+					target_id: buildId,
+					user_id,
 				},
 			},
 			create: {
-				targetType: StarTargetType.BUILD,
-				targetId: buildId,
-				userId,
+				target_type: StarTargetType.BUILD,
+				target_id: buildId,
+				user_id,
 			},
 			update: {},
 		})
 	}
 
-	async removeStar(buildId: number, userId: number) {
+	async removeStar(buildId: number, user_id: number) {
 		await prisma.star.deleteMany({
 			where: {
-				targetType: StarTargetType.BUILD,
-				targetId: buildId,
-				userId,
+				target_type: StarTargetType.BUILD,
+				target_id: buildId,
+				user_id,
 			},
 		})
 	}
@@ -396,29 +398,29 @@ class BuildsService {
 		if (!ids.length) return new Map<number, number>()
 
 		const rows = await prisma.star.groupBy({
-			by: ['targetId'],
-			where: { targetType: StarTargetType.BUILD, targetId: { in: ids } },
-			_count: { targetId: true },
+			by: ['target_id'],
+			where: { target_type: StarTargetType.BUILD, target_id: { in: ids } },
+			_count: { target_id: true },
 		})
 
 		const map = new Map<number, number>()
-		for (const r of rows) map.set(r.targetId, r._count.targetId)
+		for (const r of rows) map.set(r.target_id, r._count.target_id)
 		return map
 	}
 
-	private async userStarredIds(userId: number, ids: number[]) {
+	private async userStarredIds(user_id: number, ids: number[]) {
 		if (!ids.length) return new Set<number>()
 
 		const rows = await prisma.star.findMany({
 			where: {
-				targetType: StarTargetType.BUILD,
-				targetId: { in: ids },
-				userId,
+				target_type: StarTargetType.BUILD,
+				target_id: { in: ids },
+				user_id,
 			},
-			select: { targetId: true },
+			select: { target_id: true },
 		})
 
-		return new Set(rows.map((r) => r.targetId))
+		return new Set(rows.map((r) => r.target_id))
 	}
 }
 

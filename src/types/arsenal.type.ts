@@ -11,5 +11,5 @@ export type ItemResult = ItemInput & {
 
 export type CacheData = {
 	items: ItemResult[]
-	updatedAt: Date | null
+	updated_at: Date | null
 }

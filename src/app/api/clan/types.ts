@@ -1,11 +1,12 @@
 export interface AIScreenshotResult {
-	mapName: string | null
-	totalScore: number | null
-	opponentScore: number | null
+	map_name: string | null
+	stage_number: number | null
+	total_score: number | null
+	opponent_score: number | null
 	teams: Array<{
 		name: string | null
 		score: number | null
-		isPlayerClan: boolean
+		is_player_clan: boolean
 	}>
 	victory: boolean | null
 	players: Array<{
@@ -15,7 +16,7 @@ export interface AIScreenshotResult {
 		assists: number | null
 		score: number | null
 		role: string | null
-		isClanMember?: boolean
+		is_clan_member?: boolean
 	}>
-	rawText?: string
+	raw_text?: string
 }

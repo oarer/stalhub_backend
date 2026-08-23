@@ -17,9 +17,16 @@ type PoolToken = {
 export class GrenadesService {
 	private poolIndex = new Map<string, number>()
 
-	async getForCharacter(region: string, character: string, token?: string) {
-		const cached = await cache.getGrenades(region, character)
-		if (cached) return cached
+	async getForCharacter(
+		region: string,
+		character: string,
+		token?: string,
+		options: { skipCache?: boolean } = {}
+	) {
+		if (!options.skipCache) {
+			const cached = await cache.getGrenades(region, character)
+			if (cached) return cached
+		}
 
 		const { data } = await apiClient.get<{
 			stats: Array<{ id: string; value: number | string }>
@@ -40,13 +47,12 @@ export class GrenadesService {
 		return result
 	}
 
-	private async getPoolTokens(clanId: string): Promise<PoolToken[]> {
+	private async getPoolTokens(): Promise<PoolToken[]> {
 		const rows = await prisma.clanMember.findMany({
-			where: { clanId },
 			include: {
 				user: {
 					include: {
-						EXBOAuth: {
+						exbo_auth: {
 							select: {
 								id: true,
 								token_blob: true,
@@ -63,7 +69,7 @@ export class GrenadesService {
 		const tokens: PoolToken[] = []
 
 		for (const m of rows) {
-			const auth = m.user?.EXBOAuth
+			const auth = m.user?.exbo_auth
 			if (!auth) continue
 
 			const blob = decryptSecretJson<{
@@ -151,41 +157,41 @@ export class GrenadesService {
 		}
 	}
 
-	private pickToken(pool: PoolToken[], clanId: string): PoolToken | null {
+	private pickToken(pool: PoolToken[], clan_id: string): PoolToken | null {
 		if (pool.length === 0) return null
-		const idx = this.poolIndex.get(clanId) ?? 0
+		const idx = this.poolIndex.get(clan_id) ?? 0
 		const token = pool[idx % pool.length]!
-		this.poolIndex.set(clanId, idx + 1)
+		this.poolIndex.set(clan_id, idx + 1)
 		return token
 	}
 
 	async takeSnapshot(
-		clanId: string,
-		eventType: StageType,
+		clan_id: string,
+		event_type: StageType,
 		checkpoint: string
 	) {
 		const clan = await prisma.clan.findUnique({
-			where: { id: clanId },
+			where: { id: clan_id },
 			select: { region: true },
 		})
-		if (!clan) return { clanId, eventType, checkpoint, count: 0 }
+		if (!clan) return { clan_id, event_type, checkpoint, count: 0 }
 
 		const members = await prisma.clanMember.findMany({
-			where: { clanId },
+			where: { clan_id },
 			select: { name: true },
 		})
 
-		const pool = await this.getPoolTokens(clanId)
+		const pool = await this.getPoolTokens()
 
 		if (pool.length === 0) {
-			console.warn(
-				`[Grenades] ${clanId} ${eventType}/${checkpoint}: token pool is empty, snapshot will have 0 members`
+			throw new Error(
+				`[Grenades] ${clan_id} ${event_type}/${checkpoint}: token pool is empty; snapshot was not saved`
 			)
 		}
 
 		const results = await Promise.all(
 			members.map(async (m) => {
-				const picked = this.pickToken(pool, clanId)
+				const picked = this.pickToken(pool, clan_id)
 				if (!picked) return null
 
 				const now = new Date()
@@ -199,20 +205,22 @@ export class GrenadesService {
 						)
 						if (!refreshed) {
 							console.warn(
-								`[Grenades] ${clanId}: token refresh failed for auth #${picked.id}, skipping ${m.name}`
+								`[Grenades] ${clan_id}: token refresh failed for auth #${picked.id}, skipping ${m.name}`
 							)
 							return null
 						}
 						token = refreshed
 					} else {
 						console.warn(
-							`[Grenades] ${clanId}: access token expired and no refresh_token for auth #${picked.id}, skipping ${m.name}`
+							`[Grenades] ${clan_id}: access token expired and no refresh_token for auth #${picked.id}, skipping ${m.name}`
 						)
 						return null
 					}
 				}
 
-				return this.getForCharacter(clan.region, m.name, token)
+				return this.getForCharacter(clan.region, m.name, token, {
+					skipCache: true,
+				})
 					.then((r) => ({ name: r.character, total: r.total }))
 					.catch((err) => {
 						const status =
@@ -228,7 +236,7 @@ export class GrenadesService {
 									? String((err as { message: unknown }).message)
 									: String(err)
 						console.warn(
-							`[Grenades] ${clanId}: failed to fetch stats for ${m.name}: ${status} ${message}`
+							`[Grenades] ${clan_id}: failed to fetch stats for ${m.name}: ${status} ${message}`
 						)
 						return null
 					})
@@ -240,52 +248,52 @@ export class GrenadesService {
 
 		if (snapshot.length < members.length) {
 			console.warn(
-				`[Grenades] ${clanId} ${eventType}/${checkpoint}: only ${snapshot.length}/${members.length} members fetched`
+				`[Grenades] ${clan_id} ${event_type}/${checkpoint}: only ${snapshot.length}/${members.length} members fetched`
 			)
 		}
 		const raidDate = new Date()
 
 		await prisma.grenadeSnapshot.create({
 			data: {
-				clanId,
-				event_type: eventType,
+				clan_id,
+				event_type: event_type,
 				checkpoint,
 				raid_date: raidDate,
 				members: snapshot as never,
 			},
 		})
 		console.log(
-			`[Grenades] ${clanId} ${eventType}/${checkpoint}: saved ${snapshot.length}/${members.length} members (pool: ${pool.length} tokens)`
+			`[Grenades] ${clan_id} ${event_type}/${checkpoint}: saved ${snapshot.length}/${members.length} members (pool: ${pool.length} tokens)`
 		)
-		return { clanId, eventType, checkpoint, count: snapshot.length }
+		return { clan_id, event_type, checkpoint, count: snapshot.length }
 	}
 
-	async takeSnapshotAll(eventType: StageType, checkpoint: string) {
+	async takeSnapshotAll(event_type: StageType, checkpoint: string) {
 		const clans = await prisma.clan.findMany({
 			where: { status: 'ACTIVE' },
 		})
 		const results = await Promise.allSettled(
-			clans.map((c) => this.takeSnapshot(c.id, eventType, checkpoint))
+			clans.map((c) => this.takeSnapshot(c.id, event_type, checkpoint))
 		)
 		for (const r of results) {
 			if (r.status === 'rejected') {
 				console.error(
-					`[Grenades] takeSnapshotAll ${eventType}/${checkpoint}: clan snapshot failed:`,
+					`[Grenades] takeSnapshotAll ${event_type}/${checkpoint}: clan snapshot failed:`,
 					r.reason
 				)
 			}
 		}
 		console.log(
-			`[Grenades] takeSnapshotAll ${eventType}/${checkpoint}: ${results.filter((r) => r.status === 'fulfilled').length}/${clans.length} clans processed`
+			`[Grenades] takeSnapshotAll ${event_type}/${checkpoint}: ${results.filter((r) => r.status === 'fulfilled').length}/${clans.length} clans processed`
 		)
 		return results
 			.filter((r) => r.status === 'fulfilled')
 			.map((r) => r.value)
 	}
 
-	async getForClanStages(clanId: string) {
+	async getForClanStages(clan_id: string) {
 		const rows = await prisma.grenadeSnapshot.findMany({
-			where: { clanId },
+			where: { clan_id },
 			orderBy: { raid_date: 'asc' },
 		})
 
@@ -305,7 +313,7 @@ export class GrenadesService {
 
 		const eventsWithBoxes = await Promise.all(
 			events.map(async (event) => {
-				const { boxes } = await this.getBoxes(clanId, event.raid_date)
+				const { boxes } = await this.getBoxes(clan_id, event.raid_date)
 				return { ...event, boxes }
 			})
 		)
@@ -313,9 +321,9 @@ export class GrenadesService {
 		return { events: eventsWithBoxes }
 	}
 
-	async getAllTime(clanId: string) {
+	async getAllTime(clan_id: string) {
 		const rows = await prisma.grenadeSnapshot.findMany({
-			where: { clanId },
+			where: { clan_id },
 			orderBy: { raid_date: 'asc' },
 		})
 
@@ -407,22 +415,22 @@ export class GrenadesService {
 
 	private static readonly PERMANENT_DATE = 'permanent'
 
-	async getBoxes(clanId: string, date?: string) {
+	async getBoxes(clan_id: string, date?: string) {
 		const resolvedDate = date ?? GrenadesService.PERMANENT_DATE
 		const boxes = await prisma.grenadeBox.findMany({
-			where: { clanId, date: resolvedDate },
+			where: { clan_id, date: resolvedDate },
 			orderBy: { created_at: 'asc' },
 		})
 		return { boxes }
 	}
 
 	async addBox(
-		clanId: string,
+		clan_id: string,
 		entry: { name: string; type: string; count: number }
 	) {
 		const date = GrenadesService.PERMANENT_DATE
 		const existing = await prisma.grenadeBox.findFirst({
-			where: { clanId, date, name: entry.name, type: entry.type },
+			where: { clan_id, date, name: entry.name, type: entry.type },
 		})
 
 		if (existing) {
@@ -433,7 +441,7 @@ export class GrenadesService {
 		} else {
 			await prisma.grenadeBox.create({
 				data: {
-					clanId,
+					clan_id,
 					date,
 					name: entry.name,
 					type: entry.type,
@@ -442,18 +450,18 @@ export class GrenadesService {
 			})
 		}
 
-		return this.getBoxes(clanId)
+		return this.getBoxes(clan_id)
 	}
 
-	async removeBox(clanId: string, index: number) {
+	async removeBox(clan_id: string, index: number) {
 		const boxes = await prisma.grenadeBox.findMany({
-			where: { clanId, date: GrenadesService.PERMANENT_DATE },
+			where: { clan_id, date: GrenadesService.PERMANENT_DATE },
 			orderBy: { created_at: 'asc' },
 		})
 		if (boxes[index]) {
 			await prisma.grenadeBox.delete({ where: { id: boxes[index].id } })
 		}
-		return this.getBoxes(clanId)
+		return this.getBoxes(clan_id)
 	}
 }
 

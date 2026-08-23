@@ -27,12 +27,12 @@ export const clanBotRoutes = clanContext
 	.post(
 		'/bot/link-token',
 		async ({ store }) => {
-			const clanId = store.clanId!
+			const clan_id = store.clan_id!
 			const token = generateToken()
 			await prisma.botLinkState.create({
 				data: {
 					token,
-					clan_id: clanId,
+					clan_id: clan_id,
 					user_id: store.authUserId,
 					expires_at: new Date(Date.now() + TOKEN_TTL_MS),
 				},
@@ -52,7 +52,7 @@ export const clanBotRoutes = clanContext
 		'/bot/guilds',
 		async ({ store }) => {
 			const guilds = await prisma.botGuild.findMany({
-				where: { clan_id: store.clanId },
+				where: { clan_id: store.clan_id },
 				select: guildSelect,
 				orderBy: { created_at: 'asc' },
 			})
@@ -64,21 +64,21 @@ export const clanBotRoutes = clanContext
 		}
 	)
 	.delete(
-		'/bot/guilds/:guildId',
+		'/bot/guilds/:guild_id',
 		async ({ store, params, set }) => {
 			const guild = await prisma.botGuild.findFirst({
-				where: { guild_id: params.guildId, clan_id: store.clanId },
+				where: { guild_id: params.guild_id, clan_id: store.clan_id },
 			})
 			if (!guild) {
 				set.status = 404
 				return { error: 'Guild not linked to this clan' }
 			}
-			await prisma.botGuild.delete({ where: { guild_id: params.guildId } })
+			await prisma.botGuild.delete({ where: { guild_id: params.guild_id } })
 			return { success: true }
 		},
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
-			params: t.Object({ guildId: t.String() }),
+			params: t.Object({ guild_id: t.String() }),
 			detail: { tags: ['Clan'] },
 		}
 	)

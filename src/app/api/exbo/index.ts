@@ -72,10 +72,10 @@ export const exboRoutes = createElysia().group('/exbo', (app) =>
 	app.use(jwtPlugin).get(
 		'/:region/characters',
 		async ({ params, store, set }) => {
-			const { userId } = fromStore(store)
+			const { user_id } = fromStore(store)
 
 			const auth = await prisma.eXBOAuth.findUnique({
-				where: { userid: userId },
+				where: { userid: user_id },
 			})
 
 			if (!auth) {

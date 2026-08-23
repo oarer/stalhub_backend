@@ -49,8 +49,8 @@ async function init() {
 }
 
 async function showStatus() {
-	const profile = await prisma.userClanProfile.findUnique({
-		where: { userId: USER_ID },
+	const profile = await prisma.userClanProfile.findFirst({
+		where: { user_id: USER_ID },
 		include: { clan: { include: { members: true } } },
 	})
 	if (!profile) {
@@ -59,7 +59,7 @@ async function showStatus() {
 	}
 	console.log('=== User 1 Clan Profile ===')
 	console.log(`  Region: ${profile.region}`)
-	console.log(`  Clan ID: ${profile.clanId ?? 'none'}`)
+	console.log(`  Clan ID: ${profile.clan_id ?? 'none'}`)
 	if (profile.clan) {
 		console.log(`  Clan name: ${profile.clan.name}`)
 		console.log(`  Tag: ${profile.clan.tag}`)
@@ -70,23 +70,23 @@ async function showStatus() {
 }
 
 async function createTestClan() {
-	const existing = await prisma.userClanProfile.findUnique({
-		where: { userId: USER_ID },
+	const existing = await prisma.userClanProfile.findFirst({
+		where: { user_id: USER_ID },
 	})
-	if (existing?.clanId) {
+	if (existing?.clan_id) {
 		console.log('User already has a clan. Remove it first with --remove.')
 		return
 	}
 
-	await prisma.clanMember.deleteMany({ where: { userId: USER_ID } })
+	await prisma.clanMember.deleteMany({ where: { user_id: USER_ID } })
 	if (existing) {
-		await prisma.userClanProfile.delete({ where: { userId: USER_ID } })
+		await prisma.userClanProfile.deleteMany({ where: { user_id: USER_ID } })
 	}
 
-	const clanId = `test-clan-${Date.now()}`
+	const clan_id = `test-clan-${Date.now()}`
 	await prisma.clan.create({
 		data: {
-			id: clanId,
+			id: clan_id,
 			name: 'Test Clan',
 			tag: 'TEST',
 			level: 5,
@@ -100,7 +100,7 @@ async function createTestClan() {
 			members: {
 				createMany: {
 					data: [
-						{ name: 'TestLeader', rank: 'LEADER', userId: USER_ID },
+						{ name: 'TestLeader', rank: 'LEADER', user_id: USER_ID },
 						{ name: 'TestOfficer', rank: 'OFFICER' },
 						{ name: 'TestSoldier', rank: 'SOLDIER' },
 						{ name: 'TestCommoner', rank: 'COMMONER' },
@@ -109,51 +109,51 @@ async function createTestClan() {
 				},
 			},
 			profile: {
-				create: { userId: USER_ID, region: 'RU' },
+				create: { user_id: USER_ID, region: 'RU' },
 			},
 		},
 	})
 
-	console.log(`Test clan created: ${clanId} (ACTIVE, 5 members)`)
+	console.log(`Test clan created: ${clan_id} (ACTIVE, 5 members)`)
 	await showStatus()
 }
 
 async function removeClan() {
-	const profile = await prisma.userClanProfile.findUnique({
-		where: { userId: USER_ID },
+	const profile = await prisma.userClanProfile.findFirst({
+		where: { user_id: USER_ID },
 	})
 	const orphan = await prisma.clanMember.findFirst({
-		where: { userId: USER_ID },
+		where: { user_id: USER_ID },
 	})
-	const clanId = profile?.clanId ?? orphan?.clanId
-	if (!clanId) {
+	const clan_id = profile?.clan_id ?? orphan?.clan_id
+	if (!clan_id) {
 		console.log('No clan to remove.')
 		return
 	}
 
 	await prisma.stageAttendance.deleteMany({
-		where: { session: { clanId } },
+		where: { session: { clan_id } },
 	})
 	await prisma.stageScreenshot.deleteMany({
-		where: { session: { clanId } },
+		where: { session: { clan_id } },
 	})
-	await prisma.stageSession.deleteMany({ where: { clanId } })
-	await prisma.grenadeSnapshot.deleteMany({ where: { clanId } })
-	await prisma.clanMember.deleteMany({ where: { clanId } })
-	await prisma.userClanProfile.deleteMany({ where: { clanId } })
-	await prisma.clan.delete({ where: { id: clanId } }).catch(() => {})
+	await prisma.stageSession.deleteMany({ where: { clan_id } })
+	await prisma.grenadeSnapshot.deleteMany({ where: { clan_id } })
+	await prisma.clanMember.deleteMany({ where: { clan_id } })
+	await prisma.userClanProfile.deleteMany({ where: { clan_id } })
+	await prisma.clan.delete({ where: { id: clan_id } }).catch(() => {})
 
-	console.log(`Removed clan ${clanId} and all related data`)
+	console.log(`Removed clan ${clan_id} and all related data`)
 }
 
 async function createBulkClans(count: number) {
 	const prefix = `bulk-${Date.now()}`
 	let created = 0
 	for (let i = 0; i < count; i++) {
-		const clanId = `${prefix}-${i}`
+		const clan_id = `${prefix}-${i}`
 		await prisma.clan.create({
 			data: {
-				id: clanId,
+				id: clan_id,
 				name: `Bulk Clan ${i + 1}`,
 				tag: `B${i}`,
 				level: 5,
@@ -179,14 +179,14 @@ async function removeBulkClans() {
 }
 
 async function addPlayers() {
-	const profile = await prisma.userClanProfile.findUnique({
-		where: { userId: USER_ID },
+	const profile = await prisma.userClanProfile.findFirst({
+		where: { user_id: USER_ID },
 	})
-	if (!profile?.clanId) {
+	if (!profile?.clan_id) {
 		console.log('User 1 has no clan. Create it first with --create-test.')
 		return
 	}
-	const clanId = profile.clanId
+	const clan_id = profile.clan_id
 	let added = 0
 	let linked = 0
 	for (const p of PLAYERS) {
@@ -195,25 +195,25 @@ async function addPlayers() {
 			where: { username: { equals: p.name, mode: 'insensitive' } },
 		})
 		await prisma.clanMember.upsert({
-			where: { clanId_name: { clanId, name: p.name } },
+			where: { clan_id_name: { clan_id, name: p.name } },
 			create: {
-				clanId,
+				clan_id,
 				name: p.name,
 				rank,
-				userId: exboAuth?.userid ?? null,
+				user_id: exboAuth?.userid ?? null,
 			},
-			update: { rank, userId: exboAuth?.userid ?? null },
+			update: { rank, user_id: exboAuth?.userid ?? null },
 		})
 		added++
 		if (exboAuth) linked++
 	}
-	const count = await prisma.clanMember.count({ where: { clanId } })
+	const count = await prisma.clanMember.count({ where: { clan_id } })
 	await prisma.clan.update({
-		where: { id: clanId },
+		where: { id: clan_id },
 		data: { member_count: count },
 	})
 	console.log(
-		`Added/updated ${added} players in clan ${clanId} (total members: ${count}, linked to user: ${linked})`
+		`Added/updated ${added} players in clan ${clan_id} (total members: ${count}, linked to user: ${linked})`
 	)
 	await showStatus()
 }

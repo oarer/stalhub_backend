@@ -1,7 +1,7 @@
 import type { Prisma } from 'generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 
-export async function assignDefaultRole(userId: number) {
+export async function assignDefaultRole(user_id: number) {
 	const role = await prisma.role.upsert({
 		where: { name: 'user' },
 		update: {},
@@ -12,23 +12,23 @@ export async function assignDefaultRole(userId: number) {
 	})
 
 	await prisma.user.update({
-		where: { id: userId },
+		where: { id: user_id },
 		data: { roles: { connect: { id: role.id } } },
 	})
 }
 
 export async function createSession(
-	userId: number,
+	user_id: number,
 	userAgent: string,
 	ip: string
 ) {
-	const sessionId = crypto.randomUUID()
+	const session_id = crypto.randomUUID()
 
 	const session = await prisma.sessions.create({
 		data: {
-			sessionId,
-			userId,
-			User_Agent: userAgent.slice(0, 500),
+			session_id,
+			user_id,
+			user_agent: userAgent.slice(0, 500),
 			ip: ip.slice(0, 45),
 		},
 	})
@@ -38,13 +38,13 @@ export async function createSession(
 
 export type SessionWithFullUser = Prisma.SessionsGetPayload<{
 	include: {
-		User: {
+		user: {
 			include: {
-				UserSettings: true
+				user_settings: true
 				badges: true
-				DiscordAuth: true
-				TelegramAuth: true
-				EXBOAuth: true
+				discord_auth: true
+				telegram_auth: true
+				exbo_auth: true
 				roles: true
 				customization: true
 			}
@@ -54,7 +54,7 @@ export type SessionWithFullUser = Prisma.SessionsGetPayload<{
 
 export type SessionWithRoles = Prisma.SessionsGetPayload<{
 	include: {
-		User: {
+		user: {
 			include: {
 				roles: true
 			}
@@ -63,17 +63,17 @@ export type SessionWithRoles = Prisma.SessionsGetPayload<{
 }>
 
 class AuthService {
-	async getSession(sessionId: string): Promise<SessionWithFullUser | null> {
+	async getSession(session_id: string): Promise<SessionWithFullUser | null> {
 		const session = await prisma.sessions.findUnique({
-			where: { sessionId },
+			where: { session_id },
 			include: {
-				User: {
+				user: {
 					include: {
-						UserSettings: true,
+						user_settings: true,
 						badges: true,
-						DiscordAuth: true,
-						TelegramAuth: true,
-						EXBOAuth: true,
+						discord_auth: true,
+						telegram_auth: true,
+						exbo_auth: true,
 						roles: true,
 						customization: true,
 					},
@@ -92,12 +92,12 @@ class AuthService {
 	}
 
 	async getSessionWithRoles(
-		sessionId: string
+		session_id: string
 	): Promise<SessionWithRoles | null> {
 		const session = await prisma.sessions.findUnique({
-			where: { sessionId },
+			where: { session_id },
 			include: {
-				User: {
+				user: {
 					include: {
 						roles: true,
 					},
@@ -111,7 +111,7 @@ class AuthService {
 	}
 
 	userPayload(session: SessionWithFullUser) {
-		const u = session.User
+		const u = session.user
 
 		return {
 			id: u.id,
@@ -122,33 +122,33 @@ class AuthService {
 			onboarded: u.onboarded,
 			social_links: u.social_links ?? null,
 
-			settings: u.UserSettings ?? null,
+			settings: u.user_settings ?? null,
 			badges: u.badges ?? [],
 			roles: u.roles,
 
 			providers: {
-				discord: u.DiscordAuth
+				discord: u.discord_auth
 					? {
-							id: u.DiscordAuth.discord_id,
-							name: u.DiscordAuth.name,
-							username: u.DiscordAuth.username,
+							id: u.discord_auth.discord_id,
+							name: u.discord_auth.name,
+							username: u.discord_auth.username,
 						}
 					: null,
 
-				telegram: u.TelegramAuth
+				telegram: u.telegram_auth
 					? {
-							id: u.TelegramAuth.telegram_id,
-							name: u.TelegramAuth.name,
-							username: u.TelegramAuth.login,
+							id: u.telegram_auth.telegram_id,
+							name: u.telegram_auth.name,
+							username: u.telegram_auth.login,
 						}
 					: null,
 
-				exbo: u.EXBOAuth
+				exbo: u.exbo_auth
 					? {
-							id: u.EXBOAuth.exbo_id,
-							login: u.EXBOAuth.login,
-							username: u.EXBOAuth.username,
-							region: u.EXBOAuth.region
+							id: u.exbo_auth.exbo_id,
+							login: u.exbo_auth.login,
+							username: u.exbo_auth.username,
+							region: u.exbo_auth.region
 						}
 					: null,
 			},
@@ -156,27 +156,27 @@ class AuthService {
 			customization:
 				u.customization ?? {
 					layout: 'CLASSIC',
-					bannerMode: 'NONE',
-					bannerType: 'HEADER',
-					bannerColor: '#171717',
-					bannerImage: null,
-					cardBackground: 'NONE',
-					cardColor: '#171717',
+					banner_mode: 'NONE',
+					banner_type: 'HEADER',
+					banner_color: '#171717',
+					banner_image: null,
+					card_background: 'NONE',
+					card_color: '#171717',
 					avatar: null,
 				},
 		}
 	}
 
-	async revokeSession(sessionId: string) {
+	async revokeSession(session_id: string) {
 		await prisma.sessions.updateMany({
-			where: { sessionId },
+			where: { session_id },
 			data: { revoked: true },
 		})
 	}
 
-	async deleteUserSessions(userId: number) {
+	async deleteUserSessions(user_id: number) {
 		await prisma.sessions.deleteMany({
-			where: { userId },
+			where: { user_id },
 		})
 	}
 }

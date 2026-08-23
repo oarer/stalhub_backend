@@ -30,9 +30,9 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 				return buildsService.list(take, page, {
 					tags,
 					sort: query.sort ?? 'newest',
-					priceMin: query.priceMin,
-					priceMax: query.priceMax,
-					userId: fromStoreOpt(store).userId,
+					price_min: query.price_min,
+					price_max: query.price_max,
+					user_id: fromStoreOpt(store).user_id,
 				})
 			},
 			{
@@ -48,8 +48,8 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 							t.Literal('price'),
 						])
 					),
-					priceMin: t.Optional(t.Numeric()),
-					priceMax: t.Optional(t.Numeric()),
+					price_min: t.Optional(t.Numeric()),
+					price_max: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Builds'] },
 			}
@@ -60,7 +60,7 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 			async ({ params, store }) => {
 				return buildsService.getById(
 					params.id,
-					fromStoreOpt(store).userId
+					fromStoreOpt(store).user_id
 				)
 			},
 			{
@@ -79,7 +79,7 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 					return { error: validation.error }
 				}
 
-				return buildsService.create(fromStore(store).userId, {
+				return buildsService.create(fromStore(store).user_id, {
 					title: body.title,
 					data: validation.data,
 					flags: body.flags,
@@ -104,8 +104,8 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 		.patch(
 			'/:id',
 			async ({ params, body, store, set }) => {
-				const { userId } = fromStore(store)
-				const isAdmin = await checkPermission(userId, 'builds:manage')
+				const { user_id } = fromStore(store)
+				const is_admin = await checkPermission(user_id, 'builds:manage')
 
 				let validatedData: BuildData | undefined
 				if (body.data !== undefined) {
@@ -119,8 +119,8 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 
 				const result = await buildsService.update(
 					Number(params.id),
-					userId,
-					isAdmin,
+					user_id,
+					is_admin,
 					{
 						...(body.title !== undefined && { title: body.title }),
 						...(validatedData !== undefined && {
@@ -160,12 +160,12 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 		.delete(
 			'/:id',
 			async ({ params, store, set }) => {
-				const { userId } = fromStore(store)
-				const isAdmin = await checkPermission(userId, 'builds:manage')
+				const { user_id } = fromStore(store)
+				const is_admin = await checkPermission(user_id, 'builds:manage')
 				const ok = await buildsService.delete(
 					Number(params.id),
-					userId,
-					isAdmin
+					user_id,
+					is_admin
 				)
 
 				if (!ok) {
@@ -187,7 +187,7 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 			async ({ params, store }) => {
 				await buildsService.addStar(
 					Number(params.id),
-					fromStore(store).userId
+					fromStore(store).user_id
 				)
 				return { success: true }
 			},
@@ -203,7 +203,7 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 			async ({ params, store }) => {
 				await buildsService.removeStar(
 					Number(params.id),
-					fromStore(store).userId
+					fromStore(store).user_id
 				)
 				return { success: true }
 			},

@@ -8,20 +8,20 @@ import { goldService } from '../services/gold'
 const idParams = t.Object({ id: t.Numeric() })
 
 export const goldRoutes = clanContext
-	.get('/gold/:clanId', ({ params }) => goldService.list(params.clanId), {
+	.get('/gold/:clan_id', ({ params }) => goldService.list(params.clan_id), {
 		beforeHandle: [requireAuth],
-		params: t.Object({ clanId: t.String() }),
+		params: t.Object({ clan_id: t.String() }),
 		detail: { tags: ['Clan'] },
 	})
 	.post(
 		'/gold/:id/attendees',
 		({ params, body, store }) =>
-			goldService.setAttendees(params.id, store.clanId!, body.memberIds),
+			goldService.setAttendees(params.id, store.clan_id!, body.member_ids),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: idParams,
 			body: t.Object({
-				memberIds: t.Array(t.Numeric(), { minItems: 1 }),
+				member_ids: t.Array(t.Numeric(), { minItems: 1 }),
 			}),
 			detail: { tags: ['Clan'] },
 		}
@@ -29,7 +29,7 @@ export const goldRoutes = clanContext
 	.post(
 		'/gold/:id/status',
 		({ params, body, store }) =>
-			goldService.setStatus(params.id, store.clanId!, body.status),
+			goldService.setStatus(params.id, store.clan_id!, body.status),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: idParams,

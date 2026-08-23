@@ -9,13 +9,14 @@ import type { AIScreenshotResult } from '../types'
 const MAX_ATTEMPTS = 3
 
 export async function analyzeScreenshot(
-	filePath: string,
-	roster?: ClanRosterEntry[]
+	file_path: string,
+	roster?: ClanRosterEntry[],
+	stage_number?: number | null
 ): Promise<AIScreenshotResult> {
-	const buf = await readFile(filePath)
+	const buf = await readFile(file_path)
 	const dataUrl = `data:image/png;base64,${buf.toString('base64')}`
 	const start = Date.now()
-	const systemPrompt = buildSystemPrompt(roster)
+	const systemPrompt = buildSystemPrompt(roster, stage_number)
 
 	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
 		try {
@@ -49,9 +50,10 @@ export async function analyzeScreenshot(
 			)
 			const raw = data.choices?.[0]?.message?.content ?? '{}'
 			const parsed = JSON.parse(raw) as AIScreenshotResult
+			if (stage_number != null) parsed.stage_number = stage_number
 			aiAnalysisTotal.inc({ status: 'success' })
 			aiAnalysisDuration.observe((Date.now() - start) / 1000)
-			return { ...parsed, rawText: raw }
+			return { ...parsed, raw_text: raw }
 		} catch (err) {
 			const isLast = attempt === MAX_ATTEMPTS
 			aiAnalysisTotal.inc({ status: isLast ? 'error' : 'retry' })

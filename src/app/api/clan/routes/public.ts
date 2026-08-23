@@ -7,13 +7,13 @@ export const clansPublicRoutes = createElysia().group('/clans', (app) =>
 		.get('', () => clanService.listPublicClans(), {
 			detail: { tags: ['Clan'] },
 		})
-		.get('/:clanId', ({ params, set }) =>
-			clanService.getPublicPayload(params.clanId).then((clan) => {
+		.get('/:clan_id', ({ params, set }) =>
+			clanService.getPublicPayload(params.clan_id).then((clan) => {
 				if (!clan) set.status = 404
 				return clan
 			}),
 		{
-			params: t.Object({ clanId: t.String() }),
+			params: t.Object({ clan_id: t.String() }),
 			detail: { tags: ['Clan'] },
 		})
 )

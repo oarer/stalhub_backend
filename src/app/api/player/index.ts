@@ -125,7 +125,7 @@ export const playersRoute = createElysia()
 						character: params.character,
 					})
 					const clan_history = await playerService.getClanHistory({
-						playerName: profile.username,
+						player_name: profile.username,
 					})
 					return { ...profile, clan_history }
 				},

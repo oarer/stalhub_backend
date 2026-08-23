@@ -78,7 +78,9 @@ class AdminArtsService {
 				created_at: a.created_at,
 				updated_at: a.updated_at,
 			})),
-			totalCount,
+			total_count: totalCount,
+			page: page + 1,
+			take,
 		}
 	}
 
@@ -101,7 +103,7 @@ class AdminArtsService {
 		if (!art) return null
 
 		const stars_count = await prisma.star.count({
-			where: { targetType: StarTargetType.ART, targetId: art.id },
+			where: { target_type: StarTargetType.ART, target_id: art.id },
 		})
 
 		return {
@@ -124,7 +126,7 @@ class AdminArtsService {
 		type?: string
 		image_url?: string | null
 		tags?: string
-		authorId?: number
+		author_id?: number
 		author_name?: string
 		author_social_links?: Record<string, string>
 	}) {
@@ -138,8 +140,8 @@ class AdminArtsService {
 			tags: data.tags ?? '',
 		}
 
-		if (data.authorId) {
-			createData.author = { connect: { id: data.authorId } }
+		if (data.author_id) {
+			createData.author = { connect: { id: data.author_id } }
 		} else if (data.author_name) {
 			createData.author_name = data.author_name
 			createData.author_social_links =
@@ -168,7 +170,7 @@ class AdminArtsService {
 			type?: string
 			image_url?: string | null
 			tags?: string
-			authorId?: number | null
+			author_id?: number | null
 			author_name?: string | null
 			author_social_links?: Record<string, string> | null
 		}
@@ -182,11 +184,11 @@ class AdminArtsService {
 		if (data.image_url !== undefined) updateData.image_url = data.image_url
 		if (data.tags !== undefined) updateData.tags = data.tags
 
-		if (data.authorId !== undefined) {
-			updateData.author = data.authorId
-				? { connect: { id: data.authorId } }
+		if (data.author_id !== undefined) {
+			updateData.author = data.author_id
+				? { connect: { id: data.author_id } }
 				: { disconnect: true }
-			if (!data.authorId) {
+			if (!data.author_id) {
 				if (data.author_name !== undefined)
 					updateData.author_name = data.author_name
 				if (data.author_social_links !== undefined)
@@ -195,11 +197,11 @@ class AdminArtsService {
 			}
 		}
 
-		if (data.authorId === undefined && data.author_name !== undefined) {
+		if (data.author_id === undefined && data.author_name !== undefined) {
 			updateData.author_name = data.author_name
 		}
 		if (
-			data.authorId === undefined &&
+			data.author_id === undefined &&
 			data.author_social_links !== undefined
 		) {
 			updateData.author_social_links =
@@ -234,16 +236,16 @@ class AdminArtsService {
 		if (!ids.length) return new Map<number, number>()
 
 		const rows = await prisma.star.groupBy({
-			by: ['targetId'],
+			by: ['target_id'],
 			where: {
-				targetType: StarTargetType.ART,
-				targetId: { in: ids },
+				target_type: StarTargetType.ART,
+				target_id: { in: ids },
 			},
-			_count: { targetId: true },
+			_count: { target_id: true },
 		})
 
 		const map = new Map<number, number>()
-		for (const r of rows) map.set(r.targetId, r._count.targetId)
+		for (const r of rows) map.set(r.target_id, r._count.target_id)
 		return map
 	}
 }

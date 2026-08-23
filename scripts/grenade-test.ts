@@ -1,7 +1,9 @@
-const [clanId, nick, intervalArg] = process.argv.slice(2)
+export {}
 
-if (!clanId || !nick) {
-	console.log('Usage: bun run grenade:test -- <clanId> <nick> [intervalSec]')
+const [clan_id, nick, intervalArg] = process.argv.slice(2)
+
+if (!clan_id || !nick) {
+	console.log('Usage: bun run grenade:test -- <clan_id> <nick> [intervalSec]')
 	process.exit(1)
 }
 
@@ -30,24 +32,24 @@ async function main() {
 	const { decryptSecretJson } = await import('@/utils/crypto')
 
 	const clan = await prisma.clan.findUnique({
-		where: { id: clanId },
+		where: { id: clan_id },
 		select: { region: true },
 	})
 	if (!clan) {
-		console.error(`Clan "${clanId}" not found`)
+		console.error(`Clan "${clan_id}" not found`)
 		process.exit(1)
 	}
 
 	const members = await prisma.clanMember.findMany({
-		where: { clanId },
-		include: { user: { include: { EXBOAuth: true } } },
+		where: { clan_id },
+		include: { user: { include: { exbo_auth: true } } },
 	})
 
 	const now = new Date()
 	const pool: PoolToken[] = []
 
 	for (const m of members) {
-		const auth = m.user?.EXBOAuth
+		const auth = m.user?.exbo_auth
 		if (!auth) continue
 
 		let blob: { access_token: string; refresh_token?: string }
@@ -86,7 +88,7 @@ async function main() {
 	}
 
 	console.log(
-		`[${ts()}] clan "${clanId}" region=${clan.region}: token pool ${pool.length}/${members.length}`
+		`[${ts()}] clan "${clan_id}" region=${clan.region}: token pool ${pool.length}/${members.length}`
 	)
 	if (pool.length === 0) {
 		console.error('No usable tokens in clan pool')

@@ -6,6 +6,7 @@ import { MSK_OFFSET_MS } from '@/lib/msk'
 import { prisma } from '@/lib/prisma'
 import type { AIScreenshotResult } from '../types'
 import { analyzeScreenshot } from './ai'
+import { buildAttendanceMonth, mskMonthRange } from './attendance-month'
 
 function mskDayRange(date: string): [Date, Date] {
 	const [y, m, d] = date.split('-').map(Number)
@@ -21,11 +22,11 @@ class AnalyticsService {
 	}
 
 	async createSession(input: {
-		creatorId: number | null
+		creator_id: number | null
 		region: string
 		map_name: string
 		type?: string
-		clanId?: string
+		clan_id?: string
 		started_at?: string
 		stage_number?: number | null
 	}) {
@@ -34,8 +35,8 @@ class AnalyticsService {
 				region: input.region,
 				map_name: input.map_name,
 				type: (input.type as never) ?? 'TOURNAMENT',
-				creatorId: input.creatorId,
-				clanId: input.clanId,
+				creator_id: input.creator_id,
+				clan_id: input.clan_id,
 				stage_number: input.stage_number ?? null,
 				...((input.started_at as string | undefined) && {
 					started_at: new Date(input.started_at as string),
@@ -45,7 +46,7 @@ class AnalyticsService {
 	}
 
 	async getOrCreateStageSession(input: {
-		clanId: string
+		clan_id: string
 		region: string
 		type: string
 		stage: number
@@ -54,7 +55,7 @@ class AnalyticsService {
 		const [from, to] = mskDayRange(input.date)
 		const existing = await prisma.stageSession.findFirst({
 			where: {
-				clanId: input.clanId,
+				clan_id: input.clan_id,
 				type: input.type as never,
 				stage_number: input.stage,
 				started_at: { gte: from, lt: to },
@@ -67,34 +68,34 @@ class AnalyticsService {
 				region: input.region,
 				map_name: `Этап ${input.stage}`,
 				type: input.type as never,
-				clanId: input.clanId,
+				clan_id: input.clan_id,
 				stage_number: input.stage,
-				creatorId: null,
+				creator_id: null,
 				started_at: new Date(from),
 			},
 		})
 	}
 
 	async addScreenshot(
-		sessionId: number,
+		session_id: number,
 		file: { name: string; type: string; buffer: Buffer }
 	) {
 		const existing = await prisma.stageScreenshot.count({
-			where: { sessionId },
+			where: { session_id },
 		})
 		if (existing > 0) {
 			throw new Error('Only one screenshot per stage is allowed')
 		}
 		await this.ensureUploadDir()
 		const ext = path.extname(file.name) || '.png'
-		const filename = `${sessionId}-${randomUUID()}${ext}`
+		const filename = `${session_id}-${randomUUID()}${ext}`
 		const fullPath = path.join(UPLOAD_DIR, filename)
 		const relativePath = path.join('uploads', 'screenshots', filename)
 		await writeFile(fullPath, file.buffer)
 
 		const row = await prisma.stageScreenshot.create({
 			data: {
-				sessionId,
+				session_id,
 				file_path: relativePath,
 				mime_type: file.type,
 				size_bytes: file.buffer.length,
@@ -104,86 +105,99 @@ class AnalyticsService {
 		return row
 	}
 
-	async runAnalysis(screenshotId: number, filePath: string) {
+	async runAnalysis(screenshot_id: number, file_path: string) {
 		await prisma.stageScreenshot.update({
-			where: { id: screenshotId },
+			where: { id: screenshot_id },
 			data: { ai_status: 'processing' },
 		})
 		try {
 			const shot = await prisma.stageScreenshot.findUnique({
-				where: { id: screenshotId },
-				include: { session: { select: { clanId: true } } },
+				where: { id: screenshot_id },
+				include: {
+					session: { select: { clan_id: true, stage_number: true } },
+				},
 			})
-			const roster = shot?.session.clanId
+			const roster = shot?.session.clan_id
 				? (
 						await prisma.clanMember.findMany({
-							where: { clanId: shot.session.clanId },
+							where: { clan_id: shot.session.clan_id },
 							select: { name: true, rank: true },
 						})
 					).map((m) => ({ name: m.name, role: m.rank }))
 				: undefined
-			const result = await analyzeScreenshot(filePath, roster)
+			const result = await analyzeScreenshot(
+				file_path,
+				roster,
+				shot?.session.stage_number
+			)
 			await prisma.stageScreenshot.update({
-				where: { id: screenshotId },
+				where: { id: screenshot_id },
 				data: {
 					ai_status: 'done',
 					ai_error: null,
 					ai_result: result as never,
 				},
 			})
-			if (result.mapName) {
+			if (result.map_name) {
 				const shot = await prisma.stageScreenshot.findUnique({
-					where: { id: screenshotId },
-					select: { sessionId: true },
+					where: { id: screenshot_id },
+					select: { session_id: true },
 				})
 				if (shot) {
 					await prisma.stageSession.update({
-						where: { id: shot.sessionId },
-						data: { map_name: result.mapName.split('#')[0].trim() },
+						where: { id: shot.session_id },
+						data: {
+							map_name: result.map_name.split('#')[0].trim(),
+						},
 					})
 				}
 			}
-			await this.applyAttendanceFromAI(screenshotId, result)
-			await this.regenerateSummary(screenshotId)
+			await this.applyAttendanceFromAI(screenshot_id, result)
+			await this.regenerateSummary(screenshot_id)
 		} catch (err) {
 			await prisma.stageScreenshot.update({
-				where: { id: screenshotId },
+				where: { id: screenshot_id },
 				data: { ai_status: 'error', ai_error: (err as Error).message },
 			})
 		}
 	}
 
 	private async applyAttendanceFromAI(
-		screenshotId: number,
+		screenshot_id: number,
 		result: AIScreenshotResult
 	) {
 		const screenshot = await prisma.stageScreenshot.findUnique({
-			where: { id: screenshotId },
+			where: { id: screenshot_id },
 			include: { session: true },
 		})
-		if (!screenshot?.session.clanId) return
+		if (!screenshot?.session.clan_id) return
 
 		const members = await prisma.clanMember.findMany({
-			where: { clanId: screenshot.session.clanId },
+			where: { clan_id: screenshot.session.clan_id },
 		})
 
-		const sessionId = screenshot.sessionId
+		const session_id = screenshot.session_id
 
 		for (const m of members) {
 			const present = result.players.some(
 				(p) => p.name.trim().toLowerCase() === m.name.toLowerCase()
 			)
+			const existing = await prisma.stageAttendance.findUnique({
+				where: { session_id_name: { session_id, name: m.name } },
+				select: { source: true },
+			})
+			if (existing?.source === 'manual') continue
 			await prisma.stageAttendance.upsert({
-				where: { sessionId_name: { sessionId, name: m.name } },
+				where: { session_id_name: { session_id, name: m.name } },
 				create: {
-					sessionId,
+					session_id,
 					name: m.name,
-					userId: m.userId,
+					user_id: m.user_id,
 					status: present ? 'PRESENT' : 'ABSENT',
 					source: 'ai',
 				},
 				update: {
-					userId: m.userId,
+					user_id: m.user_id,
 					status: present ? 'PRESENT' : 'ABSENT',
 					source: 'ai',
 				},
@@ -230,8 +244,8 @@ class AnalyticsService {
 		}
 	}
 
-	async listSessions(userId: number, clanId?: string) {
-		const where = clanId ? { clanId } : { creatorId: userId }
+	async listSessions(user_id: number, clan_id?: string) {
+		const where = clan_id ? { clan_id } : { creator_id: user_id }
 		const sessions = await prisma.stageSession.findMany({
 			where,
 			orderBy: { started_at: 'desc' },
@@ -258,19 +272,26 @@ class AnalyticsService {
 	}
 
 	async setManualAttendance(
-		sessionId: number,
-		userId: number,
+		session_id: number,
+		user_id: number,
 		status: string,
 		note?: string
 	) {
-		const member = await prisma.clanMember.findFirst({ where: { userId } })
+		const attendance = await prisma.stageSession.findUnique({
+			where: { id: session_id },
+			select: { clan_id: true },
+		})
+		if (!attendance?.clan_id) throw new Error('Clan session not found')
+		const member = await prisma.clanMember.findFirst({
+			where: { user_id, clan_id: attendance.clan_id },
+		})
 		if (!member) throw new Error('Clan member not found for this user')
 		return prisma.stageAttendance.upsert({
-			where: { sessionId_name: { sessionId, name: member.name } },
+			where: { session_id_name: { session_id, name: member.name } },
 			create: {
-				sessionId,
+				session_id,
 				name: member.name,
-				userId,
+				user_id,
 				status: status as never,
 				source: 'manual',
 				note,
@@ -279,16 +300,20 @@ class AnalyticsService {
 		})
 	}
 
-	async deleteSession(sessionId: number, clanId?: string, userId?: number) {
+	async deleteSession(
+		session_id: number,
+		clan_id?: string,
+		user_id?: number
+	) {
 		const session = await prisma.stageSession.findUnique({
-			where: { id: sessionId },
+			where: { id: session_id },
 			include: { screenshots: { select: { file_path: true } } },
 		})
 		if (!session) throw new Error('Session not found')
-		if (session.clanId && session.clanId !== clanId) {
+		if (session.clan_id && session.clan_id !== clan_id) {
 			throw new Error('Not your clan session')
 		}
-		if (!session.clanId && session.creatorId !== userId) {
+		if (!session.clan_id && session.creator_id !== user_id) {
 			throw new Error('Not your session')
 		}
 		for (const shot of session.screenshots) {
@@ -296,31 +321,31 @@ class AnalyticsService {
 				await rm(shot.file_path, { force: true })
 			} catch {}
 		}
-		await prisma.stageSession.delete({ where: { id: sessionId } })
+		await prisma.stageSession.delete({ where: { id: session_id } })
 		return { ok: true }
 	}
 
-	async retryAnalysis(screenshotId: number) {
+	async retryAnalysis(screenshot_id: number) {
 		const shot = await prisma.stageScreenshot.findUnique({
-			where: { id: screenshotId },
+			where: { id: screenshot_id },
 		})
 		if (!shot) throw new Error('Screenshot not found')
 		if (shot.ai_status === 'processing') return shot
 
-		await this.runAnalysis(screenshotId, shot.file_path)
+		await this.runAnalysis(screenshot_id, shot.file_path)
 		return prisma.stageScreenshot.findUnique({
-			where: { id: screenshotId },
+			where: { id: screenshot_id },
 		})
 	}
 
 	async attendanceSummary(
-		clanId: string,
+		clan_id: string,
 		type?: StageType,
 		from?: string | null
 	) {
 		const sessions = await prisma.stageSession.findMany({
 			where: {
-				clanId,
+				clan_id,
 				...(type ? { type } : {}),
 				...(from ? { started_at: { gte: new Date(from) } } : {}),
 			},
@@ -330,7 +355,7 @@ class AnalyticsService {
 
 		const rows = await prisma.stageAttendance.groupBy({
 			by: ['name', 'status'],
-			where: { sessionId: { in: sessions.map((s) => s.id) } },
+			where: { session_id: { in: sessions.map((s) => s.id) } },
 			_count: { _all: true },
 		})
 
@@ -362,9 +387,57 @@ class AnalyticsService {
 		}
 	}
 
-	async getRawStats(clanId: string) {
+	async attendanceMonth(clan_id: string, month: string) {
+		const [from, to] = mskMonthRange(month)
+		const [members, sessions, absences] = await Promise.all([
+			prisma.clanMember.findMany({
+				where: { clan_id },
+				select: { name: true, user_id: true },
+				orderBy: { name: 'asc' },
+			}),
+			prisma.stageSession.findMany({
+				where: { clan_id, started_at: { gte: from, lt: to } },
+				select: {
+					id: true,
+					type: true,
+					stage_number: true,
+					started_at: true,
+					attendance: {
+						select: {
+							name: true,
+							user_id: true,
+							status: true,
+							note: true,
+						},
+					},
+				},
+			}),
+			prisma.absence.findMany({
+				where: {
+					clan_id,
+					date: { gte: `${month}-01`, lte: `${month}-31` },
+				},
+				select: { user_id: true, date: true, note: true, events: true },
+			}),
+		])
+
+		return buildAttendanceMonth({
+			month,
+			members,
+			sessions,
+			absences: absences.map((absence) => ({
+				...absence,
+				events: absence.events as Array<{
+					event_type: string
+					stages?: number[]
+				}>,
+			})),
+		})
+	}
+
+	async getRawStats(clan_id: string) {
 		const sessions = await prisma.stageSession.findMany({
-			where: { clanId },
+			where: { clan_id },
 			orderBy: { started_at: 'desc' },
 			include: {
 				screenshots: {
@@ -378,31 +451,33 @@ class AnalyticsService {
 				},
 			},
 		})
-		return sessions.map((s) => ({
-			id: s.id,
-			map_name: s.map_name,
-			type: s.type,
-			started_at: s.started_at,
-			screenshots: s.screenshots.map((shot) => {
-				const r = shot.ai_result as AIScreenshotResult | null
-				return {
-					id: shot.id,
-					victory: r?.victory ?? null,
-					players: r?.players ?? [],
-				}
-			}),
-		}))
+		return {
+			sessions: sessions.map((s) => ({
+				id: s.id,
+				map_name: s.map_name,
+				type: s.type,
+				started_at: s.started_at,
+				screenshots: s.screenshots.map((shot) => {
+					const r = shot.ai_result as AIScreenshotResult | null
+					return {
+						id: shot.id,
+						victory: r?.victory ?? null,
+						players: r?.players ?? [],
+					}
+				}),
+			})),
+		}
 	}
 
-	async regenerateSummary(screenshotId: number) {
+	async regenerateSummary(screenshot_id: number) {
 		const screenshot = await prisma.stageScreenshot.findUnique({
-			where: { id: screenshotId },
-			select: { sessionId: true },
+			where: { id: screenshot_id },
+			select: { session_id: true },
 		})
 		if (!screenshot) return
 
 		const screenshots = await prisma.stageScreenshot.findMany({
-			where: { sessionId: screenshot.sessionId },
+			where: { session_id: screenshot.session_id },
 			select: { id: true, ai_status: true, ai_result: true },
 		})
 		const done = screenshots.filter((s) => s.ai_status === 'done')
@@ -421,33 +496,33 @@ class AnalyticsService {
 				assists: number
 				score: number
 				appearances: number
-				bestKills: number
+				best_kills: number
 				role: string | null
 			}
 		>()
 		const scoreCounts = new Map<number, number>()
 		const opponentScoreCounts = new Map<number, number>()
-		let totalScore: number | null = null
-		let opponentScore: number | null = null
-		const screens: Array<{ screenshotId: number; score: number | null }> =
+		let total_score: number | null = null
+		let opponent_score: number | null = null
+		const screens: Array<{ screenshot_id: number; score: number | null }> =
 			[]
 
 		for (const s of done) {
 			const r = s.ai_result as AIScreenshotResult | null
 			if (!r) continue
-			if (r.totalScore != null) {
+			if (r.total_score != null) {
 				scoreCounts.set(
-					r.totalScore,
-					(scoreCounts.get(r.totalScore) ?? 0) + 1
+					r.total_score,
+					(scoreCounts.get(r.total_score) ?? 0) + 1
 				)
 			}
-			if (r.opponentScore != null) {
+			if (r.opponent_score != null) {
 				opponentScoreCounts.set(
-					r.opponentScore,
-					(opponentScoreCounts.get(r.opponentScore) ?? 0) + 1
+					r.opponent_score,
+					(opponentScoreCounts.get(r.opponent_score) ?? 0) + 1
 				)
 			}
-			screens.push({ screenshotId: s.id, score: r.totalScore ?? null })
+			screens.push({ screenshot_id: s.id, score: r.total_score ?? null })
 			for (const p of r.players ?? []) {
 				const key = p.name.trim().toLowerCase()
 				const entry = byPlayer.get(key) ?? {
@@ -457,7 +532,7 @@ class AnalyticsService {
 					assists: 0,
 					score: 0,
 					appearances: 0,
-					bestKills: 0,
+					best_kills: 0,
 					role: null,
 				}
 				entry.kills += p.kills ?? 0
@@ -465,7 +540,7 @@ class AnalyticsService {
 				entry.assists += p.assists ?? 0
 				entry.score += p.score ?? 0
 				entry.appearances += 1
-				entry.bestKills = Math.max(entry.bestKills, p.kills ?? 0)
+				entry.best_kills = Math.max(entry.best_kills, p.kills ?? 0)
 				entry.role = p.role ?? entry.role
 				byPlayer.set(key, entry)
 			}
@@ -485,19 +560,19 @@ class AnalyticsService {
 		}
 
 		if (scoreCounts.size > 0) {
-			totalScore = [...scoreCounts.entries()].sort(
+			total_score = [...scoreCounts.entries()].sort(
 				(a, b) => b[1] - a[1]
 			)[0][0]
 		}
 		if (opponentScoreCounts.size > 0) {
-			opponentScore = [...opponentScoreCounts.entries()].sort(
+			opponent_score = [...opponentScoreCounts.entries()].sort(
 				(a, b) => b[1] - a[1]
 			)[0][0]
 		}
 
 		const teamMap = new Map<
 			string,
-			{ name: string; score: number | null; isPlayerClan: boolean }
+			{ name: string; score: number | null; is_player_clan: boolean }
 		>()
 		for (const s of done) {
 			const r = s.ai_result as AIScreenshotResult | null
@@ -509,35 +584,35 @@ class AnalyticsService {
 					teamMap.set(key, {
 						name: t.name.trim(),
 						score: t.score ?? null,
-						isPlayerClan: t.isPlayerClan,
+						is_player_clan: t.is_player_clan,
 					})
 				} else {
 					if (existing.score == null && t.score != null)
 						existing.score = t.score
-					existing.isPlayerClan =
-						existing.isPlayerClan || t.isPlayerClan
+					existing.is_player_clan =
+						existing.is_player_clan || t.is_player_clan
 				}
 			}
 		}
-		if (opponentScore == null && teamMap.size > 0) {
+		if (opponent_score == null && teamMap.size > 0) {
 			const opp = [...teamMap.values()].find(
-				(t) => !t.isPlayerClan && t.score != null
+				(t) => !t.is_player_clan && t.score != null
 			)
-			opponentScore = opp?.score ?? null
+			opponent_score = opp?.score ?? null
 		}
 
 		const summary = {
-			screenshotsAnalyzed: done.length,
-			totalScore,
-			opponentScore,
+			screenshots_analyzed: done.length,
+			total_score,
+			opponent_score,
 			teams: [...teamMap.values()],
 			screens,
 			players,
 			victory: wins > losses ? true : losses > wins ? false : null,
-			generatedAt: new Date().toISOString(),
+			generated_at: new Date().toISOString(),
 		}
 		await prisma.stageSession.update({
-			where: { id: screenshot.sessionId },
+			where: { id: screenshot.session_id },
 			data: { ai_summary: summary as never },
 		})
 	}

@@ -13,25 +13,25 @@ interface ExboCharacterEntry {
 }
 
 interface ClanGuardContext {
-	store: { authUserId?: number; clanId?: string }
+	store: { authUserId?: number; clan_id?: string }
 	set: { status?: number | string }
 }
 
 export async function requireClanMember({ store, set }: ClanGuardContext) {
-	const userId = store.authUserId
-	if (!userId) {
+	const user_id = store.authUserId
+	if (!user_id) {
 		set.status = 401
 		return { error: 'Unauthorized' }
 	}
 	const profile = await prisma.userClanProfile.findFirst({
-		where: { userId, isActive: true },
-		select: { clanId: true },
+		where: { user_id, is_active: true },
+		select: { clan_id: true },
 	})
-	if (!profile?.clanId) {
+	if (!profile?.clan_id) {
 		set.status = 403
 		return { error: 'You are not in a clan' }
 	}
-	store.clanId = profile.clanId
+	store.clan_id = profile.clan_id
 }
 
 export async function requireClanOfficer(ctx: ClanGuardContext) {
@@ -40,7 +40,7 @@ export async function requireClanOfficer(ctx: ClanGuardContext) {
 
 	const { store, set } = ctx
 	const profile = await prisma.userClanProfile.findFirst({
-		where: { userId: store.authUserId, isActive: true },
+		where: { user_id: store.authUserId, is_active: true },
 		include: { clan: true },
 	})
 	if (profile?.clan?.status !== 'ACTIVE') {
@@ -48,7 +48,7 @@ export async function requireClanOfficer(ctx: ClanGuardContext) {
 		return { error: 'Clan is not active. Register it first.' }
 	}
 	const member = await prisma.clanMember.findFirst({
-		where: { clanId: store.clanId, userId: store.authUserId },
+		where: { clan_id: store.clan_id, user_id: store.authUserId },
 	})
 	const isLeader = profile?.clan?.leader !== ''
 	const allowed = (member && OFFICER_RANKS.has(member.rank)) || isLeader
@@ -65,13 +65,13 @@ export async function requireClanLeader(ctx: ClanGuardContext) {
 	const { store, set } = ctx
 
 	const member = await prisma.clanMember.findFirst({
-		where: { clanId: store.clanId, userId: store.authUserId },
+		where: { clan_id: store.clan_id, user_id: store.authUserId },
 		select: { rank: true },
 	})
 	if (member?.rank === 'LEADER') return
 
 	const clan = await prisma.clan.findUnique({
-		where: { id: store.clanId },
+		where: { id: store.clan_id },
 		select: { leader: true, region: true },
 	})
 
@@ -103,7 +103,7 @@ export async function requireClanLeader(ctx: ClanGuardContext) {
 		)
 		const isLeaderInGame = chars.some(
 			(c) =>
-				c.clan?.info?.id === store.clanId &&
+				c.clan?.info?.id === store.clan_id &&
 				c.clan?.member?.rank === 'LEADER'
 		)
 		if (isLeaderInGame) return

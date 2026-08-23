@@ -55,9 +55,9 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 					h['x-real-ip'] ??
 					''
 				const session = await createSession(user.id, ua, ip)
-				const accessToken = await jwt.sign({
+				const access_token_value = await jwt.sign({
 					sub: String(user.id),
-					sid: session.sessionId,
+					sid: session.session_id,
 					name: user.name,
 					username: user.username,
 					role: roles,
@@ -65,12 +65,12 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 				})
 				const refreshToken = await jwt.sign({
 					sub: String(user.id),
-					sid: session.sessionId,
+					sid: session.session_id,
 					exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
 				})
 
 				refresh_token.set({ value: refreshToken, ...refreshCookie })
-				access_token.set({ value: accessToken, ...accessCookie })
+				access_token.set({ value: access_token_value, ...accessCookie })
 
 				return { success: true }
 			},
@@ -108,13 +108,13 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 					return { error: 'Session revoked or expired' }
 				}
 
-				const roles = session.User.roles.map((r) => r.name)
+				const roles = session.user.roles.map((r) => r.name)
 
-				const accessToken = await jwt.sign({
+				const access_token_value = await jwt.sign({
 					sub: payload.sub,
 					sid: payload.sid,
-					name: session.User.name,
-					username: session.User.username,
+					name: session.user.name,
+					username: session.user.username,
 					role: roles,
 					exp: Math.floor(Date.now() / 1000) + 5 * 60,
 				})
@@ -131,7 +131,7 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 				})
 
 				access_token.set({
-					value: accessToken,
+					value: access_token_value,
 					...accessCookie,
 				})
 

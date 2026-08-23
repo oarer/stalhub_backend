@@ -19,14 +19,14 @@ const MAX_STAGES: Record<string, number> = {
 const DEADLINE_MSK_HOUR = 19
 
 export interface AbsenceEventInput {
-	eventType: string
+	event_type: string
 	stages?: number[] | null
 }
 
 export class AbsenceService {
-	async listForDate(clanId: string, date: string) {
+	async listForDate(clan_id: string, date: string) {
 		return prisma.absence.findMany({
-			where: { clanId, date },
+			where: { clan_id, date },
 			include: {
 				user: { select: { id: true, username: true, name: true } },
 			},
@@ -34,9 +34,9 @@ export class AbsenceService {
 		})
 	}
 
-	async listRange(clanId: string, from: string, to: string) {
+	async listRange(clan_id: string, from: string, to: string) {
 		return prisma.absence.findMany({
-			where: { clanId, date: { gte: from, lte: to } },
+			where: { clan_id, date: { gte: from, lte: to } },
 			include: {
 				user: { select: { id: true, username: true, name: true } },
 			},
@@ -45,8 +45,8 @@ export class AbsenceService {
 	}
 
 	async upsert(
-		userId: number,
-		clanId: string,
+		user_id: number,
+		clan_id: string,
 		date: string,
 		events: AbsenceEventInput[],
 		note?: string | null
@@ -54,31 +54,31 @@ export class AbsenceService {
 		this.validate(date, events)
 
 		const normalized = events.map((e) => ({
-			eventType: e.eventType,
+			event_type: e.event_type,
 			...(e.stages?.length
 				? { stages: [...new Set(e.stages)].sort((a, b) => a - b) }
 				: {}),
 		}))
 
 		return prisma.absence.upsert({
-			where: { userId_date: { userId, date } },
+			where: { user_id_date: { user_id, date } },
 			create: {
-				clanId,
-				userId,
+				clan_id,
+				user_id,
 				date,
 				events: normalized as never,
 				note: note ?? null,
 			},
-			update: { clanId, events: normalized as never, note: note ?? null },
+			update: { clan_id, events: normalized as never, note: note ?? null },
 			include: {
 				user: { select: { id: true, username: true, name: true } },
 			},
 		})
 	}
 
-	async remove(userId: number, clanId: string, date: string) {
+	async remove(user_id: number, clan_id: string, date: string) {
 		const result = await prisma.absence.deleteMany({
-			where: { userId, clanId, date },
+			where: { user_id, clan_id, date },
 		})
 		if (result.count === 0) throw new Error('Отписка не найдена')
 		return { success: true }
@@ -98,14 +98,14 @@ export class AbsenceService {
 
 		for (const e of events) {
 			if (
-				!ABSENCE_EVENT_TYPES.includes(e.eventType as AbsenceEventType)
+				!ABSENCE_EVENT_TYPES.includes(e.event_type as AbsenceEventType)
 			) {
-				throw new Error(`Неизвестное событие: ${e.eventType}`)
+				throw new Error(`Неизвестное событие: ${e.event_type}`)
 			}
-			const max = MAX_STAGES[e.eventType] ?? 0
+			const max = MAX_STAGES[e.event_type] ?? 0
 			for (const s of e.stages ?? []) {
 				if (s < 1 || s > max)
-					throw new Error(`Неверный этап ${s} для ${e.eventType}`)
+					throw new Error(`Неверный этап ${s} для ${e.event_type}`)
 			}
 		}
 	}

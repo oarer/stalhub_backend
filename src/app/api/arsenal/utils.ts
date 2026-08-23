@@ -11,10 +11,10 @@ const getAveragePrice = (prices: { price: number }[]) => {
 	)
 }
 
-export const fetchItemPrice = async (itemId: string, region = 'eu') => {
+export const fetchItemPrice = async (item_id: string, region = 'eu') => {
 	try {
 		const { data } = await apiClient.get<LotsHistoryResponse>(
-			`/${region}/auction/${itemId}/history`,
+			`/${region}/auction/${item_id}/history`,
 			{ params: { limit: 20 } }
 		)
 

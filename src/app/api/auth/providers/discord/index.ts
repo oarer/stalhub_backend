@@ -119,9 +119,9 @@ export const discordAuth = createElysia()
 						where: { discord_id: discordUser.id },
 					})
 
-					let userId: number
+					let user_id: number
 					if (existing) {
-						userId = existing.userid
+						user_id = existing.userid
 					} else {
 						const user = await prisma.user.create({
 							data: {
@@ -129,7 +129,7 @@ export const discordAuth = createElysia()
 								name:
 									discordUser.global_name ??
 									discordUser.username,
-								DiscordAuth: {
+								discord_auth: {
 									create: {
 										discord_id: discordUser.id,
 										name:
@@ -141,12 +141,12 @@ export const discordAuth = createElysia()
 								},
 							},
 						})
-						userId = user.id
-						await assignDefaultRole(userId)
+						user_id = user.id
+						await assignDefaultRole(user_id)
 					}
 
 					const user = await prisma.user.findUnique({
-						where: { id: userId },
+						where: { id: user_id },
 						include: { roles: true },
 					})
 					const roles = user?.roles.map((r) => r.name) ?? []
@@ -156,18 +156,18 @@ export const discordAuth = createElysia()
 						] ?? ''
 					const h = headers as Record<string, string | undefined>
 					const ip = (h['x-forwarded-for']?.split(',')[0]?.trim() ?? h['x-real-ip'] ?? '')
-					const session = await createSession(userId, ua, ip)
-					const accessToken = await jwt.sign({
-						sub: String(userId),
-						sid: session.sessionId,
+					const session = await createSession(user_id, ua, ip)
+					const access_token_value = await jwt.sign({
+						sub: String(user_id),
+						sid: session.session_id,
 						name: user?.name ?? '',
 						username: user?.username ?? '',
 						role: roles,
 						exp: Math.floor(Date.now() / 1000) + 5 * 60,
 					})
 					const refreshToken = await jwt.sign({
-						sub: String(userId),
-						sid: session.sessionId,
+						sub: String(user_id),
+						sid: session.session_id,
 						exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
 					})
 
@@ -176,7 +176,7 @@ export const discordAuth = createElysia()
 						...refreshCookie,
 					})
 					access_token.set({
-						value: accessToken,
+						value: access_token_value,
 						...accessCookie,
 					})
 
@@ -196,15 +196,15 @@ export const discordAuth = createElysia()
 			.get(
 				'/link',
 				async ({ store }) => {
-					const { userId } = fromStore(store)
+					const { user_id } = fromStore(store)
 					const existing = await prisma.discordAuth.findUnique({
-						where: { userid: userId },
+						where: { userid: user_id },
 					})
 					if (existing) {
 						return { error: 'Discord already linked' }
 					}
 
-					const state = createLinkState(userId)
+					const state = createLinkState(user_id)
 					const url = new URL(`${DISCORD_API}/oauth2/authorize`)
 					url.searchParams.set('client_id', env.DISCORD_CLIENT_ID)
 					url.searchParams.set(
@@ -225,9 +225,9 @@ export const discordAuth = createElysia()
 			.delete(
 				'/link',
 				async ({ store }) => {
-					const { userId } = fromStore(store)
+					const { user_id } = fromStore(store)
 					await prisma.discordAuth.deleteMany({
-						where: { userid: userId },
+						where: { userid: user_id },
 					})
 					return { success: true }
 				},

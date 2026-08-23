@@ -7,7 +7,7 @@ const MAX_BOOST_ENTRIES = 10
 
 const ArtSchema = z.object({
 	instanceId: z.string(),
-	itemId: z.string(),
+	item_id: z.string(),
 	percent: z.number().min(85).max(190),
 	potential: z.number(),
 	selectedStats: z.array(z.string().nullable()).max(MAX_SELECTED_STATS),

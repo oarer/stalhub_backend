@@ -1,12 +1,12 @@
 import { prisma } from '@/lib/prisma'
 
 class CommentsService {
-	async listByArticle(articleId: number, take: number, page: number) {
+	async listByArticle(article_id: number, take: number, page: number) {
 		const skip = page * take
 
 		const [rows, totalCount] = await Promise.all([
 			prisma.articleComment.findMany({
-				where: { articleId, parentId: null },
+				where: { article_id, parent_id: null },
 				skip,
 				take,
 				orderBy: { created_at: 'desc' },
@@ -28,21 +28,23 @@ class CommentsService {
 					},
 				},
 			}),
-			prisma.articleComment.count({ where: { articleId } }),
+			prisma.articleComment.count({ where: { article_id } }),
 		])
 
 		return {
 			data: rows,
-			totalCount,
+			total_count: totalCount,
+			page: page + 1,
+			take,
 		}
 	}
 
-	async listByArt(artId: number, take: number, page: number) {
+	async listByArt(art_id: number, take: number, page: number) {
 		const skip = page * take
 
 		const [rows, totalCount] = await Promise.all([
 			prisma.articleComment.findMany({
-				where: { artId, parentId: null },
+				where: { art_id, parent_id: null },
 				skip,
 				take,
 				orderBy: { created_at: 'desc' },
@@ -64,23 +66,25 @@ class CommentsService {
 					},
 				},
 			}),
-			prisma.articleComment.count({ where: { artId } }),
+			prisma.articleComment.count({ where: { art_id } }),
 		])
 
 		return {
 			data: rows,
-			totalCount,
+			total_count: totalCount,
+			page: page + 1,
+			take,
 		}
 	}
 
 	async createForArt(
-		artId: number,
-		authorId: number,
-		data: { content: string; parentId?: number | null }
+		art_id: number,
+		author_id: number,
+		data: { content: string; parent_id?: number | null }
 	) {
-		if (data.parentId) {
+		if (data.parent_id) {
 			const parent = await prisma.articleComment.findFirst({
-				where: { id: data.parentId, artId },
+				where: { id: data.parent_id, art_id },
 			})
 			if (!parent) return null
 		}
@@ -88,9 +92,9 @@ class CommentsService {
 		const comment = await prisma.articleComment.create({
 			data: {
 				content: data.content,
-				artId,
-				authorId,
-				parentId: data.parentId ?? null,
+				art_id,
+				author_id,
+				parent_id: data.parent_id ?? null,
 			},
 			include: {
 				author: { select: { id: true, name: true, username: true } },
@@ -106,7 +110,7 @@ class CommentsService {
 
 		if (mentions.length > 0) {
 			const art = await prisma.art.findUnique({
-				where: { id: artId },
+				where: { id: art_id },
 				select: { title: true },
 			})
 
@@ -116,18 +120,18 @@ class CommentsService {
 			})
 
 			const author = await prisma.user.findUnique({
-				where: { id: authorId },
+				where: { id: author_id },
 				select: { username: true },
 			})
 
 			const notifications = mentionedUsers
-				.filter((u) => u.id !== authorId)
+				.filter((u) => u.id !== author_id)
 				.map((u) => ({
 					title: 'Упоминание',
 					content: `${author?.username ?? 'Кто-то'} упомянул вас в комментарии к работе "${art?.title ?? ''}"`,
 					author: author?.username ?? 'Система',
 					type: 0,
-					link: `/arts/${artId}`,
+					link: `/arts/${art_id}`,
 					users: { connect: [{ id: u.id }] },
 				}))
 
@@ -142,13 +146,13 @@ class CommentsService {
 	}
 
 	async create(
-		articleId: number,
-		authorId: number,
-		data: { content: string; parentId?: number | null }
+		article_id: number,
+		author_id: number,
+		data: { content: string; parent_id?: number | null }
 	) {
-		if (data.parentId) {
+		if (data.parent_id) {
 			const parent = await prisma.articleComment.findFirst({
-				where: { id: data.parentId, articleId },
+				where: { id: data.parent_id, article_id },
 			})
 			if (!parent) return null
 		}
@@ -156,9 +160,9 @@ class CommentsService {
 		const comment = await prisma.articleComment.create({
 			data: {
 				content: data.content,
-				articleId,
-				authorId,
-				parentId: data.parentId ?? null,
+				article_id,
+				author_id,
+				parent_id: data.parent_id ?? null,
 			},
 			include: {
 				author: { select: { id: true, name: true, username: true } },
@@ -174,7 +178,7 @@ class CommentsService {
 
 		if (mentions.length > 0) {
 			const article = await prisma.article.findUnique({
-				where: { id: articleId },
+				where: { id: article_id },
 				select: { title: true },
 			})
 
@@ -184,18 +188,18 @@ class CommentsService {
 			})
 
 			const author = await prisma.user.findUnique({
-				where: { id: authorId },
+				where: { id: author_id },
 				select: { username: true },
 			})
 
 			const notifications = mentionedUsers
-				.filter((u) => u.id !== authorId)
+				.filter((u) => u.id !== author_id)
 				.map((u) => ({
 					title: 'Упоминание',
 					content: `${author?.username ?? 'Кто-то'} упомянул вас в комментарии к статье "${article?.title ?? ''}"`,
 					author: author?.username ?? 'Система',
 					type: 0,
-					link: `/articles/${articleId}`,
+					link: `/articles/${article_id}`,
 					users: { connect: [{ id: u.id }] },
 				}))
 
@@ -209,12 +213,12 @@ class CommentsService {
 		return comment
 	}
 
-	async delete(id: number, userId: number, isAdmin: boolean) {
+	async delete(id: number, user_id: number, is_admin: boolean) {
 		const existing = await prisma.articleComment.findUnique({
 			where: { id },
 		})
 		if (!existing) return false
-		if (existing.authorId !== userId && !isAdmin) return false
+		if (existing.author_id !== user_id && !is_admin) return false
 
 		await prisma.articleComment.delete({ where: { id } })
 		return true

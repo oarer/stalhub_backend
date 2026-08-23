@@ -10,7 +10,7 @@ import { resolveArtifactPrice } from './pricing'
 
 const priceRequestSchema = t.Array(
 	t.Object({
-		itemId: t.String(),
+		item_id: t.String(),
 		qlt: t.Number({ minimum: 0, maximum: 6 }),
 		ptn: t.Number({ minimum: 0, maximum: 15 }),
 	})
@@ -38,7 +38,7 @@ export const artifactsRoutes = new Elysia()
 				) {
 					set.status = 400
 					return {
-						updatedAt: null,
+						updated_at: null,
 						region,
 						prices: [],
 					}
@@ -49,7 +49,7 @@ export const artifactsRoutes = new Elysia()
 				if (!aggregate) {
 					set.status = 503
 					return {
-						updatedAt: null,
+						updated_at: null,
 						region,
 						prices: [],
 					}
@@ -59,14 +59,14 @@ export const artifactsRoutes = new Elysia()
 					(query: ArtifactPriceQuery) =>
 						resolveArtifactPrice(
 							aggregate,
-							query.itemId,
+							query.item_id,
 							query.qlt,
 							query.ptn
 						)
 				)
 
 				return {
-					updatedAt: aggregate.updatedAt,
+					updated_at: aggregate.updated_at,
 					region,
 					prices,
 				}

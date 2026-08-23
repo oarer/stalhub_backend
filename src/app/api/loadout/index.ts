@@ -16,24 +16,24 @@ export const loadoutRoutes = createElysia().group('/loadout', (app) =>
 			'',
 			async ({ query }) =>
 				loadoutService.getMany(
-					(query.userIds ?? '')
+					(query.user_ids ?? '')
 						.split(',')
 						.map((s) => Number(s.trim()))
 						.filter((n) => Number.isInteger(n) && n > 0)
 				),
 			{
 				beforeHandle: [requireOptionalAuth],
-				query: t.Object({ userIds: t.Optional(t.String()) }),
+				query: t.Object({ user_ids: t.Optional(t.String()) }),
 				detail: { tags: ['Loadout'] },
 			}
 		)
 		.get(
-			'/:userId',
+			'/:user_id',
 			async ({ params, set, store }) => {
-				const targetId = Number(params.userId)
-				const viewerId = fromStoreOpt(store).userId
-				const lo = await loadoutService.get(targetId)
-				if (!lo || (!lo.is_public && viewerId !== targetId)) {
+				const target_id = Number(params.user_id)
+				const viewerId = fromStoreOpt(store).user_id
+				const lo = await loadoutService.get(target_id)
+				if (!lo || (!lo.is_public && viewerId !== target_id)) {
 					set.status = 404
 					return { error: 'Loadout is private or not set' }
 				}
@@ -41,7 +41,7 @@ export const loadoutRoutes = createElysia().group('/loadout', (app) =>
 			},
 			{
 				beforeHandle: [requireOptionalAuth],
-				params: t.Object({ userId: t.String() }),
+				params: t.Object({ user_id: t.String() }),
 				detail: { tags: ['Loadout'] },
 			}
 		)
@@ -49,7 +49,7 @@ export const loadoutRoutes = createElysia().group('/loadout', (app) =>
 			'',
 			async ({ body, store }) =>
 				loadoutService.upsert(
-					fromStore(store).userId,
+					fromStore(store).user_id,
 					body.data,
 					body.is_public ?? false
 				),
