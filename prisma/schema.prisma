@@ -72,6 +72,11 @@ enum ArticleType {
   STALHUB
 }
 
+enum QuestType {
+  STORY
+  SIDE
+}
+
 enum ArtType {
   DEFAULT
   NSFW
@@ -80,6 +85,15 @@ enum ArtType {
 enum ClanStatus {
   FROZEN
   ACTIVE
+}
+
+enum ClanTier {
+  E
+  D
+  C
+  B
+  A
+  S
 }
 
 enum StageType {
@@ -110,6 +124,7 @@ enum BoostMode {
   ISSUED
   SELF
 }
+
 
 // ================ USER MODEL ===================
 model User {
@@ -338,7 +353,11 @@ model Article {
   content   String
   image_url String?
 
-  rewards Json?
+  quest_name   String?
+  quest_type   QuestType?
+  quest_map    Json?
+  reward_text  String?
+  reward_money Int?
 
   flags Int    @default(0)
   tags  String @default("")
@@ -476,6 +495,13 @@ model Clan {
   recruiting    Boolean @default(false)
   public_fields Json    @default("[]")
 
+  leader_discord   String   @default("")
+  clan_discord     String?
+  paid_recruitment Boolean  @default(false)
+  rating           Int      @default(0)
+  tier             ClanTier @default(E)
+  guilds_per_week  Int?
+
   blocked      Boolean   @default(false)
   block_reason String?
   blocked_at   DateTime?
@@ -485,10 +511,11 @@ model Clan {
   boost_mode   BoostMode @default(ISSUED)
   grenade_mode BoostMode @default(ISSUED)
 
-  members  ClanMember[]
-  sessions StageSession[]
-  squads   ClanSquad[]
-  profile  UserClanProfile[]
+  members       ClanMember[]
+  sessions      StageSession[]
+  rating_events ClanRatingEvent[]
+  squads        ClanSquad[]
+  profile       UserClanProfile[]
 
   boost_orders ClanBoostOrder[]
 
@@ -575,9 +602,10 @@ model StageSession {
   clan       Clan?   @relation(fields: [clan_id], references: [id], onDelete: SetNull)
   clan_id    String?
 
-  screenshots StageScreenshot[]
-  attendance  StageAttendance[]
-  ai_summary  Json?
+  screenshots  StageScreenshot[]
+  attendance   StageAttendance[]
+  rating_event ClanRatingEvent?
+  ai_summary   Json?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -585,10 +613,39 @@ model StageSession {
   @@map("stage_sessions")
 }
 
+model ClanSeason {
+  id         Int      @id @default(autoincrement())
+  name       String
+  starts_at  DateTime
+  ends_at    DateTime
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  rating_events ClanRatingEvent[]
+
+  @@index([starts_at, ends_at])
+  @@map("clan_seasons")
+}
+
+model ClanRatingEvent {
+  id         Int          @id @default(autoincrement())
+  clan       Clan         @relation(fields: [clan_id], references: [id], onDelete: Cascade)
+  clan_id    String
+  season     ClanSeason   @relation(fields: [season_id], references: [id], onDelete: Restrict)
+  season_id  Int
+  session    StageSession @relation(fields: [session_id], references: [id], onDelete: Restrict)
+  session_id Int          @unique
+  delta      Int
+  created_at DateTime     @default(now())
+
+  @@index([clan_id, season_id])
+  @@map("clan_rating_events")
+}
+
 model StageScreenshot {
   id         Int          @id @default(autoincrement())
   session    StageSession @relation(fields: [session_id], references: [id], onDelete: Cascade)
-  session_id Int
+  session_id Int          @unique
 
   file_path  String
   mime_type  String @default("image/png")

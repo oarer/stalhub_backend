@@ -1,5 +1,5 @@
 import { t } from 'elysia'
-import { ArticleStatus, ArticleType } from 'generated/prisma/client'
+import { ArticleStatus, ArticleType, QuestType } from 'generated/prisma/client'
 import {
 	checkPermission,
 	fromStore,
@@ -9,6 +9,11 @@ import {
 } from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
+import {
+	ARTICLE_IMAGE_MAX_BYTES,
+	normalizeQuestMap,
+	saveArticleImage,
+} from './article-media'
 import { articlesService } from './articles.service'
 import { commentsRoutes } from './comments'
 
@@ -22,7 +27,10 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				const { user_id } = fromStore(store)
-				const is_admin = await checkPermission(user_id, 'articles:manage')
+				const is_admin = await checkPermission(
+					user_id,
+					'articles:manage'
+				)
 				return articlesService.list(take, page, {
 					all: is_admin,
 					...(!is_admin && { author_id: user_id }),
@@ -70,6 +78,47 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 		)
 
 		.post(
+			'/:id/image',
+			async ({ params, body, store, set }) => {
+				const userId = fromStore(store).user_id
+				const isAdmin = await checkPermission(userId, 'articles:manage')
+				const article = await articlesService.getOwned(
+					Number(params.id),
+					userId,
+					isAdmin
+				)
+				if (!article) {
+					set.status = 403
+					return { error: 'Forbidden' }
+				}
+				try {
+					return {
+						url: await saveArticleImage(article.id, body.file),
+					}
+				} catch (error) {
+					set.status = 400
+					return { error: (error as Error).message }
+				}
+			},
+			{
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+				body: t.Object({
+					file: t.File({
+						type: [
+							'image/jpeg',
+							'image/png',
+							'image/webp',
+							'image/gif',
+						],
+						maxSize: ARTICLE_IMAGE_MAX_BYTES,
+					}),
+				}),
+				detail: { tags: ['Articles'] },
+			}
+		)
+
+		.post(
 			'',
 			async ({ body, store, set }) => {
 				if (body.type === ArticleType.STALHUB) {
@@ -89,10 +138,14 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					title: body.title,
 					content: body.content,
 					type: body.type,
-					rewards: body.rewards,
 					flags: body.flags,
 					tags: body.tags?.join(','),
 					image_url: body.image_url,
+					quest_name: body.quest_name,
+					quest_type: body.quest_type,
+					quest_map: normalizeQuestMap(body.quest_map),
+					reward_text: body.reward_text,
+					reward_money: body.reward_money,
 				})
 			},
 			{
@@ -108,11 +161,16 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					}),
 					type: t.Optional(t.Enum(ArticleType)),
 					image_url: t.Optional(t.String()),
-					rewards: t.Optional(
-						t.Object({
-							money: t.Numeric(),
-							items: t.Array(t.String()),
-						})
+					quest_name: t.Optional(
+						t.Nullable(t.String({ maxLength: 200 }))
+					),
+					quest_type: t.Optional(t.Nullable(t.Enum(QuestType))),
+					quest_map: t.Optional(t.Nullable(t.Unknown())),
+					reward_text: t.Optional(
+						t.Nullable(t.String({ maxLength: 5000 }))
+					),
+					reward_money: t.Optional(
+						t.Nullable(t.Integer({ minimum: 0 }))
 					),
 					flags: t.Optional(t.Numeric()),
 					tags: t.Optional(t.Array(t.String())),
@@ -125,7 +183,10 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			'/:id',
 			async ({ params, body, store, set }) => {
 				const { user_id } = fromStore(store)
-				const is_admin = await checkPermission(user_id, 'articles:manage')
+				const is_admin = await checkPermission(
+					user_id,
+					'articles:manage'
+				)
 				const result = await articlesService.update(
 					Number(params.id),
 					user_id,
@@ -136,15 +197,27 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 							content: body.content,
 						}),
 						...(body.type !== undefined && { type: body.type }),
-						...(body.rewards !== undefined && {
-							rewards: body.rewards,
-						}),
 						...(body.flags !== undefined && { flags: body.flags }),
 						...(body.tags !== undefined && {
 							tags: body.tags.join(','),
 						}),
 						...(body.image_url !== undefined && {
 							image_url: body.image_url,
+						}),
+						...(body.quest_name !== undefined && {
+							quest_name: body.quest_name,
+						}),
+						...(body.quest_type !== undefined && {
+							quest_type: body.quest_type,
+						}),
+						...(body.quest_map !== undefined && {
+							quest_map: normalizeQuestMap(body.quest_map),
+						}),
+						...(body.reward_text !== undefined && {
+							reward_text: body.reward_text,
+						}),
+						...(body.reward_money !== undefined && {
+							reward_money: body.reward_money,
 						}),
 					}
 				)
@@ -168,11 +241,16 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					content: t.Optional(t.String({ maxLength: 50000 })),
 					type: t.Optional(t.Enum(ArticleType)),
 					image_url: t.Optional(t.Nullable(t.String())),
-					rewards: t.Optional(
-						t.Object({
-							money: t.Numeric(),
-							items: t.Array(t.String()),
-						})
+					quest_name: t.Optional(
+						t.Nullable(t.String({ maxLength: 200 }))
+					),
+					quest_type: t.Optional(t.Nullable(t.Enum(QuestType))),
+					quest_map: t.Optional(t.Nullable(t.Unknown())),
+					reward_text: t.Optional(
+						t.Nullable(t.String({ maxLength: 5000 }))
+					),
+					reward_money: t.Optional(
+						t.Nullable(t.Integer({ minimum: 0 }))
 					),
 					flags: t.Optional(t.Numeric()),
 					tags: t.Optional(t.Array(t.String())),
@@ -185,7 +263,10 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			'/:id',
 			async ({ params, store, set }) => {
 				const { user_id } = fromStore(store)
-				const is_admin = await checkPermission(user_id, 'articles:manage')
+				const is_admin = await checkPermission(
+					user_id,
+					'articles:manage'
+				)
 				const ok = await articlesService.delete(
 					Number(params.id),
 					user_id,
@@ -210,7 +291,10 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			'/:id/status',
 			async ({ params, body, store, set }) => {
 				const { user_id } = fromStore(store)
-				const is_admin = await checkPermission(user_id, 'articles:manage')
+				const is_admin = await checkPermission(
+					user_id,
+					'articles:manage'
+				)
 				if (!is_admin) {
 					set.status = 403
 					return { error: 'Forbidden' }

@@ -8,6 +8,52 @@ import { adminClanService } from './clans.service'
 export const clansRoutes = createElysia().group('/clans', (app) =>
 	app
 		.use(jwtPlugin)
+		.get('/seasons', () => adminClanService.listSeasons(), {
+			beforeHandle: [requireAuth, requireAdmin],
+			detail: { tags: ['Admin'] },
+		})
+		.post(
+			'/seasons',
+			async ({ body, set }) => {
+				try {
+					return await adminClanService.createSeason(body)
+				} catch (error) {
+					set.status = 400
+					return { error: (error as Error).message }
+				}
+			},
+			{
+				beforeHandle: [requireAuth, requireAdmin],
+				body: t.Object({ name: t.String(), starts_at: t.String(), ends_at: t.String() }),
+				detail: { tags: ['Admin'] },
+			}
+		)
+		.put(
+			'/seasons/:season_id',
+			async ({ params, body, set }) => {
+				try {
+					return await adminClanService.updateSeason(params.season_id, body)
+				} catch (error) {
+					set.status = 400
+					return { error: (error as Error).message }
+				}
+			},
+			{
+				beforeHandle: [requireAuth, requireAdmin],
+				params: t.Object({ season_id: t.Numeric() }),
+				body: t.Object({ name: t.String(), starts_at: t.String(), ends_at: t.String() }),
+				detail: { tags: ['Admin'] },
+			}
+		)
+		.delete(
+			'/seasons/:season_id',
+			({ params }) => adminClanService.removeSeason(params.season_id),
+			{
+				beforeHandle: [requireAuth, requireAdmin],
+				params: t.Object({ season_id: t.Numeric() }),
+				detail: { tags: ['Admin'] },
+			}
+		)
 		.get(
 			'',
 			async ({ query }) => {
@@ -83,8 +129,17 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 					region: t.Optional(t.String()),
 					schedule: t.Optional(
 						t.Object({
-							brawls_per_week: t.Optional(t.Numeric()),
+							brawls_per_week: t.Optional(
+								t.Numeric({ minimum: 0, maximum: 4 })
+							),
 							brawls_mandatory: t.Optional(t.Boolean()),
+							sunday_activity: t.Optional(
+								t.Enum({
+									BASE_CAPTURE: 'BASE_CAPTURE',
+									BRAWL: 'BRAWL',
+									NONE: 'NONE',
+								})
+							),
 						})
 					),
 				}),

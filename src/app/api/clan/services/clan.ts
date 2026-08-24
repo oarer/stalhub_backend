@@ -1,6 +1,7 @@
 import { apiClient } from '@/app/interceptors/sc.interceptor'
 import { prisma } from '@/lib/prisma'
 import { decryptSecretJson } from '@/utils/crypto'
+import type { RecruitmentSettingsInput } from './recruitment'
 
 interface ExboCharacterEntry {
 	information: { id: string; name: string }
@@ -31,15 +32,25 @@ const LEADER_RANK = 'LEADER'
 
 export const TOURNAMENT_DAYS = 3
 
+export type SundayActivity = 'BASE_CAPTURE' | 'BRAWL' | 'NONE'
+
 export type ClanSchedule = {
 	brawls_per_week: number
 	brawls_mandatory: boolean
+	sunday_activity: SundayActivity
 }
 
 export const DEFAULT_SCHEDULE: ClanSchedule = {
 	brawls_per_week: 4,
 	brawls_mandatory: false,
+	sunday_activity: 'BRAWL',
 }
+
+const SUNDAY_ACTIVITIES = new Set<SundayActivity>([
+	'BASE_CAPTURE',
+	'BRAWL',
+	'NONE',
+])
 
 export function normalizeSchedule(raw: unknown): ClanSchedule {
 	const r = (raw ?? {}) as Record<string, unknown>
@@ -50,7 +61,9 @@ export function normalizeSchedule(raw: unknown): ClanSchedule {
 			: null
 	return {
 		brawls_per_week: clampInt(
-			r.brawls_per_week ?? legacyBrawls ?? DEFAULT_SCHEDULE.brawls_per_week,
+			r.brawls_per_week ??
+				legacyBrawls ??
+				DEFAULT_SCHEDULE.brawls_per_week,
 			0,
 			4,
 			DEFAULT_SCHEDULE.brawls_per_week
@@ -59,12 +72,28 @@ export function normalizeSchedule(raw: unknown): ClanSchedule {
 			typeof r.brawls_mandatory === 'boolean'
 				? r.brawls_mandatory
 				: DEFAULT_SCHEDULE.brawls_mandatory,
+		sunday_activity: SUNDAY_ACTIVITIES.has(
+			r.sunday_activity as SundayActivity
+		)
+			? (r.sunday_activity as SundayActivity)
+			: DEFAULT_SCHEDULE.sunday_activity,
 	}
 }
 
 function clampInt(value: unknown, min: number, max: number, fallback: number) {
 	if (typeof value !== 'number' || Number.isNaN(value)) return fallback
 	return Math.min(max, Math.max(min, Math.round(value)))
+}
+
+export function assertRecruitingAllowed(
+	recruiting: boolean,
+	leaderDiscord: string
+): void {
+	if (recruiting && !leaderDiscord.trim()) {
+		throw new Error(
+			'Leader Discord is required before enabling recruitment'
+		)
+	}
 }
 
 export class ClanService {
@@ -299,7 +328,9 @@ export class ClanService {
 		}
 	}
 
-	private async getMemberAccessToken(clan_id: string): Promise<string | null> {
+	private async getMemberAccessToken(
+		clan_id: string
+	): Promise<string | null> {
 		const profiles = await prisma.userClanProfile.findMany({
 			where: { clan_id },
 			include: {
@@ -405,6 +436,12 @@ export class ClanService {
 			schedule: normalizeSchedule(clan.schedule),
 			boost_mode: clan.boost_mode,
 			grenade_mode: clan.grenade_mode,
+			leader_discord: clan.leader_discord,
+			clan_discord: clan.clan_discord,
+			paid_recruitment: clan.paid_recruitment,
+			rating: clan.rating,
+			tier: clan.tier,
+			guilds_per_week: clan.guilds_per_week,
 		}
 	}
 
@@ -429,6 +466,7 @@ export class ClanService {
 		const merged: ClanSchedule = {
 			brawls_per_week: data.brawls_per_week ?? current.brawls_per_week,
 			brawls_mandatory: data.brawls_mandatory ?? current.brawls_mandatory,
+			sunday_activity: data.sunday_activity ?? current.sunday_activity,
 		}
 		return prisma.clan.update({
 			where: { id: clan_id },
@@ -437,15 +475,25 @@ export class ClanService {
 	}
 
 	async updateRecruiting(clan_id: string, recruiting: boolean) {
+		const clan = await prisma.clan.findUnique({
+			where: { id: clan_id },
+			select: { leader_discord: true },
+		})
+		if (!clan) throw new Error('Clan not found')
+		assertRecruitingAllowed(recruiting, clan.leader_discord)
 		return prisma.clan.update({
 			where: { id: clan_id },
 			data: { recruiting },
 		})
 	}
+
+	async updateRecruitment(clan_id: string, data: RecruitmentSettingsInput) {
+		return prisma.clan.update({ where: { id: clan_id }, data })
+	}
 }
 export const clanService = new ClanService()
 
-function publicClanPayload(clan: {
+export function publicClanPayload(clan: {
 	id: string
 	name: string
 	tag: string
@@ -456,6 +504,12 @@ function publicClanPayload(clan: {
 	status: string
 	is_public: boolean
 	recruiting: boolean
+	leader_discord: string
+	clan_discord: string | null
+	paid_recruitment: boolean
+	rating: number
+	tier: string
+	guilds_per_week: number | null
 	schedule: unknown
 	boost_mode: string
 	grenade_mode: string
@@ -472,6 +526,14 @@ function publicClanPayload(clan: {
 		status: clan.status,
 		is_public: clan.is_public,
 		recruiting: clan.recruiting,
+		...(clan.recruiting && {
+			leader_discord: clan.leader_discord,
+			clan_discord: clan.clan_discord,
+		}),
+		paid_recruitment: clan.paid_recruitment,
+		rating: clan.rating,
+		tier: clan.tier,
+		guilds_per_week: clan.guilds_per_week,
 		schedule: normalizeSchedule(clan.schedule),
 		boost_mode: clan.boost_mode,
 		grenade_mode: clan.grenade_mode,

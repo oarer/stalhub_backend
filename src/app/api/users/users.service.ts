@@ -870,6 +870,12 @@ function publicClanPayload(clan: {
 	status: string
 	is_public: boolean
 	recruiting: boolean
+	leader_discord: string
+	clan_discord: string | null
+	paid_recruitment: boolean
+	rating: number
+	tier: string
+	guilds_per_week: number | null
 	schedule: unknown
 	created_at: Date
 }) {
@@ -887,6 +893,12 @@ function publicClanPayload(clan: {
 		status: clan.status,
 		is_public: clan.is_public,
 		recruiting: clan.recruiting,
+		leader_discord: clan.leader_discord,
+		clan_discord: clan.clan_discord,
+		paid_recruitment: clan.paid_recruitment,
+		rating: clan.rating,
+		tier: clan.tier,
+		guilds_per_week: clan.guilds_per_week,
 		schedule: normalizeSchedule(clan.schedule),
 		created_at: clan.created_at,
 	}

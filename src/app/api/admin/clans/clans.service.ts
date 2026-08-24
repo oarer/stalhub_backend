@@ -1,7 +1,16 @@
 import { rm } from 'node:fs/promises'
 import type { StageType } from 'generated/prisma/enums'
-import { clanService, normalizeSchedule } from '@/app/api/clan/services/clan'
+import {
+	assertRecruitingAllowed,
+	clanService,
+	normalizeSchedule,
+	type SundayActivity,
+} from '@/app/api/clan/services/clan'
 import { prisma } from '@/lib/prisma'
+import {
+	applySessionRating,
+	deleteSessionWithRating,
+} from '@/app/api/clan/services/rating'
 
 export type AdminClanStatus = 'FROZEN' | 'ACTIVE'
 
@@ -13,10 +22,60 @@ export interface AdminClanUpdateInput {
 	is_public?: boolean
 	recruiting?: boolean
 	region?: string
-	schedule?: { brawls_per_week?: number; brawls_mandatory?: boolean }
+	schedule?: {
+		brawls_per_week?: number
+		brawls_mandatory?: boolean
+		sunday_activity?: SundayActivity
+	}
 }
 
 class AdminClanService {
+	async listSeasons() {
+		return prisma.clanSeason.findMany({ orderBy: { starts_at: 'desc' } })
+	}
+
+	async createSeason(data: { name: string; starts_at: string; ends_at: string }) {
+		return this.saveSeason(null, data)
+	}
+
+	async updateSeason(
+		season_id: number,
+		data: { name: string; starts_at: string; ends_at: string }
+	) {
+		return this.saveSeason(season_id, data)
+	}
+
+	private async saveSeason(
+		season_id: number | null,
+		data: { name: string; starts_at: string; ends_at: string }
+	) {
+		const starts_at = new Date(data.starts_at)
+		const ends_at = new Date(data.ends_at)
+		if (!data.name.trim()) throw new Error('Season name is required')
+		if (Number.isNaN(starts_at.getTime()) || Number.isNaN(ends_at.getTime()) || ends_at <= starts_at)
+			throw new Error('Season end must be after its start')
+		const overlap = await prisma.clanSeason.findFirst({
+			where: {
+				...(season_id != null && { id: { not: season_id } }),
+				starts_at: { lt: ends_at },
+				ends_at: { gt: starts_at },
+			},
+			select: { id: true },
+		})
+		if (overlap) throw new Error('Season dates overlap another season')
+		const values = { name: data.name.trim(), starts_at, ends_at }
+		return season_id == null
+			? prisma.clanSeason.create({ data: values })
+			: prisma.clanSeason.update({ where: { id: season_id }, data: values })
+	}
+
+	async removeSeason(season_id: number) {
+		const events = await prisma.clanRatingEvent.count({ where: { season_id } })
+		if (events > 0) throw new Error('Season with rating events cannot be deleted')
+		await prisma.clanSeason.delete({ where: { id: season_id } })
+		return { ok: true }
+	}
+
 	async list(take: number, page: number, search?: string) {
 		const where = search
 			? {
@@ -91,8 +150,14 @@ class AdminClanService {
 	}
 
 	async update(clan_id: string, data: AdminClanUpdateInput) {
-		const existing = await prisma.clan.findUnique({ where: { id: clan_id } })
+		const existing = await prisma.clan.findUnique({
+			where: { id: clan_id },
+		})
 		if (!existing) return null
+		assertRecruitingAllowed(
+			data.recruiting ?? existing.recruiting,
+			existing.leader_discord
+		)
 
 		const schedule = data.schedule
 			? {
@@ -102,6 +167,9 @@ class AdminClanService {
 					}),
 					...(data.schedule.brawls_mandatory !== undefined && {
 						brawls_mandatory: data.schedule.brawls_mandatory,
+					}),
+					...(data.schedule.sunday_activity !== undefined && {
+						sunday_activity: data.schedule.sunday_activity,
 					}),
 				}
 			: undefined
@@ -133,7 +201,9 @@ class AdminClanService {
 	}
 
 	async block(clan_id: string, reason?: string) {
-		const existing = await prisma.clan.findUnique({ where: { id: clan_id } })
+		const existing = await prisma.clan.findUnique({
+			where: { id: clan_id },
+		})
 		if (!existing) return null
 
 		return prisma.clan.update({
@@ -147,7 +217,9 @@ class AdminClanService {
 	}
 
 	async unblock(clan_id: string) {
-		const existing = await prisma.clan.findUnique({ where: { id: clan_id } })
+		const existing = await prisma.clan.findUnique({
+			where: { id: clan_id },
+		})
 		if (!existing) return null
 
 		return prisma.clan.update({
@@ -161,7 +233,9 @@ class AdminClanService {
 	}
 
 	async remove(clan_id: string) {
-		const existing = await prisma.clan.findUnique({ where: { id: clan_id } })
+		const existing = await prisma.clan.findUnique({
+			where: { id: clan_id },
+		})
 		if (!existing) return false
 
 		await prisma.clan.delete({ where: { id: clan_id } })
@@ -239,13 +313,17 @@ class AdminClanService {
 			...(data.region !== undefined && { region: data.region }),
 		}
 
-		return prisma.stageSession.update({
+		const updated = await prisma.stageSession.update({
 			where: { id: session_id },
 			data: updateData,
 			include: {
 				_count: { select: { screenshots: true, attendance: true } },
 			},
 		})
+		const victory =
+			(updated.ai_summary as { victory?: boolean | null } | null)?.victory ?? null
+		await applySessionRating(session_id, victory)
+		return updated
 	}
 
 	async removeSession(session_id: number) {
@@ -260,8 +338,7 @@ class AdminClanService {
 				await rm(shot.file_path, { force: true })
 			} catch {}
 		}
-		await prisma.stageSession.delete({ where: { id: session_id } })
-		return { ok: true }
+		return deleteSessionWithRating(session_id)
 	}
 }
 

@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import type { AIScreenshotResult } from '../types'
 import { analyzeScreenshot } from './ai'
 import { buildAttendanceMonth, mskMonthRange } from './attendance-month'
+import { applySessionRating, deleteSessionWithRating } from './rating'
 
 function mskDayRange(date: string): [Date, Date] {
 	const [y, m, d] = date.split('-').map(Number)
@@ -78,8 +79,14 @@ class AnalyticsService {
 
 	async addScreenshot(
 		session_id: number,
+		clan_id: string,
 		file: { name: string; type: string; buffer: Buffer }
 	) {
+		const session = await prisma.stageSession.findFirst({
+			where: { id: session_id, clan_id },
+			select: { id: true },
+		})
+		if (!session) throw new Error('Session not found for this clan')
 		const existing = await prisma.stageScreenshot.count({
 			where: { session_id },
 		})
@@ -321,15 +328,16 @@ class AnalyticsService {
 				await rm(shot.file_path, { force: true })
 			} catch {}
 		}
-		await prisma.stageSession.delete({ where: { id: session_id } })
-		return { ok: true }
+		return deleteSessionWithRating(session_id)
 	}
 
-	async retryAnalysis(screenshot_id: number) {
+	async retryAnalysis(screenshot_id: number, clan_id: string) {
 		const shot = await prisma.stageScreenshot.findUnique({
 			where: { id: screenshot_id },
+			include: { session: { select: { clan_id: true } } },
 		})
-		if (!shot) throw new Error('Screenshot not found')
+		if (!shot || shot.session.clan_id !== clan_id)
+			throw new Error('Screenshot not found for this clan')
 		if (shot.ai_status === 'processing') return shot
 
 		await this.runAnalysis(screenshot_id, shot.file_path)
@@ -615,6 +623,7 @@ class AnalyticsService {
 			where: { id: screenshot.session_id },
 			data: { ai_summary: summary as never },
 		})
+		await applySessionRating(screenshot.session_id, summary.victory)
 	}
 }
 export const analyticsService = new AnalyticsService()

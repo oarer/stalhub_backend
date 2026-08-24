@@ -50,8 +50,7 @@ export async function requireClanOfficer(ctx: ClanGuardContext) {
 	const member = await prisma.clanMember.findFirst({
 		where: { clan_id: store.clan_id, user_id: store.authUserId },
 	})
-	const isLeader = profile?.clan?.leader !== ''
-	const allowed = (member && OFFICER_RANKS.has(member.rank)) || isLeader
+	const allowed = member && OFFICER_RANKS.has(member.rank)
 	if (!allowed) {
 		set.status = 403
 		return { error: 'Officer rank required' }

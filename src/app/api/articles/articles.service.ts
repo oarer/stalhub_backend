@@ -1,14 +1,19 @@
-import type { Prisma } from 'generated/prisma/client'
 import {
 	ArticleStatus,
 	ArticleType,
+	Prisma,
+	type QuestType,
 	StarTargetType,
 } from 'generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 import { generateSlug } from '@/utils/slug'
 
 class ArticlesService {
-	async list(take: number, page: number, opts?: { all?: boolean; author_id?: number }) {
+	async list(
+		take: number,
+		page: number,
+		opts?: { all?: boolean; author_id?: number }
+	) {
 		const where: Prisma.ArticleWhereInput = {}
 		if (opts?.all) {
 			// без фильтра
@@ -46,7 +51,13 @@ class ArticlesService {
 				title: a.title,
 				content: a.content,
 				image_url: a.image_url,
-				rewards: a.type === ArticleType.QUEST ? a.rewards : null,
+				quest_name: a.type === ArticleType.QUEST ? a.quest_name : null,
+				quest_type: a.type === ArticleType.QUEST ? a.quest_type : null,
+				quest_map: a.type === ArticleType.QUEST ? a.quest_map : null,
+				reward_text:
+					a.type === ArticleType.QUEST ? a.reward_text : null,
+				reward_money:
+					a.type === ArticleType.QUEST ? a.reward_money : null,
 				flags: a.flags,
 				tags: a.tags ? a.tags.split(',').filter(Boolean) : [],
 				author: a.author,
@@ -58,6 +69,13 @@ class ArticlesService {
 			page: page + 1,
 			take,
 		}
+	}
+
+	async getOwned(id: number, user_id: number, is_admin: boolean) {
+		return prisma.article.findFirst({
+			where: { id, ...(is_admin ? {} : { author_id: user_id }) },
+			select: { id: true },
+		})
 	}
 
 	async getById(id: string, user_id?: number) {
@@ -74,7 +92,10 @@ class ArticlesService {
 		if (!article) return null
 
 		const stars_count = await prisma.star.count({
-			where: { target_type: StarTargetType.ARTICLE, target_id: article.id },
+			where: {
+				target_type: StarTargetType.ARTICLE,
+				target_id: article.id,
+			},
 		})
 
 		let is_starred = false
@@ -100,8 +121,19 @@ class ArticlesService {
 			title: article.title,
 			content: article.content,
 			image_url: article.image_url,
-			rewards:
-				article.type === ArticleType.QUEST ? article.rewards : null,
+			quest_name:
+				article.type === ArticleType.QUEST ? article.quest_name : null,
+			quest_type:
+				article.type === ArticleType.QUEST ? article.quest_type : null,
+			quest_map:
+				article.type === ArticleType.QUEST ? article.quest_map : null,
+
+			reward_text:
+				article.type === ArticleType.QUEST ? article.reward_text : null,
+			reward_money:
+				article.type === ArticleType.QUEST
+					? article.reward_money
+					: null,
 			flags: article.flags,
 			tags: article.tags ? article.tags.split(',').filter(Boolean) : [],
 			author: article.author,
@@ -122,6 +154,12 @@ class ArticlesService {
 			flags?: number
 			tags?: string
 			image_url?: string
+			quest_name?: string | null
+			quest_type?: string | null
+			quest_map?: unknown
+			gallery?: string[]
+			reward_text?: string | null
+			reward_money?: number | null
 		}
 	) {
 		const articleType = (data.type as ArticleType) ?? ArticleType.OTHER
@@ -133,6 +171,23 @@ class ArticlesService {
 				content: data.content,
 				type: articleType,
 				image_url: data.image_url ?? undefined,
+				quest_name:
+					articleType === ArticleType.QUEST ? data.quest_name : null,
+				quest_type:
+					articleType === ArticleType.QUEST
+						? (data.quest_type as QuestType | null | undefined)
+						: null,
+				quest_map:
+					articleType === ArticleType.QUEST && data.quest_map
+						? (data.quest_map as Prisma.InputJsonValue)
+						: undefined,
+				gallery: data.gallery ?? [],
+				reward_text:
+					articleType === ArticleType.QUEST ? data.reward_text : null,
+				reward_money:
+					articleType === ArticleType.QUEST
+						? data.reward_money
+						: null,
 				rewards:
 					articleType === ArticleType.QUEST &&
 					data.rewards !== undefined
@@ -164,8 +219,19 @@ class ArticlesService {
 			title: article.title,
 			content: article.content,
 			image_url: article.image_url,
-			rewards:
-				article.type === ArticleType.QUEST ? article.rewards : null,
+			quest_name:
+				article.type === ArticleType.QUEST ? article.quest_name : null,
+			quest_type:
+				article.type === ArticleType.QUEST ? article.quest_type : null,
+			quest_map:
+				article.type === ArticleType.QUEST ? article.quest_map : null,
+
+			reward_text:
+				article.type === ArticleType.QUEST ? article.reward_text : null,
+			reward_money:
+				article.type === ArticleType.QUEST
+					? article.reward_money
+					: null,
 			flags: article.flags,
 			tags: article.tags ? article.tags.split(',').filter(Boolean) : [],
 			author: article.author,
@@ -188,6 +254,12 @@ class ArticlesService {
 			flags?: number
 			tags?: string
 			image_url?: string | null
+			quest_name?: string | null
+			quest_type?: string | null
+			quest_map?: unknown
+			gallery?: string[]
+			reward_text?: string | null
+			reward_money?: number | null
 			version?: string
 		}
 	) {
@@ -210,6 +282,28 @@ class ArticlesService {
 		if (data.flags !== undefined) updateData.flags = data.flags
 		if (data.tags !== undefined) updateData.tags = data.tags
 		if (data.image_url !== undefined) updateData.image_url = data.image_url
+		if (data.gallery !== undefined) updateData.gallery = data.gallery
+		if (resolvedType === ArticleType.QUEST) {
+			if (data.quest_name !== undefined)
+				updateData.quest_name = data.quest_name
+			if (data.quest_type !== undefined)
+				updateData.quest_type = data.quest_type
+			if (data.quest_map !== undefined)
+				updateData.quest_map = data.quest_map ?? Prisma.JsonNull
+			if (data.reward_text !== undefined)
+				updateData.reward_text = data.reward_text
+			if (data.reward_money !== undefined)
+				updateData.reward_money = data.reward_money
+		} else {
+			Object.assign(updateData, {
+				quest_name: null,
+				quest_type: null,
+				quest_map: Prisma.JsonNull,
+				reward_text: null,
+				reward_money: null,
+				rewards: Prisma.JsonNull,
+			})
+		}
 
 		const article = await prisma.article.update({
 			where: { id },
@@ -230,7 +324,10 @@ class ArticlesService {
 		}
 
 		const stars_count = await prisma.star.count({
-			where: { target_type: StarTargetType.ARTICLE, target_id: article.id },
+			where: {
+				target_type: StarTargetType.ARTICLE,
+				target_id: article.id,
+			},
 		})
 
 		return {
@@ -242,8 +339,19 @@ class ArticlesService {
 			title: article.title,
 			content: article.content,
 			image_url: article.image_url,
-			rewards:
-				article.type === ArticleType.QUEST ? article.rewards : null,
+			quest_name:
+				article.type === ArticleType.QUEST ? article.quest_name : null,
+			quest_type:
+				article.type === ArticleType.QUEST ? article.quest_type : null,
+			quest_map:
+				article.type === ArticleType.QUEST ? article.quest_map : null,
+
+			reward_text:
+				article.type === ArticleType.QUEST ? article.reward_text : null,
+			reward_money:
+				article.type === ArticleType.QUEST
+					? article.reward_money
+					: null,
 			flags: article.flags,
 
 			tags: article.tags ? article.tags.split(',').filter(Boolean) : [],
@@ -273,7 +381,10 @@ class ArticlesService {
 		})
 
 		const stars_count = await prisma.star.count({
-			where: { target_type: StarTargetType.ARTICLE, target_id: updated.id },
+			where: {
+				target_type: StarTargetType.ARTICLE,
+				target_id: updated.id,
+			},
 		})
 
 		return {
@@ -285,8 +396,18 @@ class ArticlesService {
 			title: updated.title,
 			content: updated.content,
 			image_url: updated.image_url,
-			rewards:
-				updated.type === ArticleType.QUEST ? updated.rewards : null,
+			quest_name:
+				updated.type === ArticleType.QUEST ? updated.quest_name : null,
+			quest_type:
+				updated.type === ArticleType.QUEST ? updated.quest_type : null,
+			quest_map:
+				updated.type === ArticleType.QUEST ? updated.quest_map : null,
+			reward_text:
+				updated.type === ArticleType.QUEST ? updated.reward_text : null,
+			reward_money:
+				updated.type === ArticleType.QUEST
+					? updated.reward_money
+					: null,
 			flags: updated.flags,
 			tags: updated.tags ? updated.tags.split(',').filter(Boolean) : [],
 			author: updated.author,
@@ -323,7 +444,10 @@ class ArticlesService {
 		})
 
 		const stars_count = await prisma.star.count({
-			where: { target_type: StarTargetType.ARTICLE, target_id: updated.id },
+			where: {
+				target_type: StarTargetType.ARTICLE,
+				target_id: updated.id,
+			},
 		})
 
 		return {
@@ -335,8 +459,18 @@ class ArticlesService {
 			title: updated.title,
 			content: updated.content,
 			image_url: updated.image_url,
-			rewards:
-				updated.type === ArticleType.QUEST ? updated.rewards : null,
+			quest_name:
+				updated.type === ArticleType.QUEST ? updated.quest_name : null,
+			quest_type:
+				updated.type === ArticleType.QUEST ? updated.quest_type : null,
+			quest_map:
+				updated.type === ArticleType.QUEST ? updated.quest_map : null,
+			reward_text:
+				updated.type === ArticleType.QUEST ? updated.reward_text : null,
+			reward_money:
+				updated.type === ArticleType.QUEST
+					? updated.reward_money
+					: null,
 			flags: updated.flags,
 			tags: updated.tags ? updated.tags.split(',').filter(Boolean) : [],
 			author: updated.author,

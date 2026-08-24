@@ -37,11 +37,11 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 		)
 		.post(
 			'/sessions/:id/screenshots',
-			async ({ params, body, set }) => {
+			async ({ params, body, store, set }) => {
 				const file = body.file
 				const buf = Buffer.from(await file.arrayBuffer())
 				try {
-					return await analyticsService.addScreenshot(params.id, {
+					return await analyticsService.addScreenshot(params.id, store.clan_id!, {
 						name: file.name,
 						type: file.type,
 						buffer: buf,
@@ -64,7 +64,8 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 		)
 		.post(
 			'/screenshots/:id/retry',
-			({ params }) => analyticsService.retryAnalysis(params.id),
+			({ params, store }) =>
+				analyticsService.retryAnalysis(params.id, store.clan_id!),
 			{
 				beforeHandle: [requireAuth, requireClanOfficer],
 				params: idParams,
