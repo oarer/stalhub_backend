@@ -2,9 +2,11 @@ import type { StageType } from 'generated/prisma/enums'
 import { apiClient } from '@/app/interceptors/sc.interceptor'
 import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
+import { mskNow } from '@/lib/msk'
 import { decryptSecretJson, encryptSecret } from '@/utils/crypto'
 import type { GrenadeStats } from './cache'
 import * as cache from './cache'
+import { normalizeSchedule } from './clan'
 
 type PoolToken = {
 	id: number
@@ -172,9 +174,26 @@ export class GrenadesService {
 	) {
 		const clan = await prisma.clan.findUnique({
 			where: { id: clan_id },
-			select: { region: true },
+			select: { region: true, schedule: true },
 		})
-		if (!clan) return { clan_id, event_type, checkpoint, count: 0 }
+		if (!clan)
+			return { clan_id, event_type, checkpoint, count: 0, skipped: true }
+
+		const { sunday_activity } = normalizeSchedule(clan.schedule)
+
+		if (sunday_activity === 'NONE') {
+			console.log(
+				`[Grenades] ${clan_id} ${event_type}/${checkpoint}: skipped, clan does not play on Sunday`
+			)
+			return { clan_id, event_type, checkpoint, count: 0, skipped: true }
+		}
+
+		if (mskNow().getUTCDay() === 0 && event_type !== sunday_activity) {
+			console.log(
+				`[Grenades] ${clan_id} ${event_type}/${checkpoint}: skipped, clan plays ${sunday_activity} on Sunday`
+			)
+			return { clan_id, event_type, checkpoint, count: 0, skipped: true }
+		}
 
 		const members = await prisma.clanMember.findMany({
 			where: { clan_id },
@@ -265,7 +284,13 @@ export class GrenadesService {
 		console.log(
 			`[Grenades] ${clan_id} ${event_type}/${checkpoint}: saved ${snapshot.length}/${members.length} members (pool: ${pool.length} tokens)`
 		)
-		return { clan_id, event_type, checkpoint, count: snapshot.length }
+		return {
+			clan_id,
+			event_type,
+			checkpoint,
+			count: snapshot.length,
+			skipped: false,
+		}
 	}
 
 	async takeSnapshotAll(event_type: StageType, checkpoint: string) {
