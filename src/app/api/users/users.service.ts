@@ -146,6 +146,7 @@ class UsersService {
 			where: { user_id },
 			data: { avatar_image: null },
 		})
+		
 
 		return { ok: true }
 	}

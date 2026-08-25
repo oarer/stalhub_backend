@@ -470,7 +470,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			async ({ body, store, set }) => {
 				const file = body.file
 				const buf = Buffer.from(await file.arrayBuffer())
-
+				
 				try {
 					return await usersService.saveAvatar(
 						fromStore(store).user_id,

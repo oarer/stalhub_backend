@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, open, readdir, stat, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, stat, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 export const ARTICLE_IMAGE_MAX_BYTES = 10 * 1024 * 1024
-export const ARTICLE_IMAGE_MAX_COUNT = 30
+export const ARTICLE_IMAGE_MAX_COUNT = 50
 export const ARTICLE_IMAGE_TOTAL_MAX_BYTES = 100 * 1024 * 1024
 const MIME_EXTENSIONS = {
 	'image/jpeg': 'jpg',
@@ -131,35 +131,18 @@ export async function saveArticleImage(articleId: number, file: File) {
 	const directory = resolve(process.cwd(), 'uploads', relativeDir)
 	await mkdir(directory, { recursive: true })
 
-	const lockPath = resolve(directory, '.upload.lock')
-	let lock
-	try {
-		lock = await open(lockPath, 'wx')
-	} catch (error) {
-		if ((error as NodeJS.ErrnoException).code === 'EEXIST')
-			throw new Error('Another article image upload is in progress')
-		throw error
-	}
+	const entries = await readdir(directory, { withFileTypes: true })
+	const storedSizes = await Promise.all(
+		entries
+			.filter((entry) => entry.isFile() && entry.name !== '.upload.lock')
+			.map(
+				async (entry) =>
+					(await stat(resolve(directory, entry.name))).size
+			)
+	)
+	assertArticleImageQuota(storedSizes, buffer.length)
 
-	try {
-		const entries = await readdir(directory, { withFileTypes: true })
-		const storedSizes = await Promise.all(
-			entries
-				.filter(
-					(entry) => entry.isFile() && entry.name !== '.upload.lock'
-				)
-				.map(
-					async (entry) =>
-						(await stat(resolve(directory, entry.name))).size
-				)
-		)
-		assertArticleImageQuota(storedSizes, buffer.length)
-
-		const filename = `${randomUUID()}.${extension}`
-		await writeFile(resolve(directory, filename), buffer, { flag: 'wx' })
-		return `/uploads/${relativeDir}/${filename}`
-	} finally {
-		await lock.close()
-		await unlink(lockPath).catch(() => undefined)
-	}
+	const filename = `${randomUUID()}.${extension}`
+	await writeFile(resolve(directory, filename), buffer, { flag: 'wx' })
+	return `/uploads/${relativeDir}/${filename}`
 }

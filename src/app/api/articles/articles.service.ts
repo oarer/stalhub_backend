@@ -157,7 +157,6 @@ class ArticlesService {
 			quest_name?: string | null
 			quest_type?: string | null
 			quest_map?: unknown
-			gallery?: string[]
 			reward_text?: string | null
 			reward_money?: number | null
 		}
@@ -181,7 +180,6 @@ class ArticlesService {
 					articleType === ArticleType.QUEST && data.quest_map
 						? (data.quest_map as Prisma.InputJsonValue)
 						: undefined,
-				gallery: data.gallery ?? [],
 				reward_text:
 					articleType === ArticleType.QUEST ? data.reward_text : null,
 				reward_money:
@@ -257,7 +255,6 @@ class ArticlesService {
 			quest_name?: string | null
 			quest_type?: string | null
 			quest_map?: unknown
-			gallery?: string[]
 			reward_text?: string | null
 			reward_money?: number | null
 			version?: string
@@ -282,7 +279,6 @@ class ArticlesService {
 		if (data.flags !== undefined) updateData.flags = data.flags
 		if (data.tags !== undefined) updateData.tags = data.tags
 		if (data.image_url !== undefined) updateData.image_url = data.image_url
-		if (data.gallery !== undefined) updateData.gallery = data.gallery
 		if (resolvedType === ArticleType.QUEST) {
 			if (data.quest_name !== undefined)
 				updateData.quest_name = data.quest_name
