@@ -24,6 +24,27 @@ const squadInclude = () => ({
 })
 
 export class SquadService {
+	private async notify(
+		userIds: number[],
+		title: string,
+		content: string,
+		link: string,
+		authorUsername?: string
+	) {
+		if (userIds.length === 0) return
+		const uniqueIds = [...new Set(userIds)]
+		await prisma.notifications.create({
+			data: {
+				title,
+				content,
+				author: authorUsername ?? 'Система',
+				type: 0,
+				link,
+				users: { connect: uniqueIds.map((id) => ({ id })) },
+			},
+		})
+	}
+
 	async list(clan_id: string) {
 		return prisma.clanSquad.findMany({
 			where: { clan_id },
@@ -50,7 +71,7 @@ export class SquadService {
 		})
 	}
 
-	async assignMember(squad_id: number, clanMemberId: number, slot: number) {
+	async assignMember(squad_id: number, clanMemberId: number, slot: number, actorUserId?: number) {
 		if (slot < 0 || slot >= MAX_SLOTS) {
 			throw new Error(`Слот должен быть 0-${MAX_SLOTS - 1}`)
 		}
@@ -113,8 +134,14 @@ export class SquadService {
 
 		return prisma.$transaction(async (tx) => {
 			const toDelete = new Map<number, number>()
+			const movedFromSquadNames: string[] = []
 			for (const m of memberships) {
-				if (m.squad.map === squad.map) toDelete.set(m.id, m.squad_id)
+				if (m.squad.map === squad.map) {
+					toDelete.set(m.id, m.squad_id)
+					if (m.squad_id !== squad_id) {
+						movedFromSquadNames.push(m.squad.name)
+					}
+				}
 			}
 			if (occupied) toDelete.set(occupied.id, occupied.squad_id)
 			for (const [id, squadRowId] of toDelete) {
@@ -124,10 +151,24 @@ export class SquadService {
 					data: { leader_id: null },
 				})
 			}
-			return tx.clanSquadMember.create({
+			const result = await tx.clanSquadMember.create({
 				data: { squad_id, member_id: clanMemberId, slot },
 				include: memberInclude(),
 			})
+
+			if (member.user_id && movedFromSquadNames.length > 0 && actorUserId && member.user_id !== actorUserId) {
+				const actor = await prisma.user.findUnique({ where: { id: actorUserId }, select: { username: true } })
+				const targetSquad = await prisma.clanSquad.findUnique({ where: { id: squad_id }, select: { name: true } })
+				await this.notify(
+					[member.user_id],
+					'Перемещение в отряд',
+					`${actor?.username ?? 'Офицер'} переместил вас из отряда «${movedFromSquadNames[0]}» в «${targetSquad?.name ?? ''}»`,
+					'/me/clan/squads',
+					actor?.username
+				)
+			}
+
+			return result
 		})
 	}
 
@@ -183,6 +224,41 @@ export class SquadService {
 		})
 	}
 
+	async setGearOverride(
+		squad_id: number,
+		slot: number,
+		gear_override: Record<string, unknown> | null,
+		actorUserId?: number
+	) {
+		const slotRec = await prisma.clanSquadMember.findUnique({
+			where: { squad_id_slot: { squad_id, slot } },
+			include: { member: { include: { user: { select: { id: true } } } } },
+		})
+		if (!slotRec) throw new Error('Слот пуст')
+
+		const result = await prisma.clanSquadMember.update({
+			where: { id: slotRec.id },
+			data: { gear_override },
+			include: memberInclude(),
+		})
+
+		if (slotRec.member.user_id && actorUserId && slotRec.member.user_id !== actorUserId) {
+			const actor = actorUserId
+				? await prisma.user.findUnique({ where: { id: actorUserId }, select: { username: true } })
+				: null
+			const squad = await prisma.clanSquad.findUnique({ where: { id: squad_id }, select: { name: true } })
+			await this.notify(
+				[slotRec.member.user_id],
+				'Изменение снаряжения',
+				`${actor?.username ?? 'Офицер'} изменил ваше снаряжение в отряде «${squad?.name ?? ''}»`,
+				'/me/clan/squads',
+				actor?.username
+			)
+		}
+
+		return result
+	}
+
 	async removeMember(squad_id: number, slot: number) {
 		const slotRec = await prisma.clanSquadMember.findUnique({
 			where: { squad_id_slot: { squad_id, slot } },
@@ -233,10 +309,17 @@ export class SquadService {
 		})
 	}
 
-	async approveRequest(requestId: number, clan_id: string) {
+	async approveRequest(requestId: number, clan_id: string, actorUserId?: number) {
 		const req = await prisma.clanSquadRequest.findUnique({
 			where: { id: requestId },
-			include: { squad: true },
+			include: {
+				squad: true,
+				member: {
+					include: {
+						user: { select: { id: true } },
+					},
+				},
+			},
 		})
 		if (!req) throw new Error('Заявка не найдена')
 		if (req.squad.clan_id !== clan_id)
@@ -281,6 +364,17 @@ export class SquadService {
 			include: memberInclude(),
 		})
 		await prisma.clanSquadRequest.delete({ where: { id: requestId } })
+
+		if (req.member.user_id) {
+			const squad = await prisma.clanSquad.findUnique({ where: { id: req.squad_id }, select: { name: true } })
+			await this.notify(
+				[req.member.user_id],
+				'Заявка принята',
+				`Ваша заявка в отряд «${squad?.name ?? ''}» была принята`,
+				'/me/clan/squads'
+			)
+		}
+
 		return result
 	}
 

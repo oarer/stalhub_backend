@@ -18,6 +18,7 @@ import {
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 import { avatarRoutes } from './avatar'
+import { profileCommentsRoutes } from './routes/comments'
 import { usersService } from './users.service'
 
 /*
@@ -33,6 +34,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 	app
 		.use(jwtPlugin)
 		.use(avatarRoutes)
+		.use(profileCommentsRoutes)
 		.get(
 			'/@me',
 			async ({ store }) => {

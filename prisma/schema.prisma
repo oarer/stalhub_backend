@@ -125,7 +125,6 @@ enum BoostMode {
   SELF
 }
 
-
 // ================ USER MODEL ===================
 model User {
   id                  Int      @id @default(autoincrement())
@@ -151,11 +150,12 @@ model User {
 
   badges UserBadges[]
 
-  builds   Build[]
-  articles Article[]
-  arts     Art[]
-  stars    Star[]
-  comments ArticleComment[]
+  builds           Build[]
+  articles         Article[]
+  arts             Art[]
+  stars            Star[]
+  comments         ArticleComment[]
+  profile_comments ArticleComment[] @relation("ProfileComments")
 
   clan_profiles  UserClanProfile[]
   loadout        UserLoadout?
@@ -424,6 +424,9 @@ model ArticleComment {
   art    Art? @relation(fields: [art_id], references: [id])
   art_id Int?
 
+  profile_user    User? @relation("ProfileComments", fields: [profile_user_id], references: [id], onDelete: Cascade)
+  profile_user_id Int?
+
   parent    ArticleComment?  @relation("CommentReplies", fields: [parent_id], references: [id], onDelete: Cascade)
   parent_id Int?
   replies   ArticleComment[] @relation("CommentReplies")
@@ -431,6 +434,7 @@ model ArticleComment {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  @@index([profile_user_id])
   @@map("article_comments")
 }
 
@@ -709,6 +713,8 @@ model ClanSquadMember {
 
   member_id Int
   member    ClanMember @relation(fields: [member_id], references: [id], onDelete: Cascade)
+
+  gear_override Json?
 
   squad      ClanSquad  @relation(fields: [squad_id], references: [id], onDelete: Cascade)
   leader_for ClanSquad? @relation("SquadLeader")

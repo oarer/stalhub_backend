@@ -297,7 +297,6 @@ class ArticlesService {
 				quest_map: Prisma.JsonNull,
 				reward_text: null,
 				reward_money: null,
-				rewards: Prisma.JsonNull,
 			})
 		}
 
