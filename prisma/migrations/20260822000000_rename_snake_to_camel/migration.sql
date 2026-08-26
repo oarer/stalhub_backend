@@ -73,6 +73,17 @@ $migration$;
 
 -- This intermediate migration rebuilt the member-note unique index; the
 -- following memberId -> member_id column rename preserves it.
-DROP INDEX IF EXISTS "clan_member_notes_memberId_key";
-CREATE UNIQUE INDEX "clan_member_notes_memberId_key"
-ON "clan_member_notes"("memberId");
+DO $migration$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema()
+      AND table_name = 'clan_member_notes'
+      AND column_name = 'memberId'
+  ) THEN
+    DROP INDEX IF EXISTS "clan_member_notes_memberId_key";
+    CREATE UNIQUE INDEX "clan_member_notes_memberId_key"
+      ON "clan_member_notes"("memberId");
+  END IF;
+END
+$migration$;
