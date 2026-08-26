@@ -278,6 +278,31 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			}
 		)
 
+		.delete(
+			'/:user_id/builds',
+			async ({ store, params, set }) => {
+				const target_id = Number(params.user_id)
+				const canManage = await adminUserService.canManageUser(
+					fromStore(store).user_id,
+					target_id
+				)
+				if (!canManage) {
+					set.status = 403
+					return {
+						error: 'Cannot modify user with equal or higher rank',
+					}
+				}
+				const result = await adminUserService.deleteBuilds(target_id)
+				if (!result) return { error: 'User not found' }
+				return result
+			},
+			{
+				beforeHandle: [requireAuth, requireAdmin],
+				params: t.Object({ user_id: t.Numeric() }),
+				detail: { tags: ['Admin'] },
+			}
+		)
+
 		.patch(
 			'/:user_id/customization',
 			async ({ store, params, body, set }) => {

@@ -256,6 +256,28 @@ class AdminUserService {
 		return this.get(user_id)
 	}
 
+	async deleteBuilds(user_id: number) {
+		const existing = await prisma.user.findUnique({ where: { id: user_id } })
+		if (!existing) return null
+
+		const buildIds = await prisma.build.findMany({
+			where: { author_id: user_id },
+			select: { id: true },
+		})
+		const ids = buildIds.map((b) => b.id)
+
+		if (ids.length > 0) {
+			await prisma.star.deleteMany({
+				where: { target_type: 'BUILD', target_id: { in: ids } },
+			})
+		}
+
+		const { count } = await prisma.build.deleteMany({
+			where: { author_id: user_id },
+		})
+		return { deleted: count }
+	}
+
 	async unban(user_id: number) {
 		const existing = await prisma.user.findUnique({ where: { id: user_id } })
 		if (!existing) return null
