@@ -47,6 +47,25 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 		)
 
 		.get(
+			'/mine',
+			({ query, store }) => {
+				const take = query.take ?? 24
+				const page = (query.page ?? 1) - 1
+				return articlesService.list(take, page, {
+					author_id: fromStore(store).user_id,
+				})
+			},
+			{
+				beforeHandle: [requireAuth],
+				query: t.Object({
+					take: t.Optional(t.Numeric()),
+					page: t.Optional(t.Numeric()),
+				}),
+				detail: { tags: ['Articles'] },
+			}
+		)
+
+		.get(
 			'/public',
 			async ({ query }) => {
 				const take = query.take ?? 24
@@ -64,10 +83,21 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 
 		.get(
 			'/:id',
-			async ({ params, store }) => {
+			async ({ params, store, request }) => {
 				return articlesService.getById(
 					params.id,
-					fromStoreOpt(store).user_id
+					fromStoreOpt(store).user_id,
+					{
+						ip:
+							request.headers
+								.get('x-forwarded-for')
+								?.split(',')[0]
+								?.trim() ??
+							request.headers.get('x-real-ip') ??
+							undefined,
+						userAgent:
+							request.headers.get('user-agent') ?? undefined,
+					}
 				)
 			},
 			{

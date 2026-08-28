@@ -1,0 +1,1 @@
+ALTER TABLE "tier_lists" ADD COLUMN "source_commit" TEXT;

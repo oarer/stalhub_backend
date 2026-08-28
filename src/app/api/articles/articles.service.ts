@@ -1,10 +1,16 @@
 import {
 	ArticleStatus,
 	ArticleType,
+	type Faction,
 	Prisma,
 	type QuestType,
 	StarTargetType,
 } from 'generated/prisma/client'
+import { contentViewsTotal } from '@/app/api/metrics'
+import {
+	recordContentView,
+	type ViewIdentity,
+} from '@/app/api/metrics/view-dedupe'
 import { prisma } from '@/lib/prisma'
 import { generateSlug } from '@/utils/slug'
 
@@ -58,8 +64,10 @@ class ArticlesService {
 					a.type === ArticleType.QUEST ? a.reward_text : null,
 				reward_money:
 					a.type === ArticleType.QUEST ? a.reward_money : null,
+				faction: a.type === ArticleType.QUEST ? a.faction : null,
 				flags: a.flags,
 				tags: a.tags ? a.tags.split(',').filter(Boolean) : [],
+				views: a.views,
 				author: a.author,
 				stars_count: starCounts.get(a.id) ?? 0,
 				created_at: a.created_at,
@@ -78,7 +86,7 @@ class ArticlesService {
 		})
 	}
 
-	async getById(id: string, user_id?: number) {
+	async getById(id: string, user_id?: number, identity: ViewIdentity = {}) {
 		const num = Number(id)
 		const article = await prisma.article.findFirst({
 			where: isNaN(num)
@@ -90,6 +98,18 @@ class ArticlesService {
 		})
 
 		if (!article) return null
+
+		const counted = await recordContentView('ARTICLE', article.id, {
+			...identity,
+			userId: user_id,
+		})
+		if (counted) {
+			await prisma.article.update({
+				where: { id: article.id },
+				data: { views: { increment: 1 } },
+			})
+			contentViewsTotal.inc({ type: 'article' })
+		}
 
 		const stars_count = await prisma.star.count({
 			where: {
@@ -134,8 +154,11 @@ class ArticlesService {
 				article.type === ArticleType.QUEST
 					? article.reward_money
 					: null,
+			faction:
+				article.type === ArticleType.QUEST ? article.faction : null,
 			flags: article.flags,
 			tags: article.tags ? article.tags.split(',').filter(Boolean) : [],
+			views: article.views + (counted ? 1 : 0),
 			author: article.author,
 			stars_count,
 			is_starred,
@@ -159,6 +182,7 @@ class ArticlesService {
 			quest_map?: unknown
 			reward_text?: string | null
 			reward_money?: number | null
+			faction?: string | null
 		}
 	) {
 		const articleType = (data.type as ArticleType) ?? ArticleType.OTHER
@@ -185,6 +209,10 @@ class ArticlesService {
 				reward_money:
 					articleType === ArticleType.QUEST
 						? data.reward_money
+						: null,
+				faction:
+					articleType === ArticleType.QUEST && data.faction
+						? (data.faction as Faction)
 						: null,
 				rewards:
 					articleType === ArticleType.QUEST &&
@@ -230,8 +258,11 @@ class ArticlesService {
 				article.type === ArticleType.QUEST
 					? article.reward_money
 					: null,
+			faction:
+				article.type === ArticleType.QUEST ? article.faction : null,
 			flags: article.flags,
 			tags: article.tags ? article.tags.split(',').filter(Boolean) : [],
+			views: 0,
 			author: article.author,
 			stars_count: 0,
 			is_starred: false,
@@ -257,6 +288,7 @@ class ArticlesService {
 			quest_map?: unknown
 			reward_text?: string | null
 			reward_money?: number | null
+			faction?: string | null
 			version?: string
 		}
 	) {
@@ -290,6 +322,7 @@ class ArticlesService {
 				updateData.reward_text = data.reward_text
 			if (data.reward_money !== undefined)
 				updateData.reward_money = data.reward_money
+			if (data.faction !== undefined) updateData.faction = data.faction
 		} else {
 			Object.assign(updateData, {
 				quest_name: null,
@@ -297,6 +330,7 @@ class ArticlesService {
 				quest_map: Prisma.JsonNull,
 				reward_text: null,
 				reward_money: null,
+				faction: null,
 			})
 		}
 
@@ -347,9 +381,12 @@ class ArticlesService {
 				article.type === ArticleType.QUEST
 					? article.reward_money
 					: null,
+			faction:
+				article.type === ArticleType.QUEST ? article.faction : null,
 			flags: article.flags,
 
 			tags: article.tags ? article.tags.split(',').filter(Boolean) : [],
+			views: article.views,
 			author: article.author,
 			stars_count,
 			created_at: article.created_at,
@@ -403,8 +440,11 @@ class ArticlesService {
 				updated.type === ArticleType.QUEST
 					? updated.reward_money
 					: null,
+			faction:
+				updated.type === ArticleType.QUEST ? updated.faction : null,
 			flags: updated.flags,
 			tags: updated.tags ? updated.tags.split(',').filter(Boolean) : [],
+			views: updated.views,
 			author: updated.author,
 			stars_count,
 			created_at: updated.created_at,
@@ -466,8 +506,11 @@ class ArticlesService {
 				updated.type === ArticleType.QUEST
 					? updated.reward_money
 					: null,
+			faction:
+				updated.type === ArticleType.QUEST ? updated.faction : null,
 			flags: updated.flags,
 			tags: updated.tags ? updated.tags.split(',').filter(Boolean) : [],
+			views: updated.views,
 			author: updated.author,
 			stars_count,
 			created_at: updated.created_at,

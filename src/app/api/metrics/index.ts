@@ -73,6 +73,13 @@ export const popularPlayerViewsTotal = new Counter({
 	registers: [register],
 })
 
+export const contentViewsTotal = new Counter({
+	name: 'content_views_total',
+	help: 'Total view increments for content (builds, articles, arts, tier lists)',
+	labelNames: ['type'],
+	registers: [register],
+})
+
 export const auctionRequestsTotal = new Counter({
 	name: 'auction_requests_total',
 	help: 'Total number of auction API requests',

@@ -3,6 +3,7 @@ import { updateAllRegions as updateArtifacts } from '@/app/api/artifacts/aggrega
 import { clanService } from '@/app/api/clan/services/clan'
 import { goldService } from '@/app/api/clan/services/gold'
 import { grenadesService } from '@/app/api/clan/services/grenades'
+import { generateSystemTierLists } from '@/app/api/tier-lists/generator'
 import { prisma } from '@/lib/prisma'
 import { createElysia } from '@/utils/elysia'
 
@@ -221,3 +222,27 @@ export const crons = createElysia()
 			},
 		})
 	)
+	.use(
+		cron({
+			name: 'systemTierLists',
+			pattern: '0 12 * * 3',
+			timezone: 'Europe/Moscow',
+			async run() {
+				console.log('[Cron] Generating system tier lists...')
+				await generateSystemTierLists()
+				console.log('[Cron] System tier lists generated.')
+			},
+		})
+	)
+	.onStart(async () => {
+		console.log('[Startup] Generating system tier lists...')
+		try {
+			const count = await generateSystemTierLists()
+			console.log(`[Startup] System tier lists generated: ${count}`)
+		} catch (err) {
+			console.error(
+				'[Startup] Failed to generate system tier lists:',
+				err
+			)
+		}
+	})

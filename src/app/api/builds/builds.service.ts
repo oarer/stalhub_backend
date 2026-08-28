@@ -1,6 +1,7 @@
 import { type Prisma, StarTargetType } from 'generated/prisma/client'
 import { getRegionCache } from '@/app/api/artifacts/cache'
 import { resolveArtifactPrice } from '@/app/api/artifacts/pricing'
+import { contentViewsTotal } from '@/app/api/metrics'
 import { prisma } from '@/lib/prisma'
 import type { ArtifactAggregate } from '@/types/artifacts.type'
 import type { BuildData } from '@/types/build.type'
@@ -203,6 +204,7 @@ class BuildsService {
 				flags: b.flags,
 				tags: b.tags ? b.tags.split(',').filter(Boolean) : [],
 				price: aggregate ? cachedBuildPrice(b, aggregate) : null,
+				views: b.views,
 				author: b.author,
 				stars_count: pageStarCounts.get(b.id) ?? 0,
 				is_starred: starredIds.has(b.id),
@@ -227,6 +229,12 @@ class BuildsService {
 		})
 
 		if (!build) return null
+
+		await prisma.build.update({
+			where: { id: build.id },
+			data: { views: { increment: 1 } },
+		})
+		contentViewsTotal.inc({ type: 'build' })
 
 		const stars_count = await prisma.star.count({
 			where: { target_type: StarTargetType.BUILD, target_id: build.id },
@@ -253,6 +261,7 @@ class BuildsService {
 			data: decompress(build.data),
 			flags: build.flags,
 			tags: build.tags ? build.tags.split(',').filter(Boolean) : [],
+			views: build.views + 1,
 			author: build.author,
 			stars_count,
 			is_starred,

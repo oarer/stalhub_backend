@@ -1,0 +1,1 @@
+ALTER TABLE "tier_list_entries" ADD COLUMN "ttk" DOUBLE PRECISION;

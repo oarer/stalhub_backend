@@ -3,6 +3,11 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Prisma } from 'generated/prisma/client'
 import { ArtType, StarTargetType } from 'generated/prisma/client'
+import { contentViewsTotal } from '@/app/api/metrics'
+import {
+	recordContentView,
+	type ViewIdentity,
+} from '@/app/api/metrics/view-dedupe'
 import { prisma } from '@/lib/prisma'
 import { generateSlug } from '@/utils/slug'
 import { type ArtAuthorPayload, resolveArtAuthor } from './art-author'
@@ -14,6 +19,7 @@ type ArtData = {
 	title: string
 	image_url: string | null
 	tags: string[]
+	views: number
 	author: ArtAuthorPayload
 	stars_count: number
 	comments_count: number
@@ -31,6 +37,7 @@ class ArtsService {
 			title: string
 			image_url: string | null
 			tags: string
+			views: number
 			author: {
 				id: number
 				name: string
@@ -53,6 +60,7 @@ class ArtsService {
 			title: art.title,
 			image_url: art.image_url,
 			tags: art.tags ? art.tags.split(',').filter(Boolean) : [],
+			views: art.views,
 			author: resolveArtAuthor(art),
 			stars_count: stars_count,
 			comments_count: commentsCount,
@@ -107,7 +115,7 @@ class ArtsService {
 		}
 	}
 
-	async getById(id: string, user_id?: number) {
+	async getById(id: string, user_id?: number, identity: ViewIdentity = {}) {
 		const num = Number(id)
 		const art = await prisma.art.findFirst({
 			where: isNaN(num)
@@ -126,6 +134,18 @@ class ArtsService {
 		})
 
 		if (!art) return null
+
+		const counted = await recordContentView('ART', art.id, {
+			...identity,
+			userId: user_id,
+		})
+		if (counted) {
+			await prisma.art.update({
+				where: { id: art.id },
+				data: { views: { increment: 1 } },
+			})
+			contentViewsTotal.inc({ type: 'art' })
+		}
 
 		const stars_count = await prisma.star.count({
 			where: { target_type: StarTargetType.ART, target_id: art.id },
@@ -149,7 +169,12 @@ class ArtsService {
 			where: { art_id: art.id },
 		})
 
-		return this.mapArt(art, stars_count, is_starred, comments_count)
+		return this.mapArt(
+			{ ...art, views: art.views + (counted ? 1 : 0) },
+			stars_count,
+			is_starred,
+			comments_count
+		)
 	}
 
 	private mediaTypeTag(image_url?: string): 'рисунок' | 'анимация' {

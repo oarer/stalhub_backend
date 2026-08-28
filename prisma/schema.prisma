@@ -34,6 +34,7 @@ enum StarTargetType {
   ART
 }
 
+
 enum CardBackground {
   COLOR
   AVATAR
@@ -70,11 +71,37 @@ enum ArticleType {
   GUIDE
   OTHER
   STALHUB
+  FACTION
 }
 
 enum QuestType {
   STORY
   SIDE
+}
+
+enum Faction {
+  BANDITS
+  STALKERS
+  ALL
+}
+
+enum TierRank {
+  S
+  A
+  B
+  C
+  D
+  E
+}
+
+enum TierListKind {
+  SYSTEM
+  USER
+}
+
+enum TierItemKind {
+  ARMOR
+  WEAPON
 }
 
 enum ArtType {
@@ -153,6 +180,7 @@ model User {
   builds           Build[]
   articles         Article[]
   arts             Art[]
+  tier_lists       TierList[]
   stars            Star[]
   comments         ArticleComment[]
   profile_comments ArticleComment[] @relation("ProfileComments")
@@ -332,6 +360,7 @@ model Build {
 
   flags Int    @default(0)
   tags  String @default("")
+  views Int    @default(0)
 
   author    User @relation(fields: [author_id], references: [id], onDelete: Cascade)
   author_id Int
@@ -358,9 +387,11 @@ model Article {
   quest_map    Json?
   reward_text  String?
   reward_money Int?
+  faction      Faction?
 
-  flags Int    @default(0)
-  tags  String @default("")
+  flags  Int    @default(0)
+  tags   String @default("")
+  views  Int    @default(0)
 
   author    User @relation(fields: [author_id], references: [id], onDelete: Cascade)
   author_id Int
@@ -382,7 +413,8 @@ model Art {
   title     String
   image_url String?
 
-  tags String @default("")
+  tags  String @default("")
+  views Int    @default(0)
 
   author    User? @relation(fields: [author_id], references: [id], onDelete: SetNull)
   author_id Int?
@@ -397,6 +429,7 @@ model Art {
 
   @@map("arts")
 }
+
 
 model ArticleVersion {
   id      Int    @id @default(autoincrement())
@@ -911,6 +944,68 @@ model UserLoadout {
   updated_at DateTime @updatedAt
 
   @@map("user_loadout")
+}
+
+// ================ TIER LISTS ===================
+
+model TierList {
+  id          Int           @id @default(autoincrement())
+  external_id String        @unique
+  title       String
+  description String        @default("")
+  views       Int           @default(0)
+  kind        TierListKind  @default(USER)
+  item_kind   TierItemKind  @default(WEAPON)
+  is_public   Boolean       @default(true)
+  scenario    String?
+  category    String?
+
+  generated_at DateTime?
+  source_commit String?
+  is_current  Boolean  @default(false)
+  removed_at  DateTime?
+
+  author    User? @relation(fields: [author_id], references: [id], onDelete: SetNull)
+  author_id Int?
+
+  entries TierListEntry[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("tier_lists")
+}
+
+model TierListHistory {
+  id          Int      @id @default(autoincrement())
+  external_id String
+  title       String
+  description String   @default("")
+  item_kind   TierItemKind @default(WEAPON)
+  category    String?
+  scenario    String?
+  generated_at DateTime
+  removed_at  DateTime @default(now())
+
+  entries Json /// [{ item_id, rank, position }]
+
+  created_at DateTime @default(now())
+
+  @@map("tier_list_history")
+}
+
+model TierListEntry {
+  id          Int      @id @default(autoincrement())
+  tier_list_id Int
+  item_id      String
+  rank         TierRank
+  ttk          Float?
+  position     Int      @default(0)
+
+  tier_list TierList @relation(fields: [tier_list_id], references: [id], onDelete: Cascade)
+
+  @@unique([tier_list_id, item_id])
+  @@map("tier_list_entries")
 }
 
 // всё будет хорошо

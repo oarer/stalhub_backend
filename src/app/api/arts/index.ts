@@ -49,6 +49,25 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 		)
 
 		.get(
+			'/mine',
+			({ query, store }) => {
+				const take = query.take ?? 24
+				const page = (query.page ?? 1) - 1
+				return artsService.list(take, page, {
+					author_id: fromStore(store).user_id,
+				})
+			},
+			{
+				beforeHandle: [requireAuth, requireArtAuthor],
+				query: t.Object({
+					take: t.Optional(t.Numeric()),
+					page: t.Optional(t.Numeric()),
+				}),
+				detail: { tags: ['Arts'] },
+			}
+		)
+
+		.get(
 			'/public',
 			async ({ query }) => {
 				const take = query.take ?? 24
@@ -77,10 +96,21 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 
 		.get(
 			'/:id',
-			async ({ params, store }) => {
+			async ({ params, store, request }) => {
 				return artsService.getById(
 					params.id,
-					fromStoreOpt(store).user_id
+					fromStoreOpt(store).user_id,
+					{
+						ip:
+							request.headers
+								.get('x-forwarded-for')
+								?.split(',')[0]
+								?.trim() ??
+							request.headers.get('x-real-ip') ??
+							undefined,
+						userAgent:
+							request.headers.get('user-agent') ?? undefined,
+					}
 				)
 			},
 			{

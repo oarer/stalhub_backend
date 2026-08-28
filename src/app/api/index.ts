@@ -7,6 +7,7 @@ import { artsRoutes } from './arts'
 import { routeAttachments } from './attachments'
 import { auctionRoutes } from './auction'
 import { authRoutes } from './auth'
+import { authorsRoutes } from './authors'
 import { routeBarter } from './barter'
 import { buildsRoutes } from './builds'
 import { clanRoutes } from './clan'
@@ -19,6 +20,7 @@ import { botRoutes } from './internal/bot'
 import { loadoutRoutes } from './loadout'
 import { metricsRoute } from './metrics'
 import { playersRoute } from './player'
+import { tierListsRoutes } from './tier-lists'
 import { usersRoutes } from './users'
 
 export const api = createElysia()
@@ -36,6 +38,8 @@ export const api = createElysia()
 	.use(buildsRoutes)
 	.use(articlesRoutes)
 	.use(artsRoutes)
+	.use(tierListsRoutes)
+	.use(authorsRoutes)
 	.use(exboRoutes)
 	.use(adminRoutes)
 	.use(clanRoutes)
