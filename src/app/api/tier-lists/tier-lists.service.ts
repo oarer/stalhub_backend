@@ -298,6 +298,14 @@ class TierListsService {
 			title?: string
 			description?: string
 			is_public?: boolean
+			category?:
+				| 'general'
+				| 'assault_rifle'
+				| 'sniper_rifle'
+				| 'shotgun_rifle'
+				| 'submachine_gun'
+				| 'machine_gun'
+				| 'pistol'
 			entries?: Array<{
 				item_id: string
 				rank: string
@@ -315,6 +323,7 @@ class TierListsService {
 		if (data.description !== undefined)
 			updateData.description = data.description
 		if (data.is_public !== undefined) updateData.is_public = data.is_public
+		if (data.category !== undefined) updateData.category = data.category
 
 		if (data.entries !== undefined) {
 			await prisma.tierListEntry.deleteMany({
@@ -349,6 +358,7 @@ class TierListsService {
 			kind: tierList.kind,
 			item_kind: tierList.item_kind,
 			scenario: tierList.scenario,
+			category: tierList.category,
 			is_public: tierList.is_public,
 			author: tierList.author,
 			entries: tierList.entries.map((e) => ({

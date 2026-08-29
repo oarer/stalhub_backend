@@ -105,6 +105,17 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 					),
 					is_public: t.Optional(t.Boolean()),
 					scenario: t.Optional(t.String()),
+					category: t.Optional(
+						t.Union([
+							t.Literal('general'),
+							t.Literal('assault_rifle'),
+							t.Literal('sniper_rifle'),
+							t.Literal('shotgun_rifle'),
+							t.Literal('submachine_gun'),
+							t.Literal('machine_gun'),
+							t.Literal('pistol'),
+						])
+					),
 					entries: t.Optional(
 						t.Array(
 							t.Object({
@@ -144,6 +155,9 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 						...(body.description !== undefined && {
 							description: body.description,
 						}),
+						...(body.category !== undefined && {
+							category: body.category,
+						}),
 						...(body.is_public !== undefined && {
 							is_public: body.is_public,
 						}),
@@ -170,6 +184,17 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 				body: t.Object({
 					title: t.Optional(t.String({ maxLength: 200 })),
 					description: t.Optional(t.String({ maxLength: 2000 })),
+					category: t.Optional(
+						t.Union([
+							t.Literal('general'),
+							t.Literal('assault_rifle'),
+							t.Literal('sniper_rifle'),
+							t.Literal('shotgun_rifle'),
+							t.Literal('submachine_gun'),
+							t.Literal('machine_gun'),
+							t.Literal('pistol'),
+						])
+					),
 					is_public: t.Optional(t.Boolean()),
 					entries: t.Optional(
 						t.Array(
