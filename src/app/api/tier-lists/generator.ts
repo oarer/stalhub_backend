@@ -9,21 +9,25 @@ import { generateSlug } from '@/utils/slug'
 const DATA_BASE = 'https://cdn.stalhub.dev/db'
 const SC_DB_COMMIT_URL = 'https://api.github.com/repos/oarer/sc-db/commits/main'
 
-interface Translation {
-	type: string
-	key: string
-	args?: Record<string, string>
-	lines?: Record<string, string>
-	text?: string
-}
+type Translation =
+	| { type: 'text'; text: string }
+	| {
+			type: 'translation'
+			key: string
+			args?: Record<string, string>
+			lines?: Record<string, string>
+	  }
 
-type InfoElement = {
-	type: string
-	name?: Translation
-	value?: number | number[]
-	key?: Translation
-	text?: Translation
-}
+type InfoElement =
+	| {
+			type: 'key-value'
+			name?: Translation
+			key?: Translation
+			value?: Translation
+	  }
+	| { type: 'numeric'; name?: Translation; value?: number }
+	| { type: 'numericVariants'; name?: Translation; value?: number[] }
+	| { type: 'text'; text?: Translation }
 
 type InfoBlock = {
 	type: string
@@ -206,10 +210,7 @@ function getAmmoType(item: GameItem): string {
 				el.key?.type === 'translation' &&
 				el.key.key === 'weapon.tooltip.weapon.info.ammo_type'
 			) {
-				return el.value?.type === 'translation' &&
-					typeof el.value !== 'number'
-					? el.value.key
-					: ''
+				return el.value?.type === 'translation' ? el.value.key : ''
 			}
 		}
 	}
@@ -494,7 +495,10 @@ export function buildRankedEntries(
 }
 
 function itemName(item: GameItem): string {
-	return item.name?.lines?.ru ?? item.name?.key ?? item.id
+	const name = item.name
+	if (name?.type === 'translation') return name.lines?.ru ?? name.key
+	if (name?.type === 'text') return name.text
+	return item.id
 }
 
 interface WeaponCategory {
@@ -530,7 +534,6 @@ const WEAPON_CATEGORIES: WeaponCategory[] = [
 		categories: ['weapon/machine_gun'],
 	},
 	{ key: 'pistol', label: 'Пистолеты', categories: ['weapon/pistol'] },
-	{ key: 'heavy', label: 'Тяжёлое оружие', categories: ['weapon/heavy'] },
 ]
 
 const GENERAL_CATEGORY: WeaponCategory = {
@@ -541,6 +544,7 @@ const GENERAL_CATEGORY: WeaponCategory = {
 		'weapon/sniper_rifle',
 		'weapon/submachine_gun',
 		'weapon/machine_gun',
+		'weapon/pistol',
 	],
 }
 
@@ -572,7 +576,8 @@ function scoreWeapons(
 
 async function upsertSystemTierList(
 	category: WeaponCategory,
-	scored: Array<{ weapon: GameItem; ttk: number; ammoName: string | null }>
+	scored: Array<{ weapon: GameItem; ttk: number; ammoName: string | null }>,
+	sourceCommit: string
 ): Promise<{ changed: boolean; created: boolean }> {
 	const validWeapons = scored
 		.filter((s) => s.ttk < Number.MAX_SAFE_INTEGER)
@@ -704,7 +709,7 @@ export async function generateSystemTierLists() {
 			setups,
 			AGGREGATE_SCENARIO.hitZone
 		)
-		const result = await upsertSystemTierList(group, scored)
+		const result = await upsertSystemTierList(group, scored, sourceCommit)
 		if (result.created) generated++
 	}
 

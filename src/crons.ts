@@ -235,13 +235,13 @@ export const crons = createElysia()
 		})
 	)
 	.onStart(async () => {
-		console.log('[Startup] Generating system tier lists...')
+		console.log('[TierLists] Generating system tier lists...')
 		try {
 			const count = await generateSystemTierLists()
-			console.log(`[Startup] System tier lists generated: ${count}`)
+			console.log(`TierLists] System tier lists generated: ${count}`)
 		} catch (err) {
 			console.error(
-				'[Startup] Failed to generate system tier lists:',
+				'[TierLists] Failed to generate system tier lists:',
 				err
 			)
 		}
