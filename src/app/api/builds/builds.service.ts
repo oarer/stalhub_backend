@@ -78,7 +78,7 @@ function cachedBuildPrice(
 	let total = 0
 
 	for (const art of data.arts ?? []) {
-		const qlt = artQualityToQualityIndex[art.qualityClass]
+		const qlt = artQualityToQualityIndex[art.quality_class]
 		if (qlt == null) continue
 
 		const resolved = resolveArtifactPrice(

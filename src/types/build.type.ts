@@ -10,12 +10,12 @@ export enum ArtQuality {
 
 
 export type Art = {
-	instanceId: string
+	instance_id: string
 	item_id: string
 	percent: number
 	potential: number
-	selectedStats: (string | null)[]
-	qualityClass: ArtQuality
+	selected_stats: (string | null)[]
+	quality_class: ArtQuality
 }
 
 export type Armor = {

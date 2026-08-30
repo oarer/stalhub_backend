@@ -6,12 +6,12 @@ const MAX_SELECTED_STATS = 6
 const MAX_BOOST_ENTRIES = 10
 
 const ArtSchema = z.object({
-	instanceId: z.string(),
+	instance_id: z.string(),
 	item_id: z.string(),
 	percent: z.number().min(85).max(190),
 	potential: z.number(),
-	selectedStats: z.array(z.string().nullable()).max(MAX_SELECTED_STATS),
-	qualityClass: z.nativeEnum(ArtQuality),
+	selected_stats: z.array(z.string().nullable()).max(MAX_SELECTED_STATS),
+	quality_class: z.nativeEnum(ArtQuality),
 })
 
 const BoostSchema = z
