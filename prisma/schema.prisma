@@ -34,7 +34,6 @@ enum StarTargetType {
   ART
 }
 
-
 enum CardBackground {
   COLOR
   AVATAR
@@ -389,9 +388,9 @@ model Article {
   reward_money Int?
   faction      Faction?
 
-  flags  Int    @default(0)
-  tags   String @default("")
-  views  Int    @default(0)
+  flags Int    @default(0)
+  tags  String @default("")
+  views Int    @default(0)
 
   author    User @relation(fields: [author_id], references: [id], onDelete: Cascade)
   author_id Int
@@ -410,8 +409,9 @@ model Art {
   external_id String  @unique
   type        ArtType @default(DEFAULT)
 
-  title     String
-  image_url String?
+  title       String?
+  description String?
+  image_url   String?
 
   tags  String @default("")
   views Int    @default(0)
@@ -429,7 +429,6 @@ model Art {
 
   @@map("arts")
 }
-
 
 model ArticleVersion {
   id      Int    @id @default(autoincrement())
@@ -949,21 +948,21 @@ model UserLoadout {
 // ================ TIER LISTS ===================
 
 model TierList {
-  id          Int           @id @default(autoincrement())
-  external_id String        @unique
+  id          Int          @id @default(autoincrement())
+  external_id String       @unique
   title       String
-  description String        @default("")
-  views       Int           @default(0)
-  kind        TierListKind  @default(USER)
-  item_kind   TierItemKind  @default(WEAPON)
-  is_public   Boolean       @default(true)
+  description String       @default("")
+  views       Int          @default(0)
+  kind        TierListKind @default(USER)
+  item_kind   TierItemKind @default(WEAPON)
+  is_public   Boolean      @default(true)
   scenario    String?
   category    String?
 
-  generated_at DateTime?
+  generated_at  DateTime?
   source_commit String?
-  is_current  Boolean  @default(false)
-  removed_at  DateTime?
+  is_current    Boolean   @default(false)
+  removed_at    DateTime?
 
   author    User? @relation(fields: [author_id], references: [id], onDelete: SetNull)
   author_id Int?
@@ -977,15 +976,15 @@ model TierList {
 }
 
 model TierListHistory {
-  id          Int      @id @default(autoincrement())
-  external_id String
-  title       String
-  description String   @default("")
-  item_kind   TierItemKind @default(WEAPON)
-  category    String?
-  scenario    String?
+  id           Int          @id @default(autoincrement())
+  external_id  String
+  title        String
+  description  String       @default("")
+  item_kind    TierItemKind @default(WEAPON)
+  category     String?
+  scenario     String?
   generated_at DateTime
-  removed_at  DateTime @default(now())
+  removed_at   DateTime     @default(now())
 
   entries Json /// [{ item_id, rank, position }]
 
@@ -995,7 +994,7 @@ model TierListHistory {
 }
 
 model TierListEntry {
-  id          Int      @id @default(autoincrement())
+  id           Int      @id @default(autoincrement())
   tier_list_id Int
   item_id      String
   rank         TierRank

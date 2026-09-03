@@ -70,6 +70,7 @@ class AdminArtsService {
 				external_id: a.external_id,
 				type: a.type,
 				title: a.title,
+				description: a.description,
 				image_url: a.image_url,
 				tags: a.tags ? a.tags.split(',').filter(Boolean) : [],
 				author: resolveArtAuthor(a),
@@ -111,6 +112,7 @@ class AdminArtsService {
 			external_id: art.external_id,
 			type: art.type,
 			title: art.title,
+			description: art.description,
 			image_url: art.image_url,
 			tags: art.tags ? art.tags.split(',').filter(Boolean) : [],
 			author: resolveArtAuthor(art),
@@ -122,7 +124,8 @@ class AdminArtsService {
 	}
 
 	async create(data: {
-		title: string
+		title?: string
+		description?: string
 		type?: string
 		image_url?: string | null
 		tags?: string
@@ -133,8 +136,9 @@ class AdminArtsService {
 		const artType = (data.type as ArtType) ?? ArtType.DEFAULT
 
 		const createData: Prisma.ArtCreateInput = {
-			external_id: generateSlug(data.title),
-			title: data.title,
+			external_id: generateSlug(data.title ?? 'art'),
+			title: data.title ?? null,
+			description: data.description ?? null,
 			type: artType,
 			image_url: data.image_url ?? undefined,
 			tags: data.tags ?? '',
@@ -166,7 +170,8 @@ class AdminArtsService {
 	async update(
 		id: number,
 		data: {
-			title?: string
+			title?: string | null
+			description?: string | null
 			type?: string
 			image_url?: string | null
 			tags?: string
@@ -180,6 +185,7 @@ class AdminArtsService {
 
 		const updateData: Prisma.ArtUpdateInput = {}
 		if (data.title !== undefined) updateData.title = data.title
+		if (data.description !== undefined) updateData.description = data.description
 		if (data.type !== undefined) updateData.type = data.type as ArtType
 		if (data.image_url !== undefined) updateData.image_url = data.image_url
 		if (data.tags !== undefined) updateData.tags = data.tags

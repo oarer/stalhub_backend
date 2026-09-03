@@ -58,6 +58,7 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 				try {
 					return await adminArtsService.create({
 						title: body.title,
+						description: body.description,
 						type: body.type,
 						image_url: body.image_url,
 						tags: body.tags?.join(','),
@@ -73,10 +74,8 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 			{
 				beforeHandle: [requireAuth, requireArtManage],
 				body: t.Object({
-					title: t.String({
-						error: 'title is required',
-						maxLength: 200,
-					}),
+					title: t.Optional(t.String({ maxLength: 200 })),
+					description: t.Optional(t.String({ maxLength: 2000 })),
 					type: t.Optional(t.Enum(ArtType)),
 					image_url: t.Optional(t.String()),
 					tags: t.Optional(t.Array(t.String())),
@@ -114,6 +113,7 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 					Number(params.id),
 					{
 						...(body.title !== undefined && { title: body.title }),
+						...(body.description !== undefined && { description: body.description }),
 						...(body.type !== undefined && { type: body.type }),
 						...(body.image_url !== undefined && {
 							image_url: body.image_url,
@@ -142,7 +142,8 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 				beforeHandle: [requireAuth, requireArtManage],
 				params: t.Object({ id: t.Numeric() }),
 				body: t.Object({
-					title: t.Optional(t.String({ maxLength: 200 })),
+					title: t.Optional(t.Nullable(t.String({ maxLength: 200 }))),
+					description: t.Optional(t.Nullable(t.String({ maxLength: 2000 }))),
 					type: t.Optional(t.Enum(ArtType)),
 					image_url: t.Optional(t.Nullable(t.String())),
 					tags: t.Optional(t.Array(t.String())),

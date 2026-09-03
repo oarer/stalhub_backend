@@ -16,7 +16,8 @@ type ArtData = {
 	id: number
 	external_id: string
 	type: ArtType
-	title: string
+	title: string | null
+	description: string | null
 	image_url: string | null
 	tags: string[]
 	views: number
@@ -34,7 +35,8 @@ class ArtsService {
 			id: number
 			external_id: string
 			type: ArtType
-			title: string
+			title: string | null
+			description: string | null
 			image_url: string | null
 			tags: string
 			views: number
@@ -58,6 +60,7 @@ class ArtsService {
 			external_id: art.external_id,
 			type: art.type,
 			title: art.title,
+			description: art.description,
 			image_url: art.image_url,
 			tags: art.tags ? art.tags.split(',').filter(Boolean) : [],
 			views: art.views,
@@ -199,7 +202,8 @@ class ArtsService {
 	async create(
 		author_id: number,
 		data: {
-			title: string
+			title?: string
+			description?: string
 			type?: string
 			tags?: string
 			image_url?: string
@@ -222,8 +226,9 @@ class ArtsService {
 
 		const art = await prisma.art.create({
 			data: {
-				external_id: generateSlug(data.title),
-				title: data.title,
+				external_id: generateSlug(data.title ?? 'art'),
+				title: data.title ?? null,
+				description: data.description ?? null,
 				type: artType,
 				image_url: data.image_url ?? undefined,
 				tags,
@@ -249,7 +254,8 @@ class ArtsService {
 		author_id: number,
 		is_admin: boolean,
 		data: {
-			title?: string
+			title?: string | null
+			description?: string | null
 			type?: string
 			tags?: string
 			image_url?: string | null
@@ -262,6 +268,7 @@ class ArtsService {
 
 		const updateData: Record<string, unknown> = {}
 		if (data.title !== undefined) updateData.title = data.title
+		if (data.description !== undefined) updateData.description = data.description
 		if (data.type !== undefined) updateData.type = data.type
 		if (data.tags !== undefined) updateData.tags = data.tags
 		if (data.image_url !== undefined) updateData.image_url = data.image_url
