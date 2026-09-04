@@ -1,4 +1,4 @@
-FROM oven/bun AS build
+FROM oven/bun:1.4.0 AS build
 
 WORKDIR /app
 
@@ -17,9 +17,10 @@ COPY ./src ./src
 ENV NODE_ENV=production
 
 RUN bun build \
-  --compile \
-  --minify-whitespace \
-  --outfile server \
-  src/index.ts
+ --compile \
+ --minify-whitespace \
+ --minify-syntax \
+ --outfile server \
+ src/index.ts
 
 RUN mkdir -p /app/uploads
