@@ -17,10 +17,9 @@ COPY ./src ./src
 ENV NODE_ENV=production
 
 RUN bun build \
- --compile \
- --minify-whitespace \
- --minify-syntax \
- --outfile server \
- src/index.ts
+  --compile \
+  --minify-whitespace \
+  --outfile server \
+  src/index.ts
 
 RUN mkdir -p /app/uploads
