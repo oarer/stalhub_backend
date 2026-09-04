@@ -2,11 +2,10 @@ import { z } from 'zod'
 
 const envVariables = z.object({
 	PORT: z.coerce.number().default(3001),
-	NODE_ENV: z
-		.enum(['development', 'production'])
-		.default('development'),
+	NODE_ENV: z.enum(['development', 'production']).default('development'),
 	EXBO_TOKEN: z.string(),
 	TOKEN: z.string(),
+	LAUNCHER_SOURCES: z.string().min(1, 'LAUNCHER_SOURCES'),
 
 	DISCORD_CLIENT_ID: z.string().default(''),
 	DISCORD_CLIENT_SECRET: z.string().default(''),

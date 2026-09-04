@@ -16,6 +16,7 @@ import { exboRoutes } from './exbo'
 import { routeHealth } from './health'
 import { routeHideout } from './hideout'
 import { internalRoutes } from './internal'
+import { serverOnlineRoutes } from './server-online'
 import { botRoutes } from './internal/bot'
 import { loadoutRoutes } from './loadout'
 import { metricsRoute } from './metrics'
@@ -45,5 +46,6 @@ export const api = createElysia()
 	.use(clanRoutes)
 	.use(clansPublicRoutes)
 	.use(loadoutRoutes)
+	.use(serverOnlineRoutes)
 	.use(internalRoutes)
 	.use(botRoutes)

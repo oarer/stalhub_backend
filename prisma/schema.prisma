@@ -1007,4 +1007,16 @@ model TierListEntry {
   @@map("tier_list_entries")
 }
 
+model ServerOnlineSnapshot {
+  id         Int      @id @default(autoincrement())
+  region     String
+  server_id  String
+  online     Int
+  created_at DateTime @default(now())
+
+  @@index([region, created_at])
+  @@index([server_id, created_at])
+  @@map("server_online_snapshots")
+}
+
 // всё будет хорошо

@@ -3,6 +3,7 @@ import { updateAllRegions as updateArtifacts } from '@/app/api/artifacts/aggrega
 import { clanService } from '@/app/api/clan/services/clan'
 import { goldService } from '@/app/api/clan/services/gold'
 import { grenadesService } from '@/app/api/clan/services/grenades'
+import { serverOnlineService } from '@/app/api/server-online/server-online.service'
 import { generateSystemTierLists } from '@/app/api/tier-lists/generator'
 import { prisma } from '@/lib/prisma'
 import { createElysia } from '@/utils/elysia'
@@ -203,6 +204,16 @@ export const crons = createElysia()
 		})
 	)
 
+	// server online snapshots
+	.use(
+		cron({
+			name: 'server-online-snapshot',
+			pattern: '*/5 * * * *',
+			async run() {
+				await serverOnlineService.snapshot()
+			},
+		})
+	)
 	// gold drops
 	.use(
 		cron({
