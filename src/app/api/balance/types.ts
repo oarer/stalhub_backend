@@ -59,6 +59,7 @@ export interface ItemChange {
 	path: string
 	category: ItemCategory
 	name: string
+	color?: string
 	changes: StatChange[]
 }
 

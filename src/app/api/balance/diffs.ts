@@ -61,10 +61,15 @@ export function getItemDiff(
 		if (changes.length === 0) return null
 
 		const itemName = resolveItemName(newData, oldData, lang)
+		const color =
+			(typeof newData.color === 'string' && newData.color.trim()) ||
+			(typeof oldData.color === 'string' && oldData.color.trim()) ||
+			undefined
 		return {
 			path: `${category}/${id}`,
 			category,
 			name: itemName,
+			color,
 			changes,
 		}
 	} catch {
