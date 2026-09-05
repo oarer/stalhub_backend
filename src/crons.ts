@@ -1,5 +1,6 @@
 import { cron } from '@elysiajs/cron'
 import { updateAllRegions as updateArtifacts } from '@/app/api/artifacts/aggregate'
+import { refreshBalanceDiffs } from '@/app/api/balance/service'
 import { clanService } from '@/app/api/clan/services/clan'
 import { goldService } from '@/app/api/clan/services/gold'
 import { grenadesService } from '@/app/api/clan/services/grenades'
@@ -204,6 +205,17 @@ export const crons = createElysia()
 		})
 	)
 
+	// balance diffs (every 15 minutes)
+	.use(
+		cron({
+			name: 'balance-diffs',
+			pattern: '*/15 * * * *',
+			async run() {
+				await refreshBalanceDiffs(true)
+			},
+		})
+	)
+
 	// server online snapshots
 	.use(
 		cron({
@@ -214,6 +226,7 @@ export const crons = createElysia()
 			},
 		})
 	)
+	
 	// gold drops
 	.use(
 		cron({
@@ -253,6 +266,15 @@ export const crons = createElysia()
 		} catch (err) {
 			console.error(
 				'[TierLists] Failed to generate system tier lists:',
+				err
+			)
+		}
+		try {
+			await refreshBalanceDiffs(true)
+			console.log('[Balance] Initial balance diff refresh done.')
+		} catch (err) {
+			console.error(
+				'[Balance] Failed to refresh balance diffs on start:',
 				err
 			)
 		}

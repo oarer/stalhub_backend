@@ -47,4 +47,6 @@ test.*
 
 /uploads
 
+/runtime
+
 /discord-bot/node_modules

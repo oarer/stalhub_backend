@@ -29,6 +29,10 @@ const envVariables = z.object({
 	DISCORD_BOT_TOKEN: z.string().default(''),
 	DISCORD_BOT_CLIENT_ID: z.string().default(''),
 	DISCORD_BOT_SERVICE_JWT: z.string().default(''),
+
+	SC_DB_LISTING_URL: z.string().default('https://cdn.stalhub.dev/db/listing'),
+	SC_DB_LISTING_DIR: z.string().default('runtime/listing'),
+	SC_DB_DIFFS_DIR: z.string().default('runtime/balance_diffs'),
 })
 
 export const env = envVariables.parse(process.env)

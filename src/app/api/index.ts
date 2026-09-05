@@ -8,6 +8,7 @@ import { routeAttachments } from './attachments'
 import { auctionRoutes } from './auction'
 import { authRoutes } from './auth'
 import { authorsRoutes } from './authors'
+import { balanceRoutes } from './balance'
 import { routeBarter } from './barter'
 import { buildsRoutes } from './builds'
 import { clanRoutes } from './clan'
@@ -16,11 +17,11 @@ import { exboRoutes } from './exbo'
 import { routeHealth } from './health'
 import { routeHideout } from './hideout'
 import { internalRoutes } from './internal'
-import { serverOnlineRoutes } from './server-online'
 import { botRoutes } from './internal/bot'
 import { loadoutRoutes } from './loadout'
 import { metricsRoute } from './metrics'
 import { playersRoute } from './player'
+import { serverOnlineRoutes } from './server-online'
 import { tierListsRoutes } from './tier-lists'
 import { usersRoutes } from './users'
 
@@ -30,6 +31,7 @@ export const api = createElysia()
 	.use(artifactsRoutes)
 	.use(auctionRoutes)
 	.use(authRoutes)
+	.use(balanceRoutes)
 	.use(playersRoute)
 	.use(routeBarter)
 	.use(routeAttachments)
