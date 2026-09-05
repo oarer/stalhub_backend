@@ -33,6 +33,13 @@ const envVariables = z.object({
 	SC_DB_LISTING_URL: z.string().default('https://cdn.stalhub.dev/db/listing'),
 	SC_DB_LISTING_DIR: z.string().default('runtime/listing'),
 	SC_DB_DIFFS_DIR: z.string().default('runtime/balance_diffs'),
+
+	LOOT_KEY: z.string().default('dev'),
+	LOOT_SOURCE_DIR: z.string().default(''),
+	LOOT_SHUFFLEBAGS_DIR: z.string().default(''),
+	LOOT_ITEMS_DIRS: z.string().default(''),
+	LOOT_LANG_DIR: z.string().default(''),
+	LOOT_OUT_DIR: z.string().default('runtime/loot'),
 })
 
 export const env = envVariables.parse(process.env)

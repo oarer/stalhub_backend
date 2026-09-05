@@ -19,6 +19,7 @@ import { routeHideout } from './hideout'
 import { internalRoutes } from './internal'
 import { botRoutes } from './internal/bot'
 import { loadoutRoutes } from './loadout'
+import { routeLoot } from './loot'
 import { metricsRoute } from './metrics'
 import { playersRoute } from './player'
 import { serverOnlineRoutes } from './server-online'
@@ -48,6 +49,7 @@ export const api = createElysia()
 	.use(clanRoutes)
 	.use(clansPublicRoutes)
 	.use(loadoutRoutes)
+	.use(routeLoot)
 	.use(serverOnlineRoutes)
 	.use(internalRoutes)
 	.use(botRoutes)
