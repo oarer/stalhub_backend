@@ -1,6 +1,12 @@
 import { t } from 'elysia'
-
-import { requireAdmin, requireAuth } from '@/utils/auth.guard'
+import { prisma } from '@/lib/prisma'
+import {
+	canManageRole,
+	fromStore,
+	getUserMaxRank,
+	requireAdmin,
+	requireAuth,
+} from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 import { roleService } from './roles.service'
@@ -15,8 +21,24 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 
 		.post(
 			'',
-			async ({ body }) =>
-				roleService.create(body.name, body.description, body.rank),
+			async ({ store, body, set }) => {
+				if (body.rank !== undefined) {
+					const actorRank = await getUserMaxRank(
+						fromStore(store).user_id
+					)
+					if (actorRank <= body.rank) {
+						set.status = 403
+						return {
+							error: 'Cannot create role with rank equal or higher than your own',
+						}
+					}
+				}
+				return roleService.create(
+					body.name,
+					body.description,
+					body.rank
+				)
+			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
 				body: t.Object({
@@ -30,7 +52,39 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 
 		.patch(
 			'/:id',
-			async ({ params, body }) => {
+			async ({ store, params, body, set }) => {
+				const role = await prisma.role.findUnique({
+					where: { id: Number(params.id) },
+					select: { rank: true },
+				})
+				if (!role) {
+					set.status = 404
+					return { error: 'Not found' }
+				}
+
+				const ok = await canManageRole(
+					fromStore(store).user_id,
+					role.rank
+				)
+				if (!ok) {
+					set.status = 403
+					return {
+						error: 'Cannot modify role with equal or higher rank',
+					}
+				}
+
+				if (body.rank !== undefined) {
+					const actorRank = await getUserMaxRank(
+						fromStore(store).user_id
+					)
+					if (actorRank <= body.rank) {
+						set.status = 403
+						return {
+							error: 'Cannot set rank equal or higher than your own',
+						}
+					}
+				}
+
 				const result = await roleService.update(Number(params.id), body)
 				if (!result) return { error: 'Not found' }
 				return result
@@ -49,9 +103,29 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 
 		.delete(
 			'/:id',
-			async ({ params }) => {
-				const ok = await roleService.remove(Number(params.id))
-				if (!ok) return { error: 'Not found' }
+			async ({ store, params, set }) => {
+				const role = await prisma.role.findUnique({
+					where: { id: Number(params.id) },
+					select: { rank: true },
+				})
+				if (!role) {
+					set.status = 404
+					return { error: 'Not found' }
+				}
+
+				const ok = await canManageRole(
+					fromStore(store).user_id,
+					role.rank
+				)
+				if (!ok) {
+					set.status = 403
+					return {
+						error: 'Cannot delete role with equal or higher rank',
+					}
+				}
+
+				const deleted = await roleService.remove(Number(params.id))
+				if (!deleted) return { error: 'Not found' }
 				return { success: true }
 			},
 			{
@@ -63,7 +137,27 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 
 		.post(
 			'/:id/permissions',
-			async ({ params, body }) => {
+			async ({ store, params, body, set }) => {
+				const role = await prisma.role.findUnique({
+					where: { id: Number(params.id) },
+					select: { rank: true },
+				})
+				if (!role) {
+					set.status = 404
+					return { error: 'Role not found' }
+				}
+
+				const ok = await canManageRole(
+					fromStore(store).user_id,
+					role.rank
+				)
+				if (!ok) {
+					set.status = 403
+					return {
+						error: 'Cannot modify role with equal or higher rank',
+					}
+				}
+
 				const result = await roleService.addPermissions(
 					Number(params.id),
 					body.permission_ids
@@ -85,7 +179,27 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 
 		.delete(
 			'/:id/permissions',
-			async ({ params, body }) => {
+			async ({ store, params, body, set }) => {
+				const role = await prisma.role.findUnique({
+					where: { id: Number(params.id) },
+					select: { rank: true },
+				})
+				if (!role) {
+					set.status = 404
+					return { error: 'Role not found' }
+				}
+
+				const ok = await canManageRole(
+					fromStore(store).user_id,
+					role.rank
+				)
+				if (!ok) {
+					set.status = 403
+					return {
+						error: 'Cannot modify role with equal or higher rank',
+					}
+				}
+
 				const result = await roleService.removePermissions(
 					Number(params.id),
 					body.permission_ids

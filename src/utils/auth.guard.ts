@@ -120,6 +120,23 @@ async function isUserBanned(user_id: number) {
 			: null,
 	}
 }
+export async function getUserMaxRank(user_id: number): Promise<number> {
+	const user = await prisma.user.findUnique({
+		where: { id: user_id },
+		include: { roles: { select: { rank: true } } },
+	})
+	if (!user || user.roles.length === 0) return 0
+	return Math.max(...user.roles.map((r) => r.rank))
+}
+
+export async function canManageRole(
+	actorUserId: number,
+	roleRank: number
+): Promise<boolean> {
+	const actorRank = await getUserMaxRank(actorUserId)
+	return actorRank > roleRank
+}
+
 export async function requireAdmin({ store, set }: AuthContext) {
 	const ok = await checkPermission(store.authUserId as number, 'user:manage')
 	if (!ok) {

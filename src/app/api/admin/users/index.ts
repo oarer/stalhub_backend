@@ -1,6 +1,11 @@
 import { t } from 'elysia'
-
-import { fromStore, requireAdmin, requireAuth } from '@/utils/auth.guard'
+import { prisma } from '@/lib/prisma'
+import {
+	fromStore,
+	getUserMaxRank,
+	requireAdmin,
+	requireAuth,
+} from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 import { adminUserService } from './users.service'
@@ -29,7 +34,9 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.get(
 			'/:user_id',
 			async ({ params, set }) => {
-				const result = await adminUserService.get(Number(params.user_id))
+				const result = await adminUserService.get(
+					Number(params.user_id)
+				)
 				if (!result) {
 					set.status = 404
 					return { error: 'User not found' }
@@ -170,6 +177,21 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 						error: 'Cannot modify user with equal or higher rank',
 					}
 				}
+
+				const role = await prisma.role.findUnique({
+					where: { id: body.role_id },
+					select: { rank: true },
+				})
+				if (!role) return { error: 'Role not found' }
+
+				const actorRank = await getUserMaxRank(fromStore(store).user_id)
+				if (actorRank <= role.rank) {
+					set.status = 403
+					return {
+						error: 'Cannot assign role with equal or higher rank than your own',
+					}
+				}
+
 				const result = await adminUserService.assignRole(
 					target_id,
 					body.role_id
@@ -360,11 +382,14 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 				const buf = Buffer.from(await file.arrayBuffer())
 
 				try {
-					const result = await adminUserService.saveBanner(target_id, {
-						name: file.name,
-						type: file.type,
-						buffer: buf,
-					})
+					const result = await adminUserService.saveBanner(
+						target_id,
+						{
+							name: file.name,
+							type: file.type,
+							buffer: buf,
+						}
+					)
 					if (!result) {
 						set.status = 404
 						return { error: 'User not found' }
