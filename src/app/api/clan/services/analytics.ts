@@ -113,11 +113,17 @@ class AnalyticsService {
 	}
 
 	async runAnalysis(screenshot_id: number, file_path: string) {
-		await prisma.stageScreenshot.update({
+		const existing = await prisma.stageScreenshot.findUnique({
 			where: { id: screenshot_id },
-			data: { ai_status: 'processing' },
+			select: { id: true },
 		})
+		if (!existing) return
+
 		try {
+			await prisma.stageScreenshot.update({
+				where: { id: screenshot_id },
+				data: { ai_status: 'processing' },
+			})
 			const shot = await prisma.stageScreenshot.findUnique({
 				where: { id: screenshot_id },
 				include: {
@@ -162,10 +168,12 @@ class AnalyticsService {
 			await this.applyAttendanceFromAI(screenshot_id, result)
 			await this.regenerateSummary(screenshot_id)
 		} catch (err) {
-			await prisma.stageScreenshot.update({
-				where: { id: screenshot_id },
-				data: { ai_status: 'error', ai_error: (err as Error).message },
-			})
+			try {
+				await prisma.stageScreenshot.update({
+					where: { id: screenshot_id },
+					data: { ai_status: 'error', ai_error: (err as Error).message },
+				})
+			} catch {}
 		}
 	}
 
