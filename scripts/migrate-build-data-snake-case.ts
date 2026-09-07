@@ -19,14 +19,17 @@ function compress(data: unknown): string {
 
 function migrateArt<T extends Record<string, unknown>>(art: T): Record<string, unknown> {
 	const instance_id = art.instance_id ?? art.instanceId
+	const item_id = art.item_id ?? art.itemId
 	const selected_stats = art.selected_stats ?? art.selectedStats
 	const quality_class = art.quality_class ?? art.qualityClass
 
 	return {
-		...art,
-		...(instance_id !== undefined && { instance_id }),
-		...(selected_stats !== undefined && { selected_stats }),
-		...(quality_class !== undefined && { quality_class }),
+		instance_id,
+		item_id,
+		...(art.percent !== undefined && { percent: art.percent }),
+		...(art.potential !== undefined && { potential: art.potential }),
+		selected_stats,
+		quality_class,
 	}
 }
 
