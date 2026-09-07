@@ -346,6 +346,123 @@ class AnalyticsService {
 		})
 	}
 
+	async findMismatches(screenshot_id: number, clan_id: string) {
+		const shot = await prisma.stageScreenshot.findUnique({
+			where: { id: screenshot_id },
+			include: { session: { select: { clan_id: true } } },
+		})
+		if (!shot || shot.session.clan_id !== clan_id)
+			throw new Error('Screenshot not found for this clan')
+
+		const result = shot.ai_result as AIScreenshotResult | null
+		const players = result?.players ?? []
+		const roster = await prisma.clanMember.findMany({
+			where: { clan_id },
+			select: { id: true, name: true, rank: true },
+			orderBy: { name: 'asc' },
+		})
+
+		const rosterByLower = new Map(
+			roster.map((m) => [m.name.toLowerCase(), m])
+		)
+
+		const mismatches = []
+
+		for (const p of players) {
+			const key = p.name.trim().toLowerCase()
+			if (rosterByLower.has(key)) continue
+			mismatches.push({
+				detected_name: p.name.trim(),
+				kills: p.kills ?? null,
+				deaths: p.deaths ?? null,
+				assists: p.assists ?? null,
+				score: p.score ?? null,
+				role: p.role ?? null,
+			})
+		}
+
+		return {
+			detected_count: players.length,
+			mismatches,
+			roster: roster.map((m) => ({
+				id: m.id,
+				name: m.name,
+				rank: m.rank,
+			})),
+		}
+	}
+
+	async resolveMismatch(
+		screenshot_id: number,
+		clan_id: string,
+		detected_name: string,
+		member_id: number
+	) {
+		const shot = await prisma.stageScreenshot.findUnique({
+			where: { id: screenshot_id },
+			include: { session: { select: { clan_id: true } } },
+		})
+		if (!shot || shot.session.clan_id !== clan_id)
+			throw new Error('Screenshot not found for this clan')
+		if (shot.ai_status !== 'done')
+			throw new Error('Screenshot not analyzed yet')
+
+		const member = await prisma.clanMember.findFirst({
+			where: { id: member_id, clan_id },
+			select: { id: true, name: true, user_id: true },
+		})
+		if (!member) throw new Error('Roster member not found')
+
+		const result = shot.ai_result as AIScreenshotResult | null
+		const players = result?.players ?? []
+		const matched = players.find(
+			(p) => p.name.trim().toLowerCase() === detected_name.toLowerCase()
+		)
+		if (!matched) throw new Error('Detected player not found in result')
+
+		const session_id = shot.session_id
+		const exists = await prisma.stageAttendance.findUnique({
+			where: {
+				session_id_name: {
+					session_id,
+					name: member.name,
+				},
+			},
+			select: { id: true, source: true },
+		})
+		if (exists?.source === 'manual') {
+			return {
+				status: 'skipped',
+				reason: 'manual attendance already set',
+			}
+		}
+
+		const attendance = await prisma.stageAttendance.upsert({
+			where: {
+				session_id_name: {
+					session_id,
+					name: member.name,
+				},
+			},
+			create: {
+				session_id,
+				name: member.name,
+				user_id: member.user_id ?? null,
+				status: 'PRESENT',
+				source: 'ai',
+				note: `matched from "${detected_name}"`,
+			},
+			update: {
+				status: 'PRESENT',
+				source: 'ai',
+				note: `matched from "${detected_name}"`,
+			},
+		})
+
+		await this.regenerateSummary(screenshot_id)
+		return { status: 'ok', attendance }
+	}
+
 	async attendanceSummary(
 		clan_id: string,
 		type?: StageType,

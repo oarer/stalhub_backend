@@ -10,10 +10,14 @@ export const meRoutes = clanContext
 		beforeHandle: [requireAuth],
 		detail: { tags: ['Clan'] },
 	})
-	.get('/my-clans', ({ store }) => clanService.getMyClans(store.authUserId!), {
-		beforeHandle: [requireAuth],
-		detail: { tags: ['Clan'] },
-	})
+	.get(
+		'/my-clans',
+		({ store }) => clanService.getMyClans(store.authUserId!),
+		{
+			beforeHandle: [requireAuth],
+			detail: { tags: ['Clan'] },
+		}
+	)
 	.post(
 		'/switch',
 		({ store, body }) =>
@@ -52,6 +56,27 @@ export const meRoutes = clanContext
 		{
 			beforeHandle: [requireAuth],
 			params: t.Object({ clan_id: t.String() }),
+			detail: { tags: ['Clan'] },
+		}
+	)
+	.patch(
+		'/members/:id',
+		({ params, body, store }) =>
+			clanService.updateMemberName(params.id, store.clan_id!, body.name),
+		{
+			beforeHandle: [requireAuth, requireClanOfficer],
+			params: t.Object({ id: t.Numeric() }),
+			body: t.Object({ name: t.String({ minLength: 1 }) }),
+			detail: { tags: ['Clan'] },
+		}
+	)
+	.delete(
+		'/members/:id',
+		({ params, store }) =>
+			clanService.deleteMember(params.id, store.clan_id!),
+		{
+			beforeHandle: [requireAuth, requireClanOfficer],
+			params: t.Object({ id: t.Numeric() }),
 			detail: { tags: ['Clan'] },
 		}
 	)

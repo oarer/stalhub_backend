@@ -368,6 +368,61 @@ export class ClanService {
 		})
 	}
 
+	async updateMemberName(member_id: number, clan_id: string, name: string) {
+		const target = await prisma.clanMember.findFirst({
+			where: { id: member_id, clan_id },
+			select: { id: true, user_id: true },
+		})
+		if (!target) throw new Error('Clan member not found')
+
+		const updated = await prisma.clanMember.update({
+			where: { id: member_id },
+			data: { name },
+		})
+
+		if (target.user_id != null) {
+			const sessions = await prisma.stageSession.findMany({
+				where: { clan_id },
+				select: { id: true },
+			})
+			if (sessions.length > 0) {
+				await prisma.stageAttendance.updateMany({
+					where: {
+						user_id: target.user_id,
+						session_id: { in: sessions.map((s) => s.id) },
+					},
+					data: { name },
+				})
+			}
+		}
+
+		return updated
+	}
+
+	async deleteMember(member_id: number, clan_id: string) {
+		const target = await prisma.clanMember.findFirst({
+			where: { id: member_id, clan_id },
+			select: { id: true, user_id: true, clan_id: true },
+		})
+		if (!target) throw new Error('Clan member not found')
+
+		await prisma.clanMember.delete({ where: { id: member_id } })
+
+		if (target.user_id != null) {
+			await prisma.userClanProfile.deleteMany({
+				where: { user_id: target.user_id, clan_id: target.clan_id },
+			})
+		}
+
+		const count = await prisma.clanMember.count({ where: { clan_id } })
+		await prisma.clan.update({
+			where: { id: target.clan_id },
+			data: { member_count: count },
+		})
+
+		return { id: member_id }
+	}
+
 	async getClan(clan_id: string) {
 		return prisma.clan.findUnique({ where: { id: clan_id } })
 	}

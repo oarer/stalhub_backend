@@ -30,7 +30,9 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 					map_name: t.String(),
 					type: t.Optional(t.Enum(StageType)),
 					started_at: t.Optional(t.String()),
-					stage_number: t.Optional(t.Nullable(t.Numeric({ minimum: 1 }))),
+					stage_number: t.Optional(
+						t.Nullable(t.Numeric({ minimum: 1 }))
+					),
 				}),
 				detail: { tags: ['Clan Analytics'] },
 			}
@@ -41,11 +43,15 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 				const file = body.file
 				const buf = Buffer.from(await file.arrayBuffer())
 				try {
-					return await analyticsService.addScreenshot(params.id, store.clan_id!, {
-						name: file.name,
-						type: file.type,
-						buffer: buf,
-					})
+					return await analyticsService.addScreenshot(
+						params.id,
+						store.clan_id!,
+						{
+							name: file.name,
+							type: file.type,
+							buffer: buf,
+						}
+					)
 				} catch (err) {
 					set.status = 400
 					return { error: (err as Error).message }
@@ -69,6 +75,35 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 			{
 				beforeHandle: [requireAuth, requireClanOfficer],
 				params: idParams,
+				detail: { tags: ['Clan Analytics'] },
+			}
+		)
+		.get(
+			'/screenshots/:id/mismatches',
+			({ params, store }) =>
+				analyticsService.findMismatches(params.id, store.clan_id!),
+			{
+				beforeHandle: [requireAuth, requireClanOfficer],
+				params: idParams,
+				detail: { tags: ['Clan Analytics'] },
+			}
+		)
+		.post(
+			'/screenshots/:id/mismatches/resolve',
+			({ params, body, store }) =>
+				analyticsService.resolveMismatch(
+					params.id,
+					store.clan_id!,
+					body.detected_name,
+					body.member_id
+				),
+			{
+				beforeHandle: [requireAuth, requireClanOfficer],
+				params: idParams,
+				body: t.Object({
+					detected_name: t.String(),
+					member_id: t.Numeric(),
+				}),
 				detail: { tags: ['Clan Analytics'] },
 			}
 		)
