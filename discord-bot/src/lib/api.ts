@@ -4,6 +4,7 @@ const BACKEND_URL =
 const BOT_SECRET = process.env.DISCORD_BOT_SERVICE_JWT!
 
 import { error, log } from './logger'
+import { HttpError } from './errors'
 
 async function request(path: string, init: RequestInit = {}) {
 	const method = init.method ?? 'GET'
@@ -24,12 +25,11 @@ async function request(path: string, init: RequestInit = {}) {
 	} | null
 
 	if (!res.ok) {
-		const errorMessage =
-			body?.error ?? res.statusText ?? `HTTP ${res.status}`
+		error(
+			`← ${method} ${path} -> ${res.status}: ${body?.error ?? res.statusText}`
+		)
 
-		error(`← ${method} ${path} -> ${res.status}: ${errorMessage}`)
-
-		throw new Error(errorMessage)
+		throw new HttpError(res.status, body as HttpError['body'])
 	}
 
 	log(`← ${method} ${path} -> ${res.status}`)

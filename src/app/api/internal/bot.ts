@@ -254,7 +254,9 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 				if (!type || !stage) {
 					set.status = 400
 					return {
-						error: 'type/stage required when no active stage window detected',
+						error:
+							'Не удалось определить этап по времени. Укажите день (date: ГГГГ-ММ-ДД), этап (stage) и тип (type).',
+						required: ['date', 'stage', 'type'],
 						detected,
 					}
 				}
@@ -276,6 +278,7 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 				try {
 					const screenshot = await analyticsService.addScreenshot(
 						session.id,
+						clan.id,
 						{
 							name: file.name,
 							type: file.type,

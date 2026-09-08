@@ -3,6 +3,14 @@ import { backendUpload } from '../../lib/api'
 import { errMsg } from '../../lib/errors'
 import { error } from '../../lib/logger'
 import { mskDateStr } from '../../lib/msk'
+import {
+	needsParams,
+	startScreenshotPrompt,
+} from './prompt'
+
+function blobPart(buf: Buffer): BlobPart {
+	return new Uint8Array(buf)
+}
 
 export async function handleScreenshot(
 	interaction: ChatInputCommandInteraction,
@@ -14,21 +22,27 @@ export async function handleScreenshot(
 	const attachment = interaction.options.getAttachment('image', true)
 
 	await interaction.deferReply()
+	let buf: Buffer
 	try {
 		const res = await fetch(attachment.url)
 		if (!res.ok) throw new Error('Не удалось скачать изображение')
-		const buf = Buffer.from(await res.arrayBuffer())
+		buf = Buffer.from(await res.arrayBuffer())
+	} catch (err) {
+		await interaction.editReply(`Ошибка: ${errMsg(err)}`)
+		return
+	}
 
-		const form = new FormData()
-		form.append('clan_id', clanId)
-		if (type) form.append('type', type)
-		if (stage) form.append('stage', String(stage))
-		form.append('date', date)
-		form.append(
-			'file',
-			new Blob([buf], { type: attachment.contentType ?? 'image/png' }),
-			attachment.name
-		)
+	const form = new FormData()
+	form.append('clan_id', clanId)
+	if (type) form.append('type', type)
+	if (stage) form.append('stage', String(stage))
+	form.append('date', date)
+	form.append(
+		'file',
+		new Blob([blobPart(buf)], { type: attachment.contentType ?? 'image/png' }),
+		attachment.name
+	)
+	try {
 		const data = (await backendUpload(
 			'/internal/bot/screenshots',
 			form
@@ -45,6 +59,27 @@ export async function handleScreenshot(
 		)
 	} catch (err) {
 		error(`Command /screenshot failed:`, err)
+		if (needsParams(err)) {
+			await startScreenshotPrompt(
+				interaction,
+				interaction.guildId,
+				interaction.user.id,
+				clanId,
+				{
+					name: attachment.name,
+					type: attachment.contentType ?? 'image/png',
+					buffer: buf,
+				},
+				{
+					...(interaction.options.getString('date')
+						? { date: interaction.options.getString('date')! }
+						: {}),
+					...(stage ? { stage } : {}),
+					...(type ? { type } : {}),
+				}
+			)
+			return
+		}
 		await interaction.editReply(`Ошибка: ${errMsg(err)}`)
 	}
 }

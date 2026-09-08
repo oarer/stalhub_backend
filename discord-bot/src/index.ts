@@ -8,6 +8,7 @@ import { handleAbsenceComponent, handleAbsenceListCommand } from './app/absence'
 import { commandDefinitions } from './app/commands'
 import { handleJoin } from './app/join'
 import { handleScreenshot } from './app/screenshot'
+import { handleScreenshotComponent } from './app/screenshot/prompt'
 import { handleSetup, handleSetupComponent } from './app/setup'
 import { handlePublishSquads, publishSquads } from './app/squads'
 import { handleStageMessage } from './app/stages/listener'
@@ -107,6 +108,10 @@ async function main() {
 			} else if (interaction.customId.startsWith('abs:')) {
 				await handleAbsenceComponent(interaction).catch((err) =>
 					error('Absence component handler failed:', err)
+				)
+			} else if (interaction.customId.startsWith('ss:') && interaction.isButton()) {
+				await handleScreenshotComponent(interaction).catch((err) =>
+					error('Screenshot component handler failed:', err)
 				)
 			}
 			return

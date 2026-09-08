@@ -4,6 +4,7 @@ import { backendUpload } from '../../lib/api'
 import { errMsg } from '../../lib/errors'
 import { error, log } from '../../lib/logger'
 import { mskDateStr } from '../../lib/msk'
+import { needsParams, startScreenshotPrompt } from '../screenshot/prompt'
 
 const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
 
@@ -27,18 +28,27 @@ export async function handleStageMessage(message: Message) {
 
 	let ok = 0
 	const errors: string[] = []
+	let prompted = false
 	for (const attachment of images) {
+		if (prompted) continue
+		let buf: Buffer
 		try {
 			const res = await fetch(attachment.url)
 			if (!res.ok) throw new Error('Не удалось скачать изображение')
-			const buf = Buffer.from(await res.arrayBuffer())
+			buf = Buffer.from(await res.arrayBuffer())
+		} catch (err) {
+			error('Stage channel download failed:', err)
+			errors.push(`${attachment.name}: ${errMsg(err)}`)
+			continue
+		}
 
+		try {
 			const form = new FormData()
 			form.append('clan_id', settings.clan_id)
 			form.append('date', mskDateStr())
 			form.append(
 				'file',
-				new Blob([buf], {
+				new Blob([new Uint8Array(buf)], {
 					type: attachment.contentType ?? 'image/png',
 				}),
 				attachment.name
@@ -57,14 +67,41 @@ export async function handleStageMessage(message: Message) {
 			)
 		} catch (err) {
 			error('Stage channel screenshot failed:', err)
+			if (needsParams(err)) {
+				prompted = true
+				try {
+					log(
+						`Stage channel: asking for day/stage/type from ${message.author.tag}`
+					)
+					await startScreenshotPrompt(
+						message,
+						message.guildId,
+						message.author.id,
+						settings.clan_id,
+						{
+							name: attachment.name,
+							type: attachment.contentType ?? 'image/png',
+							buffer: buf,
+						}
+					)
+				} catch (promptErr) {
+					error('Stage channel screenshot prompt failed:', promptErr)
+					errors.push(
+						`${attachment.name}: ${errMsg(promptErr)}`
+					)
+				}
+				continue
+			}
 			errors.push(`${attachment.name}: ${errMsg(err)}`)
 		}
 	}
 
+	if (prompted) return
+
 	const reply =
-		ok > 0
-			? `Скриншоты загружены (${ok}).`
-			: `Не удалось загрузить скриншоты.`
+			ok > 0
+				? `Скриншоты загружены (${ok}).`
+				: `Не удалось загрузить скриншоты.`
 	const detail = errors.length ? `\n${errors.slice(0, 3).join('\n')}` : ''
 	await message
 		.reply(reply + detail)
