@@ -2,6 +2,19 @@ import { usersService } from '@/app/api/users/users.service'
 import { prisma } from '@/lib/prisma'
 
 class AdminUserService {
+	private isEffectivelyBanned(
+		settings?: {
+			banned: boolean
+			ban_expires_at: Date | null
+		} | null
+	): boolean {
+		if (!settings || !settings.banned) return false
+		if (settings.ban_expires_at && settings.ban_expires_at < new Date()) {
+			return false
+		}
+		return true
+	}
+
 	async updateCustomization(
 		user_id: number,
 		data: {
@@ -89,7 +102,7 @@ class AdminUserService {
 				}
 			: {}
 
-		const [data, totalCount] = await Promise.all([
+		const [rawData, totalCount] = await Promise.all([
 			prisma.user.findMany({
 				where,
 				skip: page * take,
@@ -102,6 +115,12 @@ class AdminUserService {
 					joined_at: true,
 					roles: true,
 					sessions: true,
+					user_settings: {
+						select: {
+							banned: true,
+							ban_expires_at: true,
+						},
+					},
 					_count: {
 						select: {
 							sessions: true,
@@ -113,6 +132,11 @@ class AdminUserService {
 			}),
 			prisma.user.count({ where }),
 		])
+
+		const data = rawData.map(({ user_settings, ...rest }) => ({
+			...rest,
+			banned: this.isEffectivelyBanned(user_settings),
+		}))
 
 		return { data, total_count: totalCount, page: page + 1, take }
 	}
@@ -148,7 +172,7 @@ class AdminUserService {
 		})
 
 		if (!user) return null
-		return user
+		return { ...user, banned: this.isEffectivelyBanned(user.user_settings) }
 	}
 
 	async update(user_id: number, data: { username?: string; name?: string }) {

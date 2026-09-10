@@ -1,8 +1,9 @@
 import { t } from 'elysia'
-import { env } from '@/env'
 import { Regions } from '@/types/api.type'
 import { PlayerRole } from '@/types/player.type'
+import { requireAdmin, requireAuth } from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
+import { jwtPlugin } from '@/utils/jwt.plugin'
 import { playerService } from './player.service'
 
 export const playersRoute = createElysia()
@@ -10,7 +11,7 @@ export const playersRoute = createElysia()
 		await playerService.init()
 	})
 	.group('/player', (app) =>
-		app
+		app.use(jwtPlugin)
 			.get(
 				'/popular',
 				async ({ query }) => {
@@ -39,27 +40,6 @@ export const playersRoute = createElysia()
 				}
 			)
 
-			.post(
-				'/blacklist',
-				async ({ body: { uuid } }) => {
-					return playerService.addToBlacklist(uuid)
-				},
-				{
-					beforeHandle: async ({ headers, set }) => {
-						if (headers.authorization !== `Bearer ${env.TOKEN}`) {
-							set.status = 401
-							return { error: 'Unauthorized' }
-						}
-					},
-					body: t.Object({
-						uuid: t.String({ error: 'Property uuid is missing' }),
-					}),
-					detail: {
-						tags: ['Player'],
-					},
-				}
-			)
-
 			.get(
 				'/blacklist',
 				async () => {
@@ -72,20 +52,76 @@ export const playersRoute = createElysia()
 				}
 			)
 
+			.post(
+				'/blacklist',
+				async ({ body: { uuid } }) => {
+					return playerService.addToBlacklist(uuid)
+				},
+				{
+					beforeHandle: [requireAuth, requireAdmin],
+					body: t.Object({
+						uuid: t.String({ error: 'Property uuid is missing' }),
+					}),
+					detail: {
+						tags: ['Player'],
+					},
+				}
+			)
+
 			.delete(
 				'/blacklist',
 				async ({ body: { uuid } }) => {
 					return playerService.removeFromBlacklist(uuid)
 				},
 				{
-					beforeHandle: async ({ headers, set }) => {
-						if (headers.authorization !== `Bearer ${env.TOKEN}`) {
-							set.status = 401
-							return { error: 'Unauthorized' }
-						}
-					},
+					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
 						uuid: t.String({ error: 'Property uuid is missing' }),
+					}),
+					detail: {
+						tags: ['Player'],
+					},
+				}
+			)
+
+			.post(
+				'',
+				async ({ body, set }) => {
+					return playerService.create({
+						uuid: body.uuid,
+						description: body.description,
+						role: body.role,
+					})
+				},
+				{
+					beforeHandle: [requireAuth, requireAdmin],
+					body: t.Object({
+						uuid: t.String({ error: 'Property uuid is missing' }),
+						description: t.String({
+							error: 'Property description is missing',
+						}),
+						role: t.Enum(PlayerRole, {
+							error: 'Property role is missing',
+						}),
+					}),
+					detail: {
+						tags: ['Player'],
+					},
+				}
+			)
+
+			.patch(
+				'',
+				async ({ body, set }) => {
+					const result = await playerService.patch(body)
+					return result
+				},
+				{
+					beforeHandle: [requireAuth, requireAdmin],
+					body: t.Object({
+						uuid: t.String({ error: 'Property uuid is missing' }),
+						description: t.Optional(t.String()),
+						role: t.Optional(t.Enum(PlayerRole)),
 					}),
 					detail: {
 						tags: ['Player'],
