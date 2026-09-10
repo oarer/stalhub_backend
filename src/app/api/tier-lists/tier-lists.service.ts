@@ -291,7 +291,7 @@ class TierListsService {
 	}
 
 	async update(
-		id: number,
+		id: string,
 		author_id: number,
 		is_admin: boolean,
 		data: {
@@ -313,10 +313,17 @@ class TierListsService {
 			}>
 		}
 	) {
-		const existing = await prisma.tierList.findUnique({ where: { id } })
+		const num = Number(id)
+		const existing = await prisma.tierList.findFirst({
+			where: isNaN(num)
+				? { external_id: id }
+				: { OR: [{ external_id: id }, { id: num }] },
+		})
 		if (!existing) return null
 		if (existing.author_id !== author_id && !is_admin)
 			return { error: 'Forbidden' }
+
+		const tierListId = existing.id
 
 		const updateData: Record<string, unknown> = {}
 		if (data.title !== undefined) updateData.title = data.title
@@ -327,12 +334,12 @@ class TierListsService {
 
 		if (data.entries !== undefined) {
 			await prisma.tierListEntry.deleteMany({
-				where: { tier_list_id: id },
+				where: { tier_list_id: tierListId },
 			})
 			if (data.entries.length > 0) {
 				await prisma.tierListEntry.createMany({
 					data: data.entries.map((e) => ({
-						tier_list_id: id,
+						tier_list_id: tierListId,
 						item_id: e.item_id,
 						rank: e.rank as TierRank,
 						position: e.position ?? 0,
@@ -342,7 +349,7 @@ class TierListsService {
 		}
 
 		const tierList = await prisma.tierList.update({
-			where: { id },
+			where: { id: tierListId },
 			data: updateData,
 			include: {
 				author: { select: { id: true, name: true, username: true } },
@@ -373,11 +380,16 @@ class TierListsService {
 		}
 	}
 
-	async delete(id: number, author_id: number, is_admin: boolean) {
-		const existing = await prisma.tierList.findUnique({ where: { id } })
+	async delete(id: string, author_id: number, is_admin: boolean) {
+		const num = Number(id)
+		const existing = await prisma.tierList.findFirst({
+			where: isNaN(num)
+				? { external_id: id }
+				: { OR: [{ external_id: id }, { id: num }] },
+		})
 		if (!existing) return false
 		if (existing.author_id !== author_id && !is_admin) return false
-		await prisma.tierList.delete({ where: { id } })
+		await prisma.tierList.delete({ where: { id: existing.id } })
 		return true
 	}
 }

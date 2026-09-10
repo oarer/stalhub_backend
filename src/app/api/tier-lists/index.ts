@@ -92,7 +92,7 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 
 		.post(
 			'',
-			async ({ body, store, set }) => {
+			async ({ body, store }) => {
 				return tierListsService.create(fromStore(store).user_id, body)
 			},
 			{
@@ -147,7 +147,7 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 				)
 
 				const result = await tierListsService.update(
-					Number(params.id),
+					params.id,
 					user_id,
 					is_admin,
 					{
@@ -226,7 +226,7 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 					'tier_lists:manage'
 				)
 				const ok = await tierListsService.delete(
-					Number(params.id),
+					params.id,
 					user_id,
 					is_admin
 				)
