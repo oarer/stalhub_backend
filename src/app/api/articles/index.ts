@@ -7,6 +7,7 @@ import {
 	requireAuth,
 	requireOptionalAuth,
 } from '@/utils/auth.guard'
+import { enforceContentSpam, SPAM_LIMIT_ARTICLE } from '@/utils/auto-ban'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 import {
@@ -164,7 +165,11 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					}
 				}
 
-				return articlesService.create(fromStore(store).user_id, {
+				const user_id = fromStore(store).user_id
+
+				await enforceContentSpam(user_id, SPAM_LIMIT_ARTICLE)
+
+				return articlesService.create(user_id, {
 					title: body.title,
 					content: body.content,
 					type: body.type,

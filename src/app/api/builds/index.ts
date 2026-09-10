@@ -8,6 +8,7 @@ import {
 	requireOptionalAuth,
 } from '@/utils/auth.guard'
 import { validateBuildData } from '@/utils/build.validation'
+import { enforceContentSpam, SPAM_LIMIT_BUILD } from '@/utils/auto-ban'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 import { buildsService } from './builds.service'
@@ -79,7 +80,10 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 					return { error: validation.error }
 				}
 
-				return buildsService.create(fromStore(store).user_id, {
+				const user_id = fromStore(store).user_id
+				await enforceContentSpam(user_id, SPAM_LIMIT_BUILD)
+
+				return buildsService.create(user_id, {
 					title: body.title,
 					data: validation.data,
 					flags: body.flags,

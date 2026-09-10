@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { apiClient } from '@/app/interceptors/sc.interceptor'
+import { LotsPuller, withRetry } from '@/app/api/auction/lots-puller'
 import type { LotsResponse } from '@/types/api.type'
 import type {
 	ArtifactAggregate,
@@ -9,13 +9,14 @@ import type {
 import { acquireLock, releaseLock, setRegionCache } from './cache'
 import { interpolateRatio } from './pricing'
 
-const LISTING_URL =
-	'https://cdn.stalhub.dev/db/listing/artefact.json'
+const LISTING_URL = 'https://cdn.stalhub.dev/db/listing/artefact.json'
 
 export const SUPPORTED_REGIONS = ['RU'] as const
 
-const LOT_LIMIT = 200
-const CONCURRENCY = 6
+const lotsPuller = new LotsPuller({
+	label: 'Artifacts',
+	attemptsPerItem: 2,
+})
 
 const median = (values: number[]): number | null => {
 	if (values.length === 0) return null
@@ -27,46 +28,6 @@ const median = (values: number[]): number | null => {
 		: (sorted[mid - 1] + sorted[mid]) / 2
 }
 
-const withRetry = async <T>(
-	fn: () => Promise<T>,
-	attempts = 3,
-	delayMs = 1000
-): Promise<T> => {
-	let lastErr: unknown
-	for (let attempt = 1; attempt <= attempts; attempt++) {
-		try {
-			return await fn()
-		} catch (err) {
-			lastErr = err
-			if (attempt === attempts) break
-			await new Promise((r) => setTimeout(r, delayMs * attempt))
-		}
-	}
-	throw lastErr
-}
-
-const mapLimit = async <T, R>(
-	arr: readonly T[],
-	limit: number,
-	fn: (item: T) => Promise<R>
-): Promise<R[]> => {
-	const results: R[] = new Array(arr.length)
-	let index = 0
-
-	const worker = async () => {
-		while (index < arr.length) {
-			const i = index++
-			results[i] = await fn(arr[i])
-		}
-	}
-
-	await Promise.all(
-		Array.from({ length: Math.min(limit, arr.length) }, () => worker())
-	)
-
-	return results
-}
-
 export const fetchListing = async (): Promise<string[]> => {
 	const { data } = await withRetry(() =>
 		axios.get<Record<string, unknown>>(LISTING_URL, {
@@ -74,20 +35,6 @@ export const fetchListing = async (): Promise<string[]> => {
 		})
 	)
 	return Object.keys(data)
-}
-
-export const fetchItemLots = async (
-	region: string,
-	item_id: string
-): Promise<LotsResponse['lots']> => {
-	const { data } = await apiClient.get<LotsResponse>(
-		`/${region}/auction/${item_id}/lots`,
-		{
-			params: { limit: LOT_LIMIT, additional: true },
-		}
-	)
-
-	return data.lots ?? []
 }
 
 type RawCells = Map<number, number[]>
@@ -253,52 +200,29 @@ const retryFailedItems = async (
 	region: string,
 	failedIds: string[],
 	lotGroups: Record<string, LotsResponse['lots']>,
-	totalCount: number,
-	attempt = 1,
-	maxAttempts = 3
+	totalCount: number
 ) => {
-	if (attempt > maxAttempts || failedIds.length === 0) return
+	await lotsPuller.drainFailed(
+		region,
+		failedIds,
+		(extraGroups, stillFailed) => {
+			Object.assign(lotGroups, extraGroups)
 
-	console.log(
-		`[Artifacts] ${region} retrying ${failedIds.length} failed items (attempt ${attempt}/${maxAttempts})...`
-	)
-
-	await new Promise((r) => setTimeout(r, 60_000))
-
-	const stillFailed: string[] = []
-
-	await mapLimit(failedIds, CONCURRENCY, async (item_id) => {
-		try {
-			lotGroups[item_id] = await withRetry(
-				() => fetchItemLots(region, item_id),
-				2
+			const aggregate = buildAggregate(
+				lotGroups,
+				new Date().toISOString()
 			)
-		} catch {
-			stillFailed.push(item_id)
+			const traded = Object.keys(aggregate.items).length
+
+			if (traded > 0) {
+				setRegionCache(region, aggregate)
+			}
+
+			console.log(
+				`[Artifacts] ${region} retry done: ${traded}/${totalCount} traded items, ${stillFailed.length} still failed`
+			)
 		}
-	})
-
-	const aggregate = buildAggregate(lotGroups, new Date().toISOString())
-	const traded = Object.keys(aggregate.items).length
-
-	if (traded > 0) {
-		setRegionCache(region, aggregate)
-	}
-
-	console.log(
-		`[Artifacts] ${region} retry ${attempt} done: ${traded}/${totalCount} traded items, ${stillFailed.length} still failed`
 	)
-
-	if (stillFailed.length > 0) {
-		await retryFailedItems(
-			region,
-			stillFailed,
-			lotGroups,
-			totalCount,
-			attempt + 1,
-			maxAttempts
-		)
-	}
 }
 
 export const updateRegion = async (region: string): Promise<number> => {
@@ -309,19 +233,11 @@ export const updateRegion = async (region: string): Promise<number> => {
 		const itemIds = await fetchListing()
 
 		const lotGroups: Record<string, LotsResponse['lots']> = {}
-		const failedIds: string[] = []
-
-		await mapLimit(itemIds, CONCURRENCY, async (item_id) => {
-			try {
-				lotGroups[item_id] = await withRetry(
-					() => fetchItemLots(region, item_id),
-					2
-				)
-			} catch {
-				lotGroups[item_id] = []
-				failedIds.push(item_id)
-			}
-		})
+		const { groups, failedIds } = await lotsPuller.fetchMany(
+			region,
+			itemIds
+		)
+		Object.assign(lotGroups, groups)
 
 		const aggregate = buildAggregate(lotGroups, new Date().toISOString())
 		const traded = Object.keys(aggregate.items).length
@@ -335,8 +251,13 @@ export const updateRegion = async (region: string): Promise<number> => {
 		)
 
 		if (failedIds.length > 0) {
-			retryFailedItems(region, failedIds, lotGroups, itemIds.length).catch(
-				(err) => console.error(`[Artifacts] ${region} retry error:`, err)
+			retryFailedItems(
+				region,
+				failedIds,
+				lotGroups,
+				itemIds.length
+			).catch((err) =>
+				console.error(`[Artifacts] ${region} retry error:`, err)
 			)
 		}
 

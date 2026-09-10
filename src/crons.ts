@@ -6,6 +6,7 @@ import { goldService } from '@/app/api/clan/services/gold'
 import { grenadesService } from '@/app/api/clan/services/grenades'
 import { serverOnlineService } from '@/app/api/server-online/server-online.service'
 import { generateSystemTierLists } from '@/app/api/tier-lists/generator'
+import { updateAllRegions as updateUpgradePrices } from '@/app/api/upgrade-prices/upgrade-prices.service'
 import { prisma } from '@/lib/prisma'
 import { createElysia } from '@/utils/elysia'
 
@@ -205,6 +206,18 @@ export const crons = createElysia()
 		})
 	)
 
+	// upgrade support/price items (tools, catalyst, battery)
+	.use(
+		cron({
+			name: 'upgrade-prices-update',
+			pattern: '30 1,13 * * *',
+			timezone: 'Europe/Moscow',
+			async run() {
+				await updateUpgradePrices()
+			},
+		})
+	)
+
 	// balance diffs (every 15 minutes)
 	.use(
 		cron({
@@ -226,7 +239,7 @@ export const crons = createElysia()
 			},
 		})
 	)
-	
+
 	// gold drops
 	.use(
 		cron({
@@ -275,6 +288,15 @@ export const crons = createElysia()
 		} catch (err) {
 			console.error(
 				'[Balance] Failed to refresh balance diffs on start:',
+				err
+			)
+		}
+		try {
+			await updateUpgradePrices()
+			console.log('[UpgradePrices] Initial prices parsed on start.')
+		} catch (err) {
+			console.error(
+				'[UpgradePrices] Failed to parse prices on start:',
 				err
 			)
 		}

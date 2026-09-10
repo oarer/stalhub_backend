@@ -11,7 +11,7 @@ export const register = new Registry()
 
 collectDefaultMetrics({ register })
 
-function normalizeRoute(route: string): string {
+export function normalizeRoute(route: string): string {
 	if (!route) return 'unknown'
 
 	return route
@@ -131,6 +131,26 @@ export const aiAnalysisDuration = new Histogram({
 	name: 'ai_analysis_duration_seconds',
 	help: 'AI analysis duration in seconds',
 	buckets: [1, 5, 10, 30, 60],
+	registers: [register],
+})
+
+export const abuseWarningsTotal = new Counter({
+	name: 'abuse_warnings_total',
+	help: 'Total auto-ban warnings issued by the system (first violation)',
+	labelNames: ['rule'],
+	registers: [register],
+})
+
+export const autoBansTotal = new Counter({
+	name: 'auto_bans_total',
+	help: 'Total permanent auto-bans issued by the system (second violation)',
+	labelNames: ['rule'],
+	registers: [register],
+})
+
+export const ipBlocksTotal = new Counter({
+	name: 'ip_blocks_total',
+	help: 'Total IP blocks issued (rate limit / brute force)',
 	registers: [register],
 })
 

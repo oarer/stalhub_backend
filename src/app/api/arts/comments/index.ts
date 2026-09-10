@@ -1,6 +1,7 @@
 import { t } from 'elysia'
 import { commentsService } from '@/app/api/articles/comments/comments.service'
 import { checkPermission, fromStore, requireAuth } from '@/utils/auth.guard'
+import { enforceContentSpam, SPAM_LIMIT_COMMENT } from '@/utils/auto-ban'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 
@@ -29,6 +30,7 @@ export const artCommentsRoutes = createElysia().group('/:id/comments', (app) =>
 			'',
 			async ({ params, body, store }) => {
 				const { user_id } = fromStore(store)
+				await enforceContentSpam(user_id, SPAM_LIMIT_COMMENT)
 				const comment = await commentsService.createForArt(
 					Number(params.id),
 					user_id,

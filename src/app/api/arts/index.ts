@@ -8,6 +8,7 @@ import {
 	requireAuth,
 	requireOptionalAuth,
 } from '@/utils/auth.guard'
+import { enforceContentSpam, SPAM_LIMIT_ART } from '@/utils/auto-ban'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 import { artsService } from './arts.service'
@@ -158,7 +159,10 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 		.post(
 			'',
 			async ({ body, store }) => {
-				return artsService.create(fromStore(store).user_id, {
+				const user_id = fromStore(store).user_id
+				await enforceContentSpam(user_id, SPAM_LIMIT_ART)
+
+				return artsService.create(user_id, {
 					title: body.title,
 					description: body.description,
 					type: body.type,

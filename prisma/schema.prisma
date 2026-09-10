@@ -28,6 +28,11 @@ enum AvatarSource {
   TELEGRAM
 }
 
+enum BanSeverity {
+  WARN
+  BAN
+}
+
 enum StarTargetType {
   BUILD
   ARTICLE
@@ -184,6 +189,8 @@ model User {
   comments         ArticleComment[]
   profile_comments ArticleComment[] @relation("ProfileComments")
 
+  ban_logs BanLog[]
+
   clan_profiles  UserClanProfile[]
   loadout        UserLoadout?
   absences       Absence[]
@@ -212,6 +219,9 @@ model UserSettings {
   banned         Boolean   @default(false)
   ban_reason     String?
   ban_expires_at DateTime?
+
+  auto_warned Boolean @default(false) // system warning issued (first violation)
+  auto_banned Boolean @default(false) // banned by system, requires admin investigation
 
   public_profile Boolean @default(false)
 }
@@ -1017,6 +1027,23 @@ model ServerOnlineSnapshot {
   @@index([region, created_at])
   @@index([server_id, created_at])
   @@map("server_online_snapshots")
+}
+
+model BanLog {
+  id      Int   @id @default(autoincrement())
+  user    User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id Int
+
+  rule      String        // login_bruteforce | request_abuse | content_spam
+  severity  BanSeverity   @default(WARN) // WARN = 1-е срабатывание, BAN = перманентный бан
+  auto      Boolean       @default(true)
+  reason    String        @default("")
+  meta      Json?         // улики: ip, route, попытки, external_id
+  created_at DateTime     @default(now())
+
+  @@index([user_id, created_at])
+  @@index([rule, created_at])
+  @@map("ban_log")
 }
 
 // всё будет хорошо

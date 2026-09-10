@@ -1,6 +1,7 @@
 import { createElysia } from '@/utils/elysia'
 import { adminArtsRoutes } from './arts'
 import { badgesRoutes } from './badges'
+import { bansRoutes } from './bans'
 import { clansRoutes } from './clans'
 import { notificationsRoutes } from './notifications'
 import { permissionsRoutes } from './permissions'
@@ -15,5 +16,6 @@ export const adminRoutes = createElysia().group('/admin', (app) =>
 		.use(badgesRoutes)
 		.use(notificationsRoutes)
 		.use(clansRoutes)
+		.use(bansRoutes)
 		.use(adminArtsRoutes)
 )

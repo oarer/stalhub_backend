@@ -11,7 +11,9 @@ class AdminUserService {
 			banner_image?: string | null
 		}
 	) {
-		const existing = await prisma.user.findUnique({ where: { id: user_id } })
+		const existing = await prisma.user.findUnique({
+			where: { id: user_id },
+		})
 		if (!existing) return null
 
 		const updateData: Record<string, unknown> = {}
@@ -39,7 +41,9 @@ class AdminUserService {
 		user_id: number,
 		file: { name: string; type: string; buffer: Buffer }
 	) {
-		const existing = await prisma.user.findUnique({ where: { id: user_id } })
+		const existing = await prisma.user.findUnique({
+			where: { id: user_id },
+		})
 		if (!existing) return null
 
 		return usersService.saveBanner(user_id, file)
@@ -136,6 +140,10 @@ class AdminUserService {
 						stars: true,
 					},
 				},
+				ban_logs: {
+					orderBy: { created_at: 'desc' },
+					take: 10,
+				},
 			},
 		})
 
@@ -144,7 +152,9 @@ class AdminUserService {
 	}
 
 	async update(user_id: number, data: { username?: string; name?: string }) {
-		const existing = await prisma.user.findUnique({ where: { id: user_id } })
+		const existing = await prisma.user.findUnique({
+			where: { id: user_id },
+		})
 		if (!existing) return null
 
 		if (data.username) {
@@ -164,7 +174,9 @@ class AdminUserService {
 	}
 
 	async remove(user_id: number) {
-		const existing = await prisma.user.findUnique({ where: { id: user_id } })
+		const existing = await prisma.user.findUnique({
+			where: { id: user_id },
+		})
 		if (!existing) return false
 
 		await prisma.user.delete({ where: { id: user_id } })
@@ -230,7 +242,9 @@ class AdminUserService {
 	}
 
 	async ban(user_id: number, reason?: string, expiresAt?: Date) {
-		const existing = await prisma.user.findUnique({ where: { id: user_id } })
+		const existing = await prisma.user.findUnique({
+			where: { id: user_id },
+		})
 		if (!existing) return null
 
 		await prisma.userSettings.upsert({
@@ -257,7 +271,9 @@ class AdminUserService {
 	}
 
 	async deleteBuilds(user_id: number) {
-		const existing = await prisma.user.findUnique({ where: { id: user_id } })
+		const existing = await prisma.user.findUnique({
+			where: { id: user_id },
+		})
 		if (!existing) return null
 
 		const buildIds = await prisma.build.findMany({
@@ -279,7 +295,9 @@ class AdminUserService {
 	}
 
 	async unban(user_id: number) {
-		const existing = await prisma.user.findUnique({ where: { id: user_id } })
+		const existing = await prisma.user.findUnique({
+			where: { id: user_id },
+		})
 		if (!existing) return null
 
 		await prisma.userSettings.update({

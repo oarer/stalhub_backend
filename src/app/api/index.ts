@@ -24,6 +24,7 @@ import { metricsRoute } from './metrics'
 import { playersRoute } from './player'
 import { serverOnlineRoutes } from './server-online'
 import { tierListsRoutes } from './tier-lists'
+import { upgradePricesRoutes } from './upgrade-prices'
 import { usersRoutes } from './users'
 
 export const api = createElysia()
@@ -43,6 +44,7 @@ export const api = createElysia()
 	.use(articlesRoutes)
 	.use(artsRoutes)
 	.use(tierListsRoutes)
+	.use(upgradePricesRoutes)
 	.use(authorsRoutes)
 	.use(exboRoutes)
 	.use(adminRoutes)

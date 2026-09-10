@@ -2,7 +2,8 @@ import { relative, resolve } from 'node:path'
 import cors from '@elysiajs/cors'
 import { swagger } from '@elysiajs/swagger'
 import { goldService } from '@/app/api/clan/services/gold'
-import { normalizeAndRecordHttpRequest } from '@/app/api/metrics'
+import { normalizeAndRecordHttpRequest, normalizeRoute } from '@/app/api/metrics'
+import { clientIp, enforceRateLimit, shouldSkipRps } from '@/utils/auto-ban'
 import { createElysia } from '@/utils/elysia'
 import { logger } from '@/utils/logger'
 import { routes } from './app'
@@ -57,8 +58,23 @@ export const app = createElysia()
 		}
 	})
 
-	.onRequest(({ store }) => {
+	.onRequest(async ({ request, set, store, server }) => {
 		;(store as Record<string, unknown>)._reqStart = Date.now()
+
+		const pathname = new URL(request.url).pathname
+		if (shouldSkipRps(pathname)) return
+
+		const headers = Object.fromEntries(request.headers)
+		const remoteIp = server?.requestIP?.(request)?.address ?? ''
+		const ip = clientIp(headers, remoteIp)
+		const routePath = pathname.startsWith('/api/v1')
+			? pathname.slice('/api/v1'.length)
+			: pathname
+		const blocked = await enforceRateLimit(ip, normalizeRoute(routePath))
+		if (blocked) {
+			set.status = 429
+			return { error: 'Too many requests, try again later' }
+		}
 	})
 	.onAfterHandle(({ request, set, store }) => {
 		const start = (store as Record<string, unknown>)._reqStart as

@@ -1,6 +1,12 @@
 import { t } from 'elysia'
 import { prisma } from '@/lib/prisma'
 import { authService, createSession } from '@/utils/auth.service'
+import {
+	clearLoginFailures,
+	clientIp,
+	isIpBlocked,
+	recordLoginFailure,
+} from '@/utils/auto-ban'
 import { verifyPassword } from '@/utils/crypto'
 import { createElysia } from '@/utils/elysia'
 import { accessCookie, jwtPlugin, refreshCookie } from '@/utils/jwt.plugin'
@@ -25,10 +31,24 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 			async ({
 				body,
 				headers,
+				request,
 				cookie: { access_token, refresh_token },
 				jwt,
 				set,
+				server,
 			}) => {
+				const h = headers as Record<string, string | undefined>
+				const ua = h['user-agent'] ?? ''
+				const ip = clientIp(
+					h,
+					server?.requestIP?.(request)?.address ?? ''
+				)
+
+				if (await isIpBlocked(ip)) {
+					set.status = 429
+					return { error: 'Too many requests, try again later' }
+				}
+
 				const user = await prisma.user.findFirst({
 					where: {
 						username: {
@@ -43,17 +63,14 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 					!user.password_hash ||
 					!verifyPassword(body.password, user.password_hash)
 				) {
+					await recordLoginFailure(body.username, ip)
 					set.status = 401
 					return { error: 'Invalid username or password' }
 				}
 
+				await clearLoginFailures(body.username, ip)
+
 				const roles = user.roles.map((r) => r.name)
-				const h = headers as Record<string, string | undefined>
-				const ua = h['user-agent'] ?? ''
-				const ip =
-					h['x-forwarded-for']?.split(',')[0]?.trim() ??
-					h['x-real-ip'] ??
-					''
 				const session = await createSession(user.id, ua, ip)
 				const access_token_value = await jwt.sign({
 					sub: String(user.id),
