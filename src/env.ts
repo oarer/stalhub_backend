@@ -6,6 +6,7 @@ const envVariables = z.object({
 	EXBO_TOKEN: z.string(),
 	TOKEN: z.string(),
 	LAUNCHER_SOURCES: z.string().min(1, 'LAUNCHER_SOURCES'),
+	LAUNCHER_AUTH_QUERY: z.string().min(1, 'LAUNCHER_AUTH_QUERY'),
 
 	DISCORD_CLIENT_ID: z.string().default(''),
 	DISCORD_CLIENT_SECRET: z.string().default(''),

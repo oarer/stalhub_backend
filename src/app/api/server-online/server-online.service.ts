@@ -16,6 +16,90 @@ type LauncherResponse = {
 	data?: string
 }
 
+type LauncherAuthResponse = {
+	type?: string
+	token?: string
+}
+
+function baseUrlOf(source: LauncherSource): string | null {
+	try {
+		const url = new URL(source.url)
+		url.pathname = ''
+		url.search = ''
+		url.hash = ''
+		return url.toString().replace(/\/$/, '')
+	} catch {
+		return null
+	}
+}
+
+function launcherLogin(): string | null {
+	return new URLSearchParams(env.LAUNCHER_AUTH_QUERY).get('login')
+}
+
+function buildListServersUrl(url: string, token: string): string | null {
+	try {
+		const parsed = new URL(url)
+		parsed.searchParams.set('token', token)
+		const login = launcherLogin()
+		if (login) parsed.searchParams.set('login', login)
+		return parsed.toString()
+	} catch {
+		return null
+	}
+}
+
+class LauncherTokenStore {
+	private readonly tokens = new Map<string, string>()
+
+	getToken(region: string) {
+		return this.tokens.get(region)
+	}
+
+	setToken(region: string, token: string) {
+		this.tokens.set(region, token)
+	}
+}
+
+const tokenStore = new LauncherTokenStore()
+
+async function refreshToken(source: LauncherSource): Promise<string | null> {
+	const base = baseUrlOf(source)
+	if (!base) {
+		console.error(
+			`[ServerOnline] Invalid URL for ${source.region}: ${source.url}`
+		)
+		return null
+	}
+
+	try {
+		const res = await fetch(`${base}/auth?${env.LAUNCHER_AUTH_QUERY}`)
+		if (!res.ok) {
+			console.error(
+				`[ServerOnline] Auth for ${source.region} responded ${res.status}`
+			)
+			return null
+		}
+
+		const body = (await res.json()) as LauncherAuthResponse
+		if (body.type !== 'OK' || !body.token) {
+			console.error(
+				`[ServerOnline] Auth for ${source.region} returned invalid data`
+			)
+			return null
+		}
+
+		tokenStore.setToken(source.region, body.token)
+		return body.token
+	} catch (err) {
+		console.error(
+			`[ServerOnline] Failed to refresh token for ${source.region}:`,
+			err
+		)
+		return null
+	}
+}
+
 function loadSources(): LauncherSource[] {
 	try {
 		const parsed = JSON.parse(env.LAUNCHER_SOURCES) as unknown
@@ -54,6 +138,42 @@ function parseOnline(
 }
 
 class ServerOnlineService {
+	async warmUp() {
+		for (const source of SOURCES) {
+			await refreshToken(source)
+		}
+	}
+
+	private async fetchRegion(
+		source: LauncherSource
+	): Promise<Array<{ serverId: string; online: number }>> {
+		const token =
+			tokenStore.getToken(source.region) || (await refreshToken(source))
+		if (!token) return []
+
+		const url = buildListServersUrl(source.url, token)
+		if (!url) return []
+
+		const res = await fetch(url)
+		if (!res.ok) {
+			console.error(
+				`[ServerOnline] ${source.region} responded ${res.status}`
+			)
+			return []
+		}
+
+		const body = (await res.json()) as LauncherResponse
+
+		if (!body.success || !body.data) {
+			console.error(
+				`[ServerOnline] ${source.region} returned invalid data`
+			)
+			return []
+		}
+
+		return parseOnline(source.region, body.data)
+	}
+
 	async snapshot() {
 		const rows: Array<{
 			region: string
@@ -63,24 +183,14 @@ class ServerOnlineService {
 
 		for (const source of SOURCES) {
 			try {
-				const res = await fetch(source.url)
-				if (!res.ok) {
-					console.error(
-						`[ServerOnline] ${source.region} responded ${res.status}`
-					)
-					continue
+				// A stale/expired token makes the request fail, so refresh it
+				let entries = await this.fetchRegion(source)
+				if (entries.length === 0) {
+					await refreshToken(source)
+					entries = await this.fetchRegion(source)
 				}
 
-				const body = (await res.json()) as LauncherResponse
-
-				if (!body.success || !body.data) {
-					console.error(
-						`[ServerOnline] ${source.region} returned invalid data`
-					)
-					continue
-				}
-
-				for (const entry of parseOnline(source.region, body.data)) {
+				for (const entry of entries) {
 					rows.push({
 						region: source.region,
 						server_id: entry.serverId,
@@ -129,9 +239,6 @@ class ServerOnlineService {
 			orderBy: { created_at: 'asc' },
 		})
 
-		// Every snapshot batch lands at roughly the same moment, so coalesce
-		// rows into 5-minute buckets and sum the online of all servers per
-		// region to build a clean time series.
 		const BUCKET_MS = 5 * 60 * 1000
 		const map = new Map<string, { createdAt: Date; online: number }>()
 		for (const s of snapshots) {
@@ -155,3 +262,7 @@ class ServerOnlineService {
 }
 
 export const serverOnlineService = new ServerOnlineService()
+
+serverOnlineService.warmUp().catch((err) => {
+	console.error('[ServerOnline] Initial token warm-up failed:', err)
+})

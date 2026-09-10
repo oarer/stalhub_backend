@@ -1034,11 +1034,11 @@ model BanLog {
   user    User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id Int
 
-  rule      String        // login_bruteforce | request_abuse | content_spam
-  severity  BanSeverity   @default(WARN) // WARN = 1-е срабатывание, BAN = перманентный бан
+  rule      String     
+  severity  BanSeverity   @default(WARN)
   auto      Boolean       @default(true)
   reason    String        @default("")
-  meta      Json?         // улики: ip, route, попытки, external_id
+  meta      Json?         // ip, route, попытки, id
   created_at DateTime     @default(now())
 
   @@index([user_id, created_at])
