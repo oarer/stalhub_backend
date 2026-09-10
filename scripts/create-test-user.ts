@@ -19,14 +19,18 @@
 
 export {}
 
-import { hashPassword } from '@/utils/crypto'
 import { prisma } from '@/lib/prisma'
+import { hashPassword } from '@/utils/crypto'
 
 const [username, password, roleName] = process.argv.slice(2)
 
 if (!username || !password) {
-	console.error('Usage: bun run scripts/create-test-user.ts <username> <password> [roleName]')
-	console.error('  roleName: роль по названию, например "user:manage" — права админа')
+	console.error(
+		'Usage: bun run scripts/create-test-user.ts <username> <password> [roleName]'
+	)
+	console.error(
+		'  roleName: роль по названию, например "user:manage" — права админа'
+	)
 	process.exit(1)
 }
 
@@ -72,6 +76,8 @@ console.log('Test user created:')
 console.log(`  id:       ${user.id}`)
 console.log(`  username: ${username}`)
 console.log(`  password: ${password}`)
-console.log(`  roles:    ${[userRole.name, roleName].filter(Boolean).join(', ')}`)
+console.log(
+	`  roles:    ${[userRole.name, roleName].filter(Boolean).join(', ')}`
+)
 
 await prisma.$disconnect()

@@ -44,8 +44,8 @@ const envVariables = z.object({
 	// auto-ban
 	LOGIN_MAX_FAILURES: z.coerce.number().default(999),
 	RPS_THRESHOLD: z.coerce.number().default(999),
-	IP_BLOCK_MIN_SECONDS: z.coerce.number().default(15 * 60),
-	IP_BLOCK_MAX_SECONDS: z.coerce.number().default(24 * 60 * 60),
+	IP_BLOCK_MIN_SECONDS: z.coerce.number().default(60 * 60),
+	IP_BLOCK_MAX_SECONDS: z.coerce.number().default(48 * 60 * 60),
 	AUTO_BAN_SKIP_RANK: z.coerce.number().default(0),
 	ADMIN_ALERT_WEBHOOK: z.string().default(''),
 })
