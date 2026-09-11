@@ -2,8 +2,7 @@ import { auctionService } from '@/app/api/auction/auction.service'
 import type { LotsHistoryResponse } from '@/types/api.type'
 import type { Root } from '@/types/hideout.type'
 
-const HIDEOUT_URL =
-	'https://cdn.stalhub.dev/db/hideout_recipes.json'
+const HIDEOUT_URL = 'https://cdn.stalhub.dev/db/hideout_recipes.json'
 
 let inMemoryData: Root | null = null
 let loadPromise: Promise<Root> | null = null
@@ -35,12 +34,17 @@ export const loadHideoutData = async () => {
 	if (inMemoryData) return inMemoryData
 	if (loadPromise) return loadPromise
 
-	loadPromise = fetchJson<Root>(HIDEOUT_URL).then((data) => {
-		inMemoryData = data
-		loadPromise = null
-		console.log('[Hideout] Loaded', data.recipes.length, 'recipes')
-		return data
-	})
+	loadPromise = fetchJson<Root>(HIDEOUT_URL)
+		.then((data) => {
+			inMemoryData = data
+			loadPromise = null
+			console.log('[Hideout] Loaded', data.recipes.length, 'recipes')
+			return data
+		})
+		.catch((err) => {
+			loadPromise = null
+			throw err
+		})
 
 	return loadPromise
 }
