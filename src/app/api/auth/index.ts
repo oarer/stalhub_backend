@@ -1,5 +1,7 @@
 import { t } from 'elysia'
+import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
+import { fromStore, requireAuth } from '@/utils/auth.guard'
 import { authService, createSession } from '@/utils/auth.service'
 import {
 	clearLoginFailures,
@@ -8,7 +10,11 @@ import {
 	recordLoginFailure,
 } from '@/utils/auto-ban'
 import { verifyPassword } from '@/utils/crypto'
-import { consumeDesktopAuthCode } from '@/utils/desktop-auth'
+import {
+	consumeDesktopAuthCode,
+	createDesktopAuthCode,
+} from '@/utils/desktop-auth'
+import { desktopLoginQuery } from '@/utils/desktop-provider'
 import { createElysia } from '@/utils/elysia'
 import { accessCookie, jwtPlugin, refreshCookie } from '@/utils/jwt.plugin'
 import { discordAuth } from './providers/discord'
@@ -89,6 +95,50 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 					code: t.String({ minLength: 20, maxLength: 100 }),
 					code_verifier: t.String({ minLength: 43, maxLength: 128 }),
 				}),
+				detail: { tags: ['Auth'] },
+			}
+		)
+		.get(
+			'/desktop/start',
+			({ query, set }) => {
+				if (!query.desktop_state || !query.code_challenge) {
+					set.status = 400
+					return {
+						error: 'Desktop state and PKCE challenge required',
+					}
+				}
+				const url = new URL('/auth', env.WEB_ORIGIN)
+				url.searchParams.set('desktop_state', query.desktop_state)
+				url.searchParams.set('code_challenge', query.code_challenge)
+				return { url: url.toString() }
+			},
+			{
+				query: desktopLoginQuery,
+				detail: { tags: ['Auth'] },
+			}
+		)
+		.post(
+			'/desktop/issue',
+			async ({ body, store }) => {
+				const code = await createDesktopAuthCode(
+					fromStore(store).user_id,
+					body.code_challenge
+				)
+				const url = new URL('stalhub://auth/callback')
+				url.searchParams.set('code', code)
+				url.searchParams.set('state', body.desktop_state)
+				return { success: true, url: url.toString() }
+			},
+			{
+				body: t.Object({
+					desktop_state: t.String({
+						pattern: '^[A-Za-z0-9_-]{43,128}$',
+					}),
+					code_challenge: t.String({
+						pattern: '^[A-Za-z0-9_-]{43}$',
+					}),
+				}),
+				beforeHandle: [requireAuth],
 				detail: { tags: ['Auth'] },
 			}
 		)

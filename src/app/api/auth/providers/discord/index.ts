@@ -34,8 +34,8 @@ export const discordAuth = createElysia()
 					const desktopRedirect = await bindDesktopLogin(
 						query,
 						state,
-						request,
-						'discord'
+						'discord',
+						env.DISCORD_REDIRECT_URI || undefined
 					)
 					if (desktopRedirect) {
 						url.searchParams.set('redirect_uri', desktopRedirect)

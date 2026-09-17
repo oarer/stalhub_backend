@@ -13,6 +13,7 @@ const envVariables = z.object({
 	DISCORD_REDIRECT_URI: z.string().default(''),
 	DESKTOP_REDIRECT_URI: z.string().default('stalhub://auth/callback'),
 	DESKTOP_AUTH_TTL_SECONDS: z.coerce.number().int().min(30).max(600).default(120),
+	WEB_ORIGIN: z.string().default('https://stalhub.dev'),
 
 	TELEGRAM_CLIENT_ID: z.string().default(''),
 	TELEGRAM_CLIENT_SECRET: z.string().default(''),

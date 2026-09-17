@@ -47,7 +47,7 @@ export const exboAuth = createElysia()
 						query,
 						state,
 						'exbo',
-						'http://localhost:3000/auth/callback/exbo'
+						env.EXBO_REDIRECT_URI || undefined
 					)
 					if (desktopRedirect)
 						url.searchParams.set('redirect_uri', desktopRedirect)

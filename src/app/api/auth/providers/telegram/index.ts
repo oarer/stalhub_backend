@@ -176,8 +176,8 @@ export const telegramAuth = createElysia()
 					const desktopRedirect = await bindDesktopLogin(
 						query,
 						state,
-						request,
-						'telegram'
+						'telegram',
+						env.TELEGRAM_REDIRECT_URI || undefined
 					)
 					if (desktopRedirect)
 						url.searchParams.set('redirect_uri', desktopRedirect)

@@ -31,9 +31,7 @@ export async function bindDesktopLogin(
 	let redirectUri: string
 	if (preferredRedirectUri) {
 		if (!isHttpUrl(preferredRedirectUri))
-			throw new Error(
-				`Desktop callback requires an HTTP(S) URL, got: ${JSON.stringify(preferredRedirectUri)}`
-			)
+			throw new Error('Desktop callback requires an HTTP(S) URL')
 		redirectUri = preferredRedirectUri
 	} else {
 		const publicOrigin = new URL(
