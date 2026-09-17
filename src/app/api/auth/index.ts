@@ -8,6 +8,7 @@ import {
 	recordLoginFailure,
 } from '@/utils/auto-ban'
 import { verifyPassword } from '@/utils/crypto'
+import { consumeDesktopAuthCode } from '@/utils/desktop-auth'
 import { createElysia } from '@/utils/elysia'
 import { accessCookie, jwtPlugin, refreshCookie } from '@/utils/jwt.plugin'
 import { discordAuth } from './providers/discord'
@@ -26,6 +27,71 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 		.use(telegramAuth)
 		.use(exboAuth)
 
+		.post(
+			'/desktop/exchange',
+			async ({
+				body,
+				headers,
+				cookie: { access_token, refresh_token },
+				jwt,
+				set,
+			}) => {
+				const exchange = await consumeDesktopAuthCode(
+					body.code,
+					body.code_verifier
+				)
+				if (!exchange) {
+					set.status = 400
+					return { error: 'Invalid or expired desktop code' }
+				}
+				const user = await prisma.user.findUnique({
+					where: { id: exchange.user_id },
+					include: { roles: true },
+				})
+				if (!user) {
+					set.status = 404
+					return { error: 'User not found' }
+				}
+				const h = headers as Record<string, string | undefined>
+				const session = await createSession(
+					user.id,
+					h['user-agent'] ?? 'Stalhub Desktop',
+					h['x-forwarded-for'] ?? ''
+				)
+				const roles = user.roles.map((role) => role.name)
+				const accessValue = await jwt.sign({
+					sub: String(user.id),
+					sid: session.session_id,
+					name: user.name,
+					username: user.username,
+					role: roles,
+					exp: Math.floor(Date.now() / 1000) + 5 * 60,
+				})
+				const refreshValue = await jwt.sign({
+					sub: String(user.id),
+					sid: session.session_id,
+					exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+				})
+				refresh_token.set({ value: refreshValue, ...refreshCookie })
+				access_token.set({ value: accessValue, ...accessCookie })
+				const fullSession = await authService.getSession(
+					session.session_id
+				)
+				return {
+					success: true,
+					user: fullSession
+						? authService.userPayload(fullSession)
+						: null,
+				}
+			},
+			{
+				body: t.Object({
+					code: t.String({ minLength: 20, maxLength: 100 }),
+					code_verifier: t.String({ minLength: 43, maxLength: 128 }),
+				}),
+				detail: { tags: ['Auth'] },
+			}
+		)
 		.post(
 			'/login',
 			async ({

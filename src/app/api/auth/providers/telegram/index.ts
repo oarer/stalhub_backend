@@ -1,8 +1,15 @@
+import { redis } from 'bun'
 import { t } from 'elysia'
 import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
 import { fromStore, requireAuth } from '@/utils/auth.guard'
 import { assignDefaultRole, createSession } from '@/utils/auth.service'
+import {
+	bindDesktopLogin,
+	desktopLoginQuery,
+	finishDesktopLogin,
+	takeDesktopLogin,
+} from '@/utils/desktop-provider'
 import { createElysia } from '@/utils/elysia'
 import { accessCookie, jwtPlugin, refreshCookie } from '@/utils/jwt.plugin'
 
@@ -104,21 +111,34 @@ async function validateIdToken(idToken: string) {
 	}
 }
 
-const stateStore = new Map<
-	string,
-	{ verifier: string; expiresAt: number; user_id?: number }
->()
+const TELEGRAM_STATE_PREFIX = 'stalhub:telegram-state:'
+type TelegramState = { verifier: string; user_id?: number }
 
-export function storeTelegramState(
+export async function storeTelegramState(
 	state: string,
 	verifier: string,
 	user_id?: number
 ) {
-	stateStore.set(state, {
-		verifier,
-		user_id,
-		expiresAt: Date.now() + 10 * 60 * 1000,
-	})
+	await redis.set(
+		TELEGRAM_STATE_PREFIX + state,
+		JSON.stringify({
+			verifier,
+			...(user_id === undefined ? {} : { user_id }),
+		}),
+		'EX',
+		600
+	)
+}
+
+async function takeTelegramState(state: string): Promise<TelegramState | null> {
+	const raw = await redis.getdel(TELEGRAM_STATE_PREFIX + state)
+	if (!raw) return null
+	try {
+		const value = JSON.parse(raw) as TelegramState
+		return typeof value.verifier === 'string' ? value : null
+	} catch {
+		return null
+	}
 }
 
 export const telegramAuth = createElysia()
@@ -127,7 +147,7 @@ export const telegramAuth = createElysia()
 		app
 			.get(
 				'/login',
-				async () => {
+				async ({ query, request }) => {
 					const verifier = base64urlEncode(
 						crypto.getRandomValues(new Uint8Array(32)).buffer
 					)
@@ -139,10 +159,7 @@ export const telegramAuth = createElysia()
 					)
 					const state = crypto.randomUUID()
 
-					stateStore.set(state, {
-						verifier,
-						expiresAt: Date.now() + 10 * 60 * 1000,
-					})
+					await storeTelegramState(state, verifier)
 
 					const url = new URL('https://oauth.telegram.org/auth')
 					url.searchParams.set('client_id', env.TELEGRAM_CLIENT_ID)
@@ -156,9 +173,18 @@ export const telegramAuth = createElysia()
 					url.searchParams.set('code_challenge', challenge)
 					url.searchParams.set('code_challenge_method', 'S256')
 
+					const desktopRedirect = await bindDesktopLogin(
+						query,
+						state,
+						request,
+						'telegram'
+					)
+					if (desktopRedirect)
+						url.searchParams.set('redirect_uri', desktopRedirect)
 					return { url: url.toString() }
 				},
 				{
+					query: desktopLoginQuery,
 					detail: {
 						tags: ['Auth: Telegram'],
 					},
@@ -174,12 +200,12 @@ export const telegramAuth = createElysia()
 					jwt,
 					set,
 				}) => {
-					const stored = stateStore.get(state)
-					if (!stored || stored.expiresAt < Date.now()) {
+					const desktop = await takeDesktopLogin('telegram', state)
+					const stored = await takeTelegramState(state)
+					if (!stored) {
 						set.status = 403
 						return { error: 'Invalid or expired state' }
 					}
-					stateStore.delete(state)
 
 					const basic = btoa(
 						`${env.TELEGRAM_CLIENT_ID}:${env.TELEGRAM_CLIENT_SECRET}`
@@ -197,7 +223,9 @@ export const telegramAuth = createElysia()
 							body: new URLSearchParams({
 								grant_type: 'authorization_code',
 								code,
-								redirect_uri: env.TELEGRAM_REDIRECT_URI,
+								redirect_uri:
+									desktop?.redirectUri ??
+									env.TELEGRAM_REDIRECT_URI,
 								client_id: env.TELEGRAM_CLIENT_ID,
 								code_verifier: stored.verifier,
 							}),
@@ -269,18 +297,22 @@ export const telegramAuth = createElysia()
 						await assignDefaultRole(user_id)
 					}
 
+					if (desktop) return finishDesktopLogin(user_id, desktop)
+
 					const userData = await prisma.user.findUnique({
 						where: { id: user_id },
 						include: { roles: true },
 					})
-					const roleNames =
-						userData?.roles.map((r) => r.name) ?? []
+					const roleNames = userData?.roles.map((r) => r.name) ?? []
 					const ua =
 						(headers as Record<string, string | undefined>)[
 							'user-agent'
 						] ?? ''
 					const h = headers as Record<string, string | undefined>
-					const ip = (h['x-forwarded-for']?.split(',')[0]?.trim() ?? h['x-real-ip'] ?? '')
+					const ip =
+						h['x-forwarded-for']?.split(',')[0]?.trim() ??
+						h['x-real-ip'] ??
+						''
 					const session = await createSession(user_id, ua, ip)
 					const access_token_value = await jwt.sign({
 						sub: String(user_id),
@@ -363,14 +395,16 @@ export const telegramAuth = createElysia()
 						where: { id: user_id },
 						include: { roles: true },
 					})
-					const roleNames =
-						userData?.roles.map((r) => r.name) ?? []
+					const roleNames = userData?.roles.map((r) => r.name) ?? []
 					const ua =
 						(headers as Record<string, string | undefined>)[
 							'user-agent'
 						] ?? ''
 					const h = headers as Record<string, string | undefined>
-					const ip = (h['x-forwarded-for']?.split(',')[0]?.trim() ?? h['x-real-ip'] ?? '')
+					const ip =
+						h['x-forwarded-for']?.split(',')[0]?.trim() ??
+						h['x-real-ip'] ??
+						''
 					const session = await createSession(user_id, ua, ip)
 					const access_token_value = await jwt.sign({
 						sub: String(user_id),

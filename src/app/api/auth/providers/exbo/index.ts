@@ -6,6 +6,12 @@ import { Regions } from '@/types/api.type'
 import { fromStore, requireAuth } from '@/utils/auth.guard'
 import { assignDefaultRole, createSession } from '@/utils/auth.service'
 import { decryptSecretJson, encryptSecret } from '@/utils/crypto'
+import {
+	bindDesktopLogin,
+	desktopLoginQuery,
+	finishDesktopLogin,
+	takeDesktopLogin,
+} from '@/utils/desktop-provider'
 import { createElysia } from '@/utils/elysia'
 import { accessCookie, jwtPlugin, refreshCookie } from '@/utils/jwt.plugin'
 import { consumeLinkState, createLinkState } from '@/utils/link.state'
@@ -18,7 +24,7 @@ export const exboAuth = createElysia()
 		app
 			.get(
 				'/login',
-				async () => {
+				async ({ query, request }) => {
 					const state = crypto.randomUUID()
 
 					await prisma.eXBOAuthState.create({
@@ -35,9 +41,20 @@ export const exboAuth = createElysia()
 					url.searchParams.set('scope', '')
 					url.searchParams.set('state', state)
 
+					const desktopRedirect = await bindDesktopLogin(
+						query,
+						state,
+						request,
+						'exbo'
+					)
+					if (desktopRedirect) {
+						url.searchParams.set('redirect_uri', desktopRedirect)
+						url.searchParams.set('state', state)
+					}
 					return { url: url.toString() }
 				},
 				{
+					query: desktopLoginQuery,
 					detail: {
 						tags: ['Auth: Exbo'],
 					},
@@ -53,6 +70,7 @@ export const exboAuth = createElysia()
 					jwt,
 					set,
 				}) => {
+					const desktop = await takeDesktopLogin('exbo', state)
 					const linkUserId = state ? consumeLinkState(state) : null
 
 					if (!linkUserId) {
@@ -79,7 +97,8 @@ export const exboAuth = createElysia()
 						client_secret: env.EXBO_CLIENT_SECRET,
 						code,
 						grant_type: 'authorization_code',
-						redirect_uri: env.EXBO_REDIRECT_URI,
+						redirect_uri:
+							desktop?.redirectUri ?? env.EXBO_REDIRECT_URI,
 					})
 
 					const tokenRes = await fetch(
@@ -259,6 +278,8 @@ export const exboAuth = createElysia()
 					} catch {
 						// no block
 					}
+
+					if (desktop) return finishDesktopLogin(user_id, desktop)
 
 					const userData = await prisma.user.findUnique({
 						where: { id: user_id },

@@ -3,6 +3,12 @@ import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
 import { fromStore, requireAuth } from '@/utils/auth.guard'
 import { assignDefaultRole, createSession } from '@/utils/auth.service'
+import {
+	bindDesktopLogin,
+	desktopLoginQuery,
+	finishDesktopLogin,
+	takeDesktopLogin,
+} from '@/utils/desktop-provider'
 import { createElysia } from '@/utils/elysia'
 import { accessCookie, jwtPlugin, refreshCookie } from '@/utils/jwt.plugin'
 import { consumeLinkState, createLinkState } from '@/utils/link.state'
@@ -15,7 +21,8 @@ export const discordAuth = createElysia()
 		app
 			.get(
 				'/login',
-				() => {
+				async ({ query, request }) => {
+					const state = crypto.randomUUID()
 					const url = new URL(`${DISCORD_API}/oauth2/authorize`)
 					url.searchParams.set('client_id', env.DISCORD_CLIENT_ID)
 					url.searchParams.set(
@@ -24,9 +31,20 @@ export const discordAuth = createElysia()
 					)
 					url.searchParams.set('response_type', 'code')
 					url.searchParams.set('scope', 'identify')
+					const desktopRedirect = await bindDesktopLogin(
+						query,
+						state,
+						request,
+						'discord'
+					)
+					if (desktopRedirect) {
+						url.searchParams.set('redirect_uri', desktopRedirect)
+						url.searchParams.set('state', state)
+					}
 					return { url: url.toString() }
 				},
 				{
+					query: desktopLoginQuery,
 					detail: {
 						tags: ['Auth: Discord'],
 					},
@@ -42,6 +60,7 @@ export const discordAuth = createElysia()
 					jwt,
 					set,
 				}) => {
+					const desktop = await takeDesktopLogin('discord', state)
 					const linkUserId = state ? consumeLinkState(state) : null
 
 					const tokenRes = await fetch(
@@ -57,7 +76,9 @@ export const discordAuth = createElysia()
 								client_secret: env.DISCORD_CLIENT_SECRET,
 								code,
 								grant_type: 'authorization_code',
-								redirect_uri: env.DISCORD_REDIRECT_URI,
+								redirect_uri:
+									desktop?.redirectUri ??
+									env.DISCORD_REDIRECT_URI,
 							}),
 						}
 					)
@@ -145,6 +166,8 @@ export const discordAuth = createElysia()
 						await assignDefaultRole(user_id)
 					}
 
+					if (desktop) return finishDesktopLogin(user_id, desktop)
+
 					const user = await prisma.user.findUnique({
 						where: { id: user_id },
 						include: { roles: true },
@@ -155,7 +178,10 @@ export const discordAuth = createElysia()
 							'user-agent'
 						] ?? ''
 					const h = headers as Record<string, string | undefined>
-					const ip = (h['x-forwarded-for']?.split(',')[0]?.trim() ?? h['x-real-ip'] ?? '')
+					const ip =
+						h['x-forwarded-for']?.split(',')[0]?.trim() ??
+						h['x-real-ip'] ??
+						''
 					const session = await createSession(user_id, ua, ip)
 					const access_token_value = await jwt.sign({
 						sub: String(user_id),
