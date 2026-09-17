@@ -24,6 +24,8 @@ const envVariables = z.object({
 	EXBO_REDIRECT_URI: z.string().default(''),
 	ENCRYPT_KEY: z.string().default('dev'),
 
+	DESKTOP_AUTH_ORIGIN: z.string().default('https://api.stalhub.dev'),
+
 	JWT_SECRET: z.string().default('dev'),
 
 	OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY'),

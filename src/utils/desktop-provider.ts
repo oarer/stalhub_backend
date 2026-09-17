@@ -1,5 +1,6 @@
 import { redis } from 'bun'
 import { t } from 'elysia'
+import { env } from '@/env'
 import { createDesktopAuthCode } from './desktop-auth'
 
 export const desktopLoginQuery = t.Object({
@@ -34,9 +35,7 @@ export async function bindDesktopLogin(
 			throw new Error('Desktop callback requires an HTTP(S) URL')
 		redirectUri = preferredRedirectUri
 	} else {
-		const publicOrigin = new URL(
-			process.env.DESKTOP_AUTH_ORIGIN || 'https://api.stalhub.dev'
-		)
+		const publicOrigin = new URL(env.DESKTOP_AUTH_ORIGIN)
 		if (publicOrigin.protocol !== 'https:')
 			throw new Error('Desktop callback requires HTTPS')
 		redirectUri = `${publicOrigin.origin}/api/v1/auth/${provider}/callback`

@@ -23,6 +23,11 @@ function parseUserAgent(ua: string) {
 	let browser: string | null = null
 	let browserVersion: string | null = null
 
+	const desktopMarker = ua.match(/StalHubApp_([A-Za-z]+)/)
+	if (desktopMarker) {
+		return { isMobile, browser: 'StalHubApp', browserVersion: desktopMarker[1] }
+	}
+
 	const patterns = [
 		{ name: 'Chrome', regex: /Chrome\/([\d.]+)/ },
 		{ name: 'Firefox', regex: /Firefox\/([\d.]+)/ },

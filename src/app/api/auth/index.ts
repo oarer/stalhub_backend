@@ -26,6 +26,16 @@ const cookieSchema = t.Cookie({
 	access_token: t.Optional(t.String()),
 })
 
+const DESKTOP_PLATFORMS: Record<string, string> = {
+	aix: 'AIX',
+	darwin: 'macOS',
+	freebsd: 'FreeBSD',
+	linux: 'Linux',
+	openbsd: 'OpenBSD',
+	sunos: 'SunOS',
+	win32: 'Windows',
+}
+
 export const authRoutes = createElysia().group('/auth', (app) =>
 	app
 		.use(jwtPlugin)
@@ -59,9 +69,14 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 					return { error: 'User not found' }
 				}
 				const h = headers as Record<string, string | undefined>
+				const desktopUa = body.platform
+					? DESKTOP_PLATFORMS[body.platform]
+					: undefined
 				const session = await createSession(
 					user.id,
-					h['user-agent'] ?? 'Stalhub Desktop',
+					desktopUa
+						? `StalHubApp_${desktopUa}`
+						: h['user-agent'] ?? 'Stalhub Desktop',
 					h['x-forwarded-for'] ?? ''
 				)
 				const roles = user.roles.map((role) => role.name)
@@ -94,6 +109,12 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 				body: t.Object({
 					code: t.String({ minLength: 20, maxLength: 100 }),
 					code_verifier: t.String({ minLength: 43, maxLength: 128 }),
+					platform: t.Optional(
+						t.String({
+							pattern:
+								'^(aix|darwin|freebsd|linux|openbsd|sunos|win32)$',
+						})
+					),
 				}),
 				detail: { tags: ['Auth'] },
 			}
