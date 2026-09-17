@@ -8,8 +8,8 @@ import { assignDefaultRole, createSession } from '@/utils/auth.service'
 import { decryptSecretJson, encryptSecret } from '@/utils/crypto'
 import {
 	bindDesktopLogin,
+	buildDesktopLoginUrl,
 	desktopLoginQuery,
-	finishDesktopLogin,
 	takeDesktopLogin,
 } from '@/utils/desktop-provider'
 import { createElysia } from '@/utils/elysia'
@@ -41,16 +41,17 @@ export const exboAuth = createElysia()
 					url.searchParams.set('scope', '')
 					url.searchParams.set('state', state)
 
+					// EXBO only whitelists the web callback URL, so desktop
+					// logins must reuse it instead of the public API address.
 					const desktopRedirect = await bindDesktopLogin(
 						query,
 						state,
 						request,
-						'exbo'
+						'exbo',
+						env.EXBO_REDIRECT_URI || undefined
 					)
-					if (desktopRedirect) {
+					if (desktopRedirect)
 						url.searchParams.set('redirect_uri', desktopRedirect)
-						url.searchParams.set('state', state)
-					}
 					return { url: url.toString() }
 				},
 				{
@@ -279,7 +280,17 @@ export const exboAuth = createElysia()
 						// no block
 					}
 
-					if (desktop) return finishDesktopLogin(user_id, desktop)
+					// Desktop flow: the callback arrives from the web page via XHR
+					// (EXBO redirects to /auth/callback/exbo, which relays here),
+					// so a 302 to a custom scheme cannot be followed. Return the
+					// stalhub:// deeplink as JSON for the page to launch.
+					if (desktop) {
+						const desktopUrl = await buildDesktopLoginUrl(
+							user_id,
+							desktop
+						)
+						return { success: true, desktopUrl }
+					}
 
 					const userData = await prisma.user.findUnique({
 						where: { id: user_id },
