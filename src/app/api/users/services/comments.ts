@@ -82,7 +82,7 @@ class ProfileCommentsService {
 					content: `${author?.username ?? 'Кто-то'} оставил комментарий на вашей странице`,
 					author: author?.username ?? 'Система',
 					type: 0,
-					link: `/profile/${userId}`,
+					link: `/users/${userId}`,
 					users: { connect: [{ id: userId }] },
 				},
 			})
@@ -113,7 +113,7 @@ class ProfileCommentsService {
 					content: `${author?.username ?? 'Кто-то'} упомянул вас в комментарии на странице ${profileOwner?.username ?? 'пользователя'}`,
 					author: author?.username ?? 'Система',
 					type: 0,
-					link: `/profile/${userId}`,
+					link: `/users/${userId}`,
 					users: { connect: [{ id: u.id }] },
 				}))
 
