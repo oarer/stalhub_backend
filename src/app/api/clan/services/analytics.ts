@@ -17,6 +17,16 @@ function mskDayRange(date: string): [Date, Date] {
 
 const UPLOAD_DIR = path.resolve('uploads', 'screenshots')
 
+function screenshotVictory(r: AIScreenshotResult | null): boolean | null {
+	if (!r) return null
+	if (r.victory === true || r.victory === false) return r.victory
+	if (r.total_score != null && r.opponent_score != null) {
+		if (r.total_score > r.opponent_score) return true
+		if (r.total_score < r.opponent_score) return false
+	}
+	return null
+}
+
 class AnalyticsService {
 	private async ensureUploadDir() {
 		await mkdir(UPLOAD_DIR, { recursive: true })
@@ -245,17 +255,31 @@ class AnalyticsService {
 		})
 		if (!data) return null
 		const { screenshots, ...rest } = data
-		return {
-			...rest,
-			screenshots: screenshots.map((s) => ({
+		let wins = 0
+		let losses = 0
+		const mapped = screenshots.map((s) => {
+			const v = screenshotVictory(s.ai_result as AIScreenshotResult | null)
+			if (v === true) wins++
+			else if (v === false) losses++
+			return {
 				id: s.id,
 				ai_status: s.ai_status,
 				ai_error: s.ai_error,
 				created_at: s.created_at,
 				file_path: s.file_path,
-				victory:
-					(s.ai_result as AIScreenshotResult | null)?.victory ?? null,
-			})),
+				victory: v,
+			}
+		})
+		const summary = rest.ai_summary as
+			| { victory?: boolean | null }
+			| null
+			| undefined
+		const sessionVictory =
+			wins > losses ? true : losses > wins ? false : null
+		return {
+			...rest,
+			ai_summary: summary ? { ...summary, victory: sessionVictory } : null,
+			screenshots: mapped,
 		}
 	}
 
@@ -277,9 +301,11 @@ class AnalyticsService {
 			let wins = 0
 			let losses = 0
 			for (const shot of screenshots) {
-				const r = shot.ai_result as AIScreenshotResult | null
-				if (r?.victory === true) wins++
-				else if (r?.victory === false) losses++
+				const v = screenshotVictory(
+					shot.ai_result as AIScreenshotResult | null
+				)
+				if (v === true) wins++
+				else if (v === false) losses++
 			}
 			const victory = wins > losses ? true : losses > wins ? false : null
 			return { ...session, victory }
@@ -594,7 +620,7 @@ class AnalyticsService {
 					const r = shot.ai_result as AIScreenshotResult | null
 					return {
 						id: shot.id,
-						victory: r?.victory ?? null,
+						victory: screenshotVictory(r),
 						players: r?.players ?? [],
 					}
 				}),
@@ -686,10 +712,9 @@ class AnalyticsService {
 		let wins = 0
 		let losses = 0
 		for (const s of done) {
-			const r = s.ai_result as AIScreenshotResult | null
-			if (!r) continue
-			if (r.victory === true) wins++
-			else if (r.victory === false) losses++
+			const v = screenshotVictory(s.ai_result as AIScreenshotResult | null)
+			if (v === true) wins++
+			else if (v === false) losses++
 		}
 
 		if (scoreCounts.size > 0) {
