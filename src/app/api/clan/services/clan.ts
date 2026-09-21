@@ -10,6 +10,17 @@ interface ExboCharacterEntry {
 		member: { name: string; rank: string; joinTime: string }
 	}
 }
+
+interface ClanProfileExboAuth {
+	userid: number
+	token_blob: string
+	access_expires_at: Date
+}
+
+interface ClanProfileWithAuth {
+	user_id: number
+	user: { exbo_auth: ClanProfileExboAuth | null }
+}
 interface ExboClanInfo {
 	id: string
 	name: string
@@ -218,7 +229,15 @@ export class ClanService {
 			`/${reg}/clan/${clan_id}/info`
 		)
 
-		const access_token = await this.getMemberAccessToken(clan_id)
+		const profiles = await this.getMemberProfiles(clan_id)
+		let access_token: string | null = null
+		for (const p of profiles) {
+			const token = ClanService.getProfileAccessToken(p)
+			if (token) {
+				access_token = token
+				break
+			}
+		}
 		let members: ExboClanMember[] = []
 		if (access_token) {
 			const { data } = await apiClient.get<ExboClanMember[]>(
@@ -284,13 +303,25 @@ export class ClanService {
 			guestsByName.map((u) => [u.name.toLowerCase(), u.id])
 		)
 
+		const characterNameByUser = await this.buildCharacterNameMap(
+			profiles,
+			clan_id,
+			reg
+		)
+		const usedUserIds = new Set<number>()
+
 		for (const m of members) {
 			const key = m.name.toLowerCase()
-			const linkedUserId =
+			let linkedUserId =
+				characterNameByUser.get(key) ??
 				exboByLower.get(key) ??
 				usernameByLower.get(key) ??
 				guestNameByLower.get(key) ??
 				null
+			if (linkedUserId != null && usedUserIds.has(linkedUserId)) {
+				linkedUserId = null
+			}
+			if (linkedUserId != null) usedUserIds.add(linkedUserId)
 			await prisma.clanMember.create({
 				data: {
 					clan_id,
@@ -328,16 +359,17 @@ export class ClanService {
 		}
 	}
 
-	private async getMemberAccessToken(
+	private async getMemberProfiles(
 		clan_id: string
-	): Promise<string | null> {
-		const profiles = await prisma.userClanProfile.findMany({
+	): Promise<ClanProfileWithAuth[]> {
+		return prisma.userClanProfile.findMany({
 			where: { clan_id },
 			include: {
 				user: {
 					include: {
 						exbo_auth: {
 							select: {
+								userid: true,
 								token_blob: true,
 								access_expires_at: true,
 							},
@@ -346,16 +378,63 @@ export class ClanService {
 				},
 			},
 		})
-		for (const p of profiles) {
-			const auth = p.user.exbo_auth
-			if (!auth) continue
-			if (auth.access_expires_at <= new Date()) continue
+	}
+
+	private static getProfileAccessToken(p: ClanProfileWithAuth): string | null {
+		const auth = p.user.exbo_auth
+		if (!auth) return null
+		if (auth.access_expires_at <= new Date()) return null
+		try {
 			const { access_token } = decryptSecretJson<{
 				access_token: string
 			}>(auth.token_blob)
-			if (access_token) return access_token
+			return access_token ?? null
+		} catch {
+			return null
 		}
-		return null
+	}
+
+	// Игровые персонажи — первоисточник принадлежности клан-члена сайт-аккаунту.
+	// Для каждого привязанного профиля клана с живым EXBO-токеном тянем
+	// /{region}/characters и маппим имя персонажа → user_id. Сопоставление по
+	// нику ниже — лишь фолбэк, т.к. ник не доказывает владение персонажем.
+	private async buildCharacterNameMap(
+		profiles: ClanProfileWithAuth[],
+		clan_id: string,
+		region: string
+	): Promise<Map<string, number>> {
+		const map = new Map<string, number>()
+		const results = await Promise.all(
+			profiles.map(async (p) => {
+				const auth = p.user.exbo_auth
+				const token = ClanService.getProfileAccessToken(p)
+				if (!auth || !token) return []
+				try {
+					const { data: chars } = await apiClient.get<
+						ExboCharacterEntry[]
+					>(`/${region}/characters`, {
+						headers: { Authorization: `Bearer ${token}` },
+						_skipAuth: true,
+					} as never)
+					return chars
+						.filter((c) => c.clan?.info?.id === clan_id)
+						.flatMap((c) => {
+							const name = c.clan?.member?.name ?? c.information?.name
+							return name
+								? [([name.toLowerCase(), auth.userid] as const)]
+								: []
+						})
+				} catch {
+					return []
+				}
+			})
+		)
+		for (const entries of results) {
+			for (const [name, userid] of entries) {
+				map.set(name, userid)
+			}
+		}
+		return map
 	}
 
 	async listMembers(clan_id: string) {
