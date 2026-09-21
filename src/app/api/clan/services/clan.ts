@@ -394,10 +394,6 @@ export class ClanService {
 		}
 	}
 
-	// Игровые персонажи — первоисточник принадлежности клан-члена сайт-аккаунту.
-	// Для каждого привязанного профиля клана с живым EXBO-токеном тянем
-	// /{region}/characters и маппим имя персонажа → user_id. Сопоставление по
-	// нику ниже — лишь фолбэк, т.к. ник не доказывает владение персонажем.
 	private async buildCharacterNameMap(
 		profiles: ClanProfileWithAuth[],
 		clan_id: string,
