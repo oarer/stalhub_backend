@@ -18,10 +18,14 @@ class AdminUserService {
 	async updateCustomization(
 		user_id: number,
 		data: {
+			layout?: 'CLASSIC' | 'MODERN' | 'COMPACT'
 			banner_mode?: 'COLOR' | 'IMAGE' | 'NONE'
 			banner_type?: 'BACKGROUND' | 'HEADER'
 			banner_color?: string
 			banner_image?: string | null
+			card_background?: 'COLOR' | 'AVATAR' | 'NONE'
+			card_color?: string
+			avatar?: 'DISCORD' | 'TELEGRAM' | null
 		}
 	) {
 		const existing = await prisma.user.findUnique({
@@ -30,6 +34,7 @@ class AdminUserService {
 		if (!existing) return null
 
 		const updateData: Record<string, unknown> = {}
+		if (data.layout !== undefined) updateData.layout = data.layout
 		if (data.banner_mode !== undefined)
 			updateData.banner_mode = data.banner_mode
 		if (data.banner_type !== undefined)
@@ -38,6 +43,13 @@ class AdminUserService {
 			updateData.banner_color = data.banner_color
 		if (data.banner_image !== undefined)
 			updateData.banner_image = data.banner_image
+		if (data.card_background !== undefined)
+			updateData.card_background = data.card_background
+		if (data.card_color !== undefined) updateData.card_color = data.card_color
+		if (data.avatar !== undefined) {
+			updateData.avatar = data.avatar
+			if (data.avatar === null) updateData.avatar_image = null
+		}
 
 		if (Object.keys(updateData).length === 0) {
 			return { error: 'No valid fields to update' }
@@ -175,7 +187,16 @@ class AdminUserService {
 		return { ...user, banned: this.isEffectivelyBanned(user.user_settings) }
 	}
 
-	async update(user_id: number, data: { username?: string; name?: string }) {
+	async update(
+		user_id: number,
+		data: {
+			username?: string
+			name?: string
+			onboarded?: boolean
+			public_profile?: boolean
+			social_links?: Record<string, string>
+		}
+	) {
 		const existing = await prisma.user.findUnique({
 			where: { id: user_id },
 		})
@@ -188,13 +209,47 @@ class AdminUserService {
 			if (taken) return { error: 'Username already taken' }
 		}
 
-		return prisma.user.update({
-			where: { id: user_id },
-			data: {
-				...(data.name !== undefined && { name: data.name }),
-				...(data.username !== undefined && { username: data.username }),
-			},
-		})
+		const userUpdate: Record<string, unknown> = {}
+		if (data.name !== undefined) userUpdate.name = data.name
+		if (data.username !== undefined) userUpdate.username = data.username
+		if (data.onboarded !== undefined) userUpdate.onboarded = data.onboarded
+
+		if (data.social_links !== undefined) {
+			const pruned: Record<string, string> = {}
+			for (const [key, value] of Object.entries(data.social_links)) {
+				const url = value.trim()
+				if (!url) continue
+				pruned[key.trim().toLowerCase()] = url
+			}
+			userUpdate.social_links = pruned
+		}
+
+		const updates: Promise<unknown>[] = []
+
+		if (Object.keys(userUpdate).length > 0) {
+			updates.push(
+				prisma.user.update({
+					where: { id: user_id },
+					data: userUpdate,
+				})
+			)
+		}
+
+		if (data.public_profile !== undefined) {
+			updates.push(
+				prisma.userSettings.upsert({
+					where: { user_id },
+					update: { public_profile: data.public_profile },
+					create: { user_id, public_profile: data.public_profile },
+				})
+			)
+		}
+
+		if (updates.length > 0) {
+			await Promise.all(updates)
+		}
+
+		return this.get(user_id)
 	}
 
 	async remove(user_id: number) {

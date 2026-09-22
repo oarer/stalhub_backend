@@ -1,4 +1,11 @@
 import { t } from 'elysia'
+import {
+	AvatarSource,
+	BannerMode,
+	BannerType,
+	CardBackground,
+	UserLayout,
+} from 'generated/prisma/enums'
 import { prisma } from '@/lib/prisma'
 import {
 	fromStore,
@@ -75,6 +82,9 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 				body: t.Object({
 					username: t.Optional(t.String()),
 					name: t.Optional(t.String()),
+					onboarded: t.Optional(t.Boolean()),
+					public_profile: t.Optional(t.Boolean()),
+					social_links: t.Optional(t.Record(t.String(), t.String())),
 				}),
 				detail: { tags: ['Admin'] },
 			}
@@ -351,14 +361,14 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ user_id: t.Numeric() }),
 				body: t.Object({
-					banner_mode: t.Optional(
-						t.Enum({ COLOR: 'COLOR', IMAGE: 'IMAGE', NONE: 'NONE' })
-					),
-					banner_type: t.Optional(
-						t.Enum({ BACKGROUND: 'BACKGROUND', HEADER: 'HEADER' })
-					),
+					layout: t.Optional(t.Enum(UserLayout)),
+					banner_mode: t.Optional(t.Enum(BannerMode)),
+					banner_type: t.Optional(t.Enum(BannerType)),
 					banner_color: t.Optional(t.String()),
 					banner_image: t.Optional(t.Nullable(t.String())),
+					card_background: t.Optional(t.Enum(CardBackground)),
+					card_color: t.Optional(t.String()),
+					avatar: t.Optional(t.Nullable(t.Enum(AvatarSource))),
 				}),
 				detail: { tags: ['Admin'] },
 			}
