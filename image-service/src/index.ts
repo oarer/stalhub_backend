@@ -2,6 +2,9 @@ import sharp from 'sharp'
 
 const PORT = Number(process.env.PORT) || 3002
 const MAX_BYTES = Number(process.env.IMAGE_MAX_BYTES) || 20 * 1024 * 1024
+// Кап длинной стороны: без даунскейла 10-МБ кадры остаются
+// многомегабайтными, сколько ни жми quality.
+const MAX_DIMENSION = Number(process.env.IMAGE_MAX_DIMENSION) || 2048
 
 const TEXT_DECODER = new TextDecoder()
 
@@ -45,13 +48,22 @@ async function compress(
 	input: Buffer,
 	mime: CompressibleMime
 ): Promise<Buffer> {
-	const pipeline = sharp(input).rotate()
+	const pipeline = sharp(input)
+		.rotate()
+		.resize({
+			width: MAX_DIMENSION,
+			height: MAX_DIMENSION,
+			fit: 'inside',
+			withoutEnlargement: true,
+		})
 	let output: Buffer
 	if (mime === 'image/jpeg')
 		output = await pipeline.jpeg({ quality: 82, mozjpeg: true }).toBuffer()
 	else if (mime === 'image/png')
+		// Без palette: квантование в 256 цветов даёт бендинг
+		// на фото/градиентах. Размер давит даунскейл + level 6.
 		output = await pipeline
-			.png({ quality: 80, compressionLevel: 6, palette: true })
+			.png({ quality: 80, compressionLevel: 6 })
 			.toBuffer()
 	else output = await pipeline.webp({ quality: 80 }).toBuffer()
 	// Never inflate already-optimized files.
