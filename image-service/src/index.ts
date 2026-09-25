@@ -51,7 +51,7 @@ async function compress(
 		output = await pipeline.jpeg({ quality: 82, mozjpeg: true }).toBuffer()
 	else if (mime === 'image/png')
 		output = await pipeline
-			.png({ quality: 80, compressionLevel: 9, palette: true })
+			.png({ quality: 80, compressionLevel: 6, palette: true })
 			.toBuffer()
 	else output = await pipeline.webp({ quality: 80 }).toBuffer()
 	// Never inflate already-optimized files.
