@@ -50,3 +50,4 @@ test.*
 /runtime
 
 /discord-bot/node_modules
+/image-service/node_modules

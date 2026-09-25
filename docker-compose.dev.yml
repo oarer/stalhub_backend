@@ -13,11 +13,32 @@ services:
       - "3001:3001"
     env_file:
       - .env
+    environment:
+      IMAGE_SERVICE_URL: http://image-service:3002
+      NO_PROXY: localhost,127.0.0.1,::1,app,image-service,host.docker.internal
+      no_proxy: localhost,127.0.0.1,::1,app,image-service,host.docker.internal
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      image-service:
+        condition: service_started
+
+  image-service:
+    build: ./image-service
+    container_name: StalHub_image_service
+    command: sh -c "bun install && bun run --watch src/index.ts"
+    restart: unless-stopped
+    volumes:
+      - ./image-service:/app
+      - /app/node_modules
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
+    environment:
+      PORT: 3002
 
   discord-bot:
     build: ./discord-bot

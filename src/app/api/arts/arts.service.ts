@@ -9,6 +9,12 @@ import {
 	type ViewIdentity,
 } from '@/app/api/metrics/view-dedupe'
 import { prisma } from '@/lib/prisma'
+import {
+	compressImageBuffer,
+	detectImageMime,
+	IMAGE_MIME_EXTENSIONS,
+	isCompressibleImageMime,
+} from '@/utils/image-compress'
 import { generateSlug } from '@/utils/slug'
 import { type ArtAuthorPayload, resolveArtAuthor } from './art-author'
 
@@ -192,9 +198,20 @@ class ArtsService {
 		const artDir = './uploads/arts'
 		await mkdir(artDir, { recursive: true })
 
-		const ext = path.extname(file.name) || '.png'
+		// Trust magic bytes over file name / Content-Type for images.
+		const detected = detectImageMime(file.buffer)
+		const declaredExt = path.extname(file.name) || '.png'
+		const ext = detected
+			? `.${IMAGE_MIME_EXTENSIONS[detected]}`
+			: declaredExt
+		// Recompress without resizing; gif/video pass through untouched.
+		const mime = detected ?? file.type
+		const data = isCompressibleImageMime(mime)
+			? await compressImageBuffer(file.buffer, mime)
+			: file.buffer
+
 		const filename = `${randomUUID()}${ext}`
-		await writeFile(path.join(artDir, filename), file.buffer)
+		await writeFile(path.join(artDir, filename), data)
 
 		return { image_url: `/uploads/arts/${filename}` }
 	}

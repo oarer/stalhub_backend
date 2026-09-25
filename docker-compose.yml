@@ -8,13 +8,16 @@ services:
       - .env
     environment:
       DATABASE_URL: ${DATABASE_URL}
-      NO_PROXY: localhost,127.0.0.1,::1,app,host.docker.internal
-      no_proxy: localhost,127.0.0.1,::1,app,host.docker.internal
+      IMAGE_SERVICE_URL: http://image-service:3002
+      NO_PROXY: localhost,127.0.0.1,::1,app,image-service,host.docker.internal
+      no_proxy: localhost,127.0.0.1,::1,app,image-service,host.docker.internal
     depends_on:
       redis:
         condition: service_healthy
       postgres:
         condition: service_healthy
+      image-service:
+        condition: service_started
     command: [ "sh", "-c", "bun run db:deploy && ./server" ]
     healthcheck:
       test: [ "CMD", "bun", "-e", "fetch('http://localhost:3001/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" ]
@@ -24,6 +27,18 @@ services:
     volumes:
       - ./uploads:/app/uploads
       - ./runtime:/app/runtime
+
+  image-service:
+    build: ./image-service
+    container_name: StalHub_image_service
+    restart: unless-stopped
+    environment:
+      PORT: 3002
+    healthcheck:
+      test: [ "CMD", "bun", "-e", "fetch('http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   discord-bot:
     build: ./discord-bot

@@ -1,16 +1,16 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, readdir, stat, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import {
+	compressImageBuffer,
+	detectImageMime,
+	IMAGE_MIME_EXTENSIONS,
+} from '@/utils/image-compress'
 
 export const ARTICLE_IMAGE_MAX_BYTES = 10 * 1024 * 1024
 export const ARTICLE_IMAGE_MAX_COUNT = 50
 export const ARTICLE_IMAGE_TOTAL_MAX_BYTES = 100 * 1024 * 1024
-const MIME_EXTENSIONS = {
-	'image/jpeg': 'jpg',
-	'image/png': 'png',
-	'image/webp': 'webp',
-	'image/gif': 'gif',
-} as const
+const MIME_EXTENSIONS = IMAGE_MIME_EXTENSIONS
 
 export type QuestMap = {
 	map_id: string
@@ -66,34 +66,7 @@ export function normalizeQuestMap(value: unknown): QuestMap | null {
 }
 
 function detectedMime(buffer: Uint8Array): keyof typeof MIME_EXTENSIONS | null {
-	if (
-		buffer.length >= 3 &&
-		buffer[0] === 0xff &&
-		buffer[1] === 0xd8 &&
-		buffer[2] === 0xff
-	)
-		return 'image/jpeg'
-	if (
-		buffer.length >= 8 &&
-		[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every(
-			(v, i) => buffer[i] === v
-		)
-	)
-		return 'image/png'
-	if (
-		buffer.length >= 12 &&
-		new TextDecoder().decode(buffer.slice(0, 4)) === 'RIFF' &&
-		new TextDecoder().decode(buffer.slice(8, 12)) === 'WEBP'
-	)
-		return 'image/webp'
-	if (
-		buffer.length >= 6 &&
-		['GIF87a', 'GIF89a'].includes(
-			new TextDecoder().decode(buffer.slice(0, 6))
-		)
-	)
-		return 'image/gif'
-	return null
+	return detectImageMime(buffer)
 }
 
 export function validateArticleImage(file: File, buffer: Uint8Array) {
@@ -125,8 +98,10 @@ export function assertArticleImageQuota(
 }
 
 export async function saveArticleImage(articleId: number, file: File) {
-	const buffer = new Uint8Array(await file.arrayBuffer())
-	const extension = validateArticleImage(file, buffer)
+	const raw = Buffer.from(await file.arrayBuffer())
+	const extension = validateArticleImage(file, raw)
+	// Recompress without resizing; gif passes through untouched.
+	const buffer = await compressImageBuffer(raw, file.type)
 	const relativeDir = `articles/${articleId}/image`
 	const directory = resolve(process.cwd(), 'uploads', relativeDir)
 	await mkdir(directory, { recursive: true })
