@@ -28,6 +28,7 @@ services:
     volumes:
       - ./uploads:/app/uploads
       - ./runtime:/app/runtime
+      - ./scripts:/app/scripts:ro
 
   image-service:
     build: ./image-service
