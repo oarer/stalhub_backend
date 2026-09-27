@@ -43,8 +43,7 @@ const SERVICE_URL = (
 const MANIFEST_NAME = '.compress-manifest.json'
 type Manifest = Record<string, { sha256: string; bytes: number }>
 
-const sha256 = (data: Buffer) =>
-	createHash('sha256').update(data).digest('hex')
+const sha256 = (data: Buffer) => createHash('sha256').update(data).digest('hex')
 
 async function loadManifest(): Promise<Manifest> {
 	try {
@@ -129,7 +128,9 @@ async function compressOne(
 		})
 	} catch (err) {
 		stats.failed++
-		failures.push(`${file}: service unreachable (${(err as Error).message})`)
+		failures.push(
+			`${file}: service unreachable (${(err as Error).message})`
+		)
 		return
 	}
 	if (!res.ok) {
@@ -149,12 +150,13 @@ async function compressOne(
 		stats.optimal++
 		return
 	}
-	const pct = Math.round((compressed.length / raw.length) * 100)
+	const saved = Math.round(savedPct)
+	const line = `${file}: ${raw.length} -> ${compressed.length} (-${saved}%)`
 	if (!APPLY) {
 		stats.shrunk++
 		stats.bytesBefore += raw.length
 		stats.bytesAfter += compressed.length
-		console.log(`[dry-run] ${file}: ${raw.length} -> ${compressed.length} (${pct}%)`)
+		console.log(`[dry-run] ${line}`)
 		return
 	}
 	try {
@@ -167,7 +169,7 @@ async function compressOne(
 		stats.shrunk++
 		stats.bytesBefore += raw.length
 		stats.bytesAfter += compressed.length
-		console.log(`${file}: ${raw.length} -> ${compressed.length} (${pct}%)`)
+		console.log(line)
 	} catch (err) {
 		stats.failed++
 		failures.push(`${file}: replace failed (${(err as Error).message})`)
@@ -230,7 +232,8 @@ async function main() {
 	if (failures.length) {
 		console.log('\nFailures:')
 		for (const f of failures.slice(0, 50)) console.log(`  ${f}`)
-		if (failures.length > 50) console.log(`  ... and ${failures.length - 50} more`)
+		if (failures.length > 50)
+			console.log(`  ... and ${failures.length - 50} more`)
 		process.exit(1)
 	}
 }
