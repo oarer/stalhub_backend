@@ -22,7 +22,6 @@ function bucketKey(
 	}
 }
 
-// In-memory fallback when Redis is unavailable (single-instance mode).
 const memFallback = new Map<string, { used: number; resetAt: number }>()
 
 function memGet(key: string, resetAt: number): number {
@@ -56,10 +55,6 @@ export async function peekQuota(
 	}
 }
 
-/**
- * Try to reserve `cost` quota units in the current minute window.
- * Returns ok:false when the quota is exhausted (caller should try next).
- */
 export async function tryReserveQuota(
 	prefix: string,
 	id: number | string,
@@ -87,7 +82,6 @@ export async function tryReserveQuota(
 	}
 }
 
-/** Roll back a reservation (e.g. request failed before reaching eAPI). */
 export async function releaseQuota(
 	prefix: string,
 	id: number | string,
@@ -105,8 +99,6 @@ export async function releaseQuota(
 	}
 }
 
-// ---------- token quota: 200 uses/min per token ----------
-
 export const peekUsage = (tokenId: number | string): Promise<QuotaState> =>
 	peekQuota('token', tokenId, QUOTA_PER_MINUTE_TOKEN)
 
@@ -121,7 +113,6 @@ export const release = (
 	cost: number
 ): Promise<void> => releaseQuota('token', tokenId, cost)
 
-// ---------- node (egress IP) quota: 800 uses/min per node ----------
 
 export const peekNodeUsage = (nodeId: number | string): Promise<QuotaState> =>
 	peekQuota('node', nodeId, QUOTA_PER_MINUTE_NODE)

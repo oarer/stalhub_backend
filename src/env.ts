@@ -8,7 +8,6 @@ const envVariables = z.object({
 		.string()
 		.default('true')
 		.transform((v) => v.toLowerCase() !== 'false' && v !== '0'),
-	TOKEN: z.string(),
 	LAUNCHER_SOURCES: z.string().min(1, 'LAUNCHER_SOURCES'),
 	LAUNCHER_AUTH_QUERY: z.string().min(1, 'LAUNCHER_AUTH_QUERY'),
 

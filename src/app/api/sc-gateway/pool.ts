@@ -44,10 +44,6 @@ export function invalidateTokenCache(): void {
 	cache = null
 }
 
-/**
- * One-time seed: import legacy env.EXBO_TOKEN into the pool
- * when the table is empty. Keeps old deploys working.
- */
 export async function ensureSeeded(): Promise<void> {
 	if (!env.EXBO_TOKEN) return
 	const count = await prisma.scApiToken.count()

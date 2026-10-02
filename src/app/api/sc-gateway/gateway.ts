@@ -113,7 +113,6 @@ export async function gatewayRequest<T>(
 	const triedNodeIds = new Set<number>()
 	const nodeCount = (await listNodes()).length
 
-	// Try every enabled node once, each time with a fresh token.
 	for (let attempt = 0; attempt <= nodeCount; attempt++) {
 		const token = await pickToken(cost, triedTokenIds)
 		if (!token) {
@@ -126,8 +125,7 @@ export async function gatewayRequest<T>(
 
 		const node = await pickNode(cost, triedNodeIds)
 		if (!node) {
-			// No nodes with free IP quota (or none enabled / all failed):
-			// run directly from the backend egress IP.
+
 			if (!env.SC_GATEWAY_DIRECT_FALLBACK) {
 				await release(token.id, cost)
 				throw {
