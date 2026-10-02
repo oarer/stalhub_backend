@@ -6,7 +6,7 @@ import {
 	setBlacklistCount,
 	setRecentPlayersCount,
 } from '@/app/api/metrics'
-import { apiClient } from '@/app/interceptors/sc.interceptor'
+import { scGateway } from '@/app/api/sc-gateway/gateway'
 import { prisma } from '@/lib/prisma'
 import type { OperationSessionListing } from '@/types/operations.type'
 import type {
@@ -76,9 +76,9 @@ class PlayerService {
 
 		let data: PlayerResponse
 		try {
-			; ({ data } = await apiClient.get<PlayerResponse>(
+			data = await scGateway.get<PlayerResponse>(
 				`/${region}/character/by-name/${character}/profile`
-			))
+			)
 
 			if (!data || !data.uuid) {
 				throw new Error('eAPI return null response')
@@ -129,9 +129,9 @@ class PlayerService {
 		const cached = await operationsCache.getOperations(region, params)
 		if (cached) return cached
 
-		const { data } = await apiClient.get<OperationSessionListing>(
+		const data = await scGateway.get<OperationSessionListing>(
 			`/${region}/operations/sessions`,
-			{ params }
+			params as Record<string, unknown>
 		)
 
 		await operationsCache.setOperations(region, params, data)

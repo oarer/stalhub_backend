@@ -189,6 +189,90 @@ OAuth-колбэк EXBO. Обслуживает и вход/регистраци
 
 ---
 
+## `GET /api/v1/auth/exbo/credentials`
+`requireAuth`. Статус локальных реквизитов (вход по паролю через `POST /auth/login`). Только для пользователей с привязанным EXBO-аккаунтом. Возвращает текущий логин (`User.username`) и задан ли пароль.
+
+### Тело ответа
+```json
+{ "login": "player_1", "has_password": false }
+```
+
+### Возможные ошибки
+- **404** — `{ "error": "EXBO account is not linked" }`
+- **401** — `{ "error": "Unauthorized" }`
+
+---
+
+## `POST /api/v1/auth/exbo/credentials`
+`requireAuth`. Первичная установка локальных реквизитов: юзер сам задаёт пароль и опционально новый логин. Только для пользователей с привязанным EXBO-аккаунтом. Повторный вызов после установки — **409**. Выбор логина при первичной установке — без 30-дневного кулдауна (как онбординг), `username_changed_at` обновляется.
+
+### Параметры (body)
+| Поле | Описание | Тип | Обязательный |
+| ---- | -------- | --- | :----------: |
+| `login` | новый логин = `username` (латиница, цифры, `_`, 3–32) | `string` | Нет |
+| `password` | пароль, 8–128 символов | `string` | Да |
+
+### Тело ответа
+```json
+{ "success": true, "login": "player_1" }
+```
+
+### Возможные ошибки
+- **404** — `{ "error": "EXBO account is not linked" }`
+- **409** — `{ "error": "Password already set, use PATCH to change it" }` — пароль уже задан
+- **409** — `{ "error": "Username is already taken" }` — логин занят
+- **422** — ошибка валидации схемы (короткий пароль/логин)
+- **401** — `{ "error": "Unauthorized" }`
+
+---
+
+## `PATCH /api/v1/auth/exbo/credentials`
+`requireAuth`. Смена логина и/или пароля (хотя бы одно поле обязательно). Смена логина ограничена кулдауном **30 дней** от `username_changed_at` (как `PATCH /users/@me`). Смена пароля требует `current_password`, если пароль уже задан; после смены все остальные сессии отзываются.
+
+### Параметры (body)
+| Поле | Описание | Тип | Обязательный |
+| ---- | -------- | --- | :----------: |
+| `login` | новый логин = `username` (латиница, цифры, `_`, 3–32) | `string` | Нет |
+| `new_password` | новый пароль, 8–128 символов | `string` | Нет |
+| `current_password` | текущий пароль (обязателен при смене пароля, если он уже задан) | `string` | Нет |
+
+### Тело ответа
+```json
+{ "success": true, "login": "player_1" }
+```
+
+### Возможные ошибки
+- **404** — `{ "error": "EXBO account is not linked" }`
+- **400** — `{ "error": "Nothing to update" }` — ничего не передано
+- **400** — `{ "error": "Current password required" }` — нет текущего пароля
+- **400** — `Username can be changed once every 30 days. N days remaining.` — кулдаун смены логина
+- **401** — `{ "error": "Invalid current password" }`
+- **409** — `{ "error": "Username is already taken" }`
+- **401** — `{ "error": "Unauthorized" }`
+
+---
+
+## `DELETE /api/v1/auth/exbo/credentials`
+`requireAuth`. Отключение входа по паролю (удаляет `password_hash`). Если передан неверный `current_password` — **401**; без него удаление выполняется по валидной сессии. Остальные сессии отзываются.
+
+### Параметры (body, опционально)
+| Поле | Описание | Тип | Обязательный |
+| ---- | -------- | --- | :----------: |
+| `current_password` | текущий пароль для подтверждения | `string` | Нет |
+
+### Тело ответа
+```json
+{ "success": true }
+```
+
+### Возможные ошибки
+- **404** — `{ "error": "EXBO account is not linked" }`
+- **404** — `{ "error": "Password login is not enabled" }` — пароль не задан
+- **401** — `{ "error": "Invalid current password" }`
+- **401** — `{ "error": "Unauthorized" }`
+
+---
+
 # OAuth: Discord
 
 ## `GET /api/v1/auth/discord/login`

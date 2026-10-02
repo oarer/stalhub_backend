@@ -271,6 +271,22 @@ export const crons = createElysia()
 			},
 		})
 	)
+	.use(
+		cron({
+			name: 'eforumSync',
+			pattern: '*/2 * * * *',
+			async run() {
+				try {
+					const { checkNewPosts } = await import(
+						'@/app/api/eforum/service'
+					)
+					await checkNewPosts()
+				} catch (err) {
+					console.error('[EForum] cron failed:', err)
+				}
+			},
+		})
+	)
 	.onStart(async () => {
 		console.log('[TierLists] Generating system tier lists...')
 		try {

@@ -3,7 +3,11 @@ import { z } from 'zod'
 const envVariables = z.object({
 	PORT: z.coerce.number().default(3001),
 	NODE_ENV: z.enum(['development', 'production']).default('development'),
-	EXBO_TOKEN: z.string(),
+	EXBO_TOKEN: z.string().default(''),
+	SC_GATEWAY_DIRECT_FALLBACK: z
+		.string()
+		.default('true')
+		.transform((v) => v.toLowerCase() !== 'false' && v !== '0'),
 	TOKEN: z.string(),
 	LAUNCHER_SOURCES: z.string().min(1, 'LAUNCHER_SOURCES'),
 	LAUNCHER_AUTH_QUERY: z.string().min(1, 'LAUNCHER_AUTH_QUERY'),
@@ -62,6 +66,13 @@ const envVariables = z.object({
 		.min(1000)
 		.max(120000)
 		.default(15000),
+
+	FORUM_COOKIE: z.string().default(''),
+	FORUM_USER_AGENT: z
+		.string()
+		.default(
+			'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0'
+		),
 })
 
 export const env = envVariables.parse(process.env)

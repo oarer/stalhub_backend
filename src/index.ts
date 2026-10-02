@@ -96,6 +96,11 @@ export const app = createElysia()
 		goldService.createSchedule(2).catch((err) => {
 			console.error('Failed to create gold drop schedule:', err)
 		})
+		import('@/app/api/sc-gateway/pool')
+			.then(({ ensureSeeded }) => ensureSeeded())
+			.catch((err) => {
+				console.error('Failed to seed SC token pool:', err)
+			})
 	})
 
 export type App = typeof app

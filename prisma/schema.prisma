@@ -1029,6 +1029,42 @@ model ServerOnlineSnapshot {
   @@map("server_online_snapshots")
 }
 
+// ================ SC API NODES ===================
+
+model ScApiNode {
+  id         Int     @id @default(autoincrement())
+  name       String  @unique
+  base_url   String
+  api_key    String  @default("") // encrypted bearer for node auth (enc:v1:... or plain for dev)
+  enabled    Boolean @default(true)
+  priority   Int     @default(0) // higher = preferred
+  timeout_ms Int     @default(10000)
+
+  last_seen_at DateTime?
+  last_error   String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("sc_api_nodes")
+}
+
+model ScApiToken {
+  id             Int     @id @default(autoincrement())
+  label          String  @default("")
+  token_encrypted String
+  token_hash     String  @unique // sha256 hex, for dedupe + safe display
+  token_tail     String  @default("") // last 6 chars for admin display
+  enabled        Boolean @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("sc_api_tokens")
+}
+
+// ================ END SC API NODES ===================
+
 model BanLog {
   id      Int   @id @default(autoincrement())
   user    User  @relation(fields: [user_id], references: [id], onDelete: Cascade)

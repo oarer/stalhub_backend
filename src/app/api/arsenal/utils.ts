@@ -1,4 +1,4 @@
-import { apiClient } from '@/app/interceptors/sc.interceptor'
+import { scGateway } from '@/app/api/sc-gateway/gateway'
 import items from '@/data/arsenal.json'
 import type { LotsHistoryResponse } from '@/types/api.type'
 import type { ItemInput, ItemResult } from '@/types/arsenal.type'
@@ -13,9 +13,9 @@ const getAveragePrice = (prices: { price: number }[]) => {
 
 export const fetchItemPrice = async (item_id: string, region = 'eu') => {
 	try {
-		const { data } = await apiClient.get<LotsHistoryResponse>(
+		const data = await scGateway.get<LotsHistoryResponse>(
 			`/${region}/auction/${item_id}/history`,
-			{ params: { limit: 20 } }
+			{ limit: 20 }
 		)
 
 		return getAveragePrice(data.prices ?? [])

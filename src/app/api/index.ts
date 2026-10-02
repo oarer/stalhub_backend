@@ -13,6 +13,7 @@ import { routeBarter } from './barter'
 import { buildsRoutes } from './builds'
 import { clanRoutes } from './clan'
 import { clansPublicRoutes } from './clan/routes/public'
+import { eforumRoutes } from './eforum'
 import { exboRoutes } from './exbo'
 import { routeHealth } from './health'
 import { routeHideout } from './hideout'
@@ -50,6 +51,7 @@ export const api = createElysia()
 	.use(adminRoutes)
 	.use(clanRoutes)
 	.use(clansPublicRoutes)
+	.use(eforumRoutes)
 	.use(loadoutRoutes)
 	.use(routeLoot)
 	.use(serverOnlineRoutes)

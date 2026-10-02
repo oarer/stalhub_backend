@@ -1,4 +1,5 @@
 import { apiClient } from '@/app/interceptors/sc.interceptor'
+import { scGateway } from '@/app/api/sc-gateway/gateway'
 import { prisma } from '@/lib/prisma'
 import { decryptSecretJson } from '@/utils/crypto'
 import type { RecruitmentSettingsInput } from './recruitment'
@@ -225,7 +226,7 @@ export class ClanService {
 		const clan = await prisma.clan.findUnique({ where: { id: clan_id } })
 		const reg = region ?? clan?.region ?? 'RU'
 
-		const { data: info } = await apiClient.get<ExboClanInfo>(
+		const info = await scGateway.get<ExboClanInfo>(
 			`/${reg}/clan/${clan_id}/info`
 		)
 

@@ -1,4 +1,4 @@
-import { apiClient } from '@/app/interceptors/sc.interceptor'
+import { scGateway } from '@/app/api/sc-gateway/gateway'
 import type { Lot, LotsResponse } from '@/types/api.type'
 
 const LOT_LIMIT = 200
@@ -7,11 +7,12 @@ export const fetchItemLots = async (
 	region: string,
 	item_id: string
 ): Promise<LotsResponse['lots']> => {
-	const { data } = await apiClient.get<LotsResponse>(
+	const data = await scGateway.get<LotsResponse>(
 		`/${region}/auction/${item_id}/lots`,
 		{
-			params: { limit: LOT_LIMIT, additional: true },
-		}
+			limit: LOT_LIMIT,
+			additional: true,
+		} as Record<string, unknown>
 	)
 
 	return data.lots ?? []

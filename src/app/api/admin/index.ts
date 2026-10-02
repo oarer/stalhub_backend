@@ -6,6 +6,7 @@ import { clansRoutes } from './clans'
 import { notificationsRoutes } from './notifications'
 import { permissionsRoutes } from './permissions'
 import { rolesRoutes } from './roles'
+import { scAdminRoutes } from './sc-nodes'
 import { usersRoutes } from './users'
 
 export const adminRoutes = createElysia().group('/admin', (app) =>
@@ -18,4 +19,5 @@ export const adminRoutes = createElysia().group('/admin', (app) =>
 		.use(clansRoutes)
 		.use(bansRoutes)
 		.use(adminArtsRoutes)
+		.use(scAdminRoutes)
 )

@@ -19,6 +19,7 @@ import { createElysia } from '@/utils/elysia'
 import { accessCookie, jwtPlugin, refreshCookie } from '@/utils/jwt.plugin'
 import { discordAuth } from './providers/discord'
 import { exboAuth } from './providers/exbo'
+import { exboCredentials } from './providers/exbo/credentials'
 import { telegramAuth } from './providers/telegram'
 
 const cookieSchema = t.Cookie({
@@ -42,6 +43,7 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 		.use(discordAuth)
 		.use(telegramAuth)
 		.use(exboAuth)
+		.use(exboCredentials)
 
 		.post(
 			'/desktop/exchange',

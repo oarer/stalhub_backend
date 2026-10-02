@@ -1,5 +1,5 @@
 import { auctionRequestsTotal } from '@/app/api/metrics'
-import { apiClient } from '@/app/interceptors/sc.interceptor'
+import { scGateway } from '@/app/api/sc-gateway/gateway'
 import type { LotsHistoryResponse, LotsResponse } from '@/types/api.type'
 import * as cache from './cache'
 
@@ -26,9 +26,9 @@ export class AuctionService {
 		)
 		if (cached) return cached
 
-		const { data } = await apiClient.get<LotsResponse>(
+		const data = await scGateway.get<LotsResponse>(
 			`/${region}/auction/${id}/lots`,
-			{ params: { limit, additional, offset } }
+			{ limit, additional, offset }
 		)
 		auctionRequestsTotal.inc({ region, type: 'lots' })
 		await cache.setLots(region, id, limit, additional, offset, data)
@@ -57,9 +57,9 @@ export class AuctionService {
 		)
 		if (cached) return cached
 
-		const { data } = await apiClient.get<LotsHistoryResponse>(
+		const data = await scGateway.get<LotsHistoryResponse>(
 			`/${region}/auction/${id}/history`,
-			{ params: { limit, additional, offset } }
+			{ limit, additional, offset }
 		)
 		auctionRequestsTotal.inc({ region, type: 'history' })
 		await cache.setHistory(region, id, limit, additional, offset, data)
