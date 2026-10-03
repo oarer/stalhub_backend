@@ -18,7 +18,7 @@ class ArticlesService {
 	async list(
 		take: number,
 		page: number,
-		opts?: { all?: boolean; author_id?: number }
+		opts?: { all?: boolean; author_id?: number; type?: ArticleType }
 	) {
 		const where: Prisma.ArticleWhereInput = {}
 		if (opts?.all) {
@@ -27,6 +27,9 @@ class ArticlesService {
 			where.author_id = opts.author_id
 		} else {
 			where.status = ArticleStatus.APPROVED
+		}
+		if (opts?.type) {
+			where.type = opts.type
 		}
 
 		const [rows, totalCount] = await Promise.all([

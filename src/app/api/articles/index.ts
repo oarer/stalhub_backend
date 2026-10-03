@@ -34,6 +34,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				)
 				return articlesService.list(take, page, {
 					all: is_admin,
+					type: query.type as ArticleType | undefined,
 					...(!is_admin && { author_id: user_id }),
 				})
 			},
@@ -42,6 +43,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
+					type: t.Optional(t.Enum(ArticleType)),
 				}),
 				detail: { tags: ['Articles'] },
 			}
@@ -54,6 +56,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				const page = (query.page ?? 1) - 1
 				return articlesService.list(take, page, {
 					author_id: fromStore(store).user_id,
+					type: query.type as ArticleType | undefined,
 				})
 			},
 			{
@@ -61,6 +64,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
+					type: t.Optional(t.Enum(ArticleType)),
 				}),
 				detail: { tags: ['Articles'] },
 			}
@@ -71,12 +75,15 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			async ({ query }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
-				return articlesService.list(take, page)
+				return articlesService.list(take, page, {
+					type: query.type as ArticleType | undefined,
+				})
 			},
 			{
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
+					type: t.Optional(t.Enum(ArticleType)),
 				}),
 				detail: { tags: ['Articles'] },
 			}
@@ -152,6 +159,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 		.post(
 			'',
 			async ({ body, store, set }) => {
+				let is_stalhub_admin = false
 				if (body.type === ArticleType.STALHUB) {
 					const is_admin = await checkPermission(
 						fromStore(store).user_id,
@@ -163,13 +171,14 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 							error: 'Only admins can create STALHUB articles',
 						}
 					}
+					is_stalhub_admin = true
 				}
 
 				const user_id = fromStore(store).user_id
 
 				await enforceContentSpam(user_id, SPAM_LIMIT_ARTICLE)
 
-				return articlesService.create(user_id, {
+				const created = await articlesService.create(user_id, {
 					title: body.title,
 					content: body.content,
 					type: body.type,
@@ -182,6 +191,17 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					reward_text: body.reward_text,
 					reward_money: body.reward_money,
 				})
+
+				// Патч-ноуты от админа сразу публикуем
+				if (is_stalhub_admin) {
+					const published = await articlesService.setStatus(
+						created.id,
+						ArticleStatus.APPROVED
+					)
+					return published ?? created
+				}
+
+				return created
 			},
 			{
 				beforeHandle: [requireAuth],
