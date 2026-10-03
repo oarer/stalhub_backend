@@ -3,6 +3,7 @@ export type ItemInput = {
 	currentPrice?: number
 	id?: string
 	limit?: number
+	icon?: string
 }
 
 export type ItemResult = ItemInput & {
