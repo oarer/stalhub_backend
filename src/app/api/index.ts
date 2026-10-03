@@ -22,6 +22,7 @@ import { botRoutes } from './internal/bot'
 import { loadoutRoutes } from './loadout'
 import { routeLoot } from './loot'
 import { metricsRoute } from './metrics'
+import { personalRoutes } from './personal'
 import { playersRoute } from './player'
 import { serverOnlineRoutes } from './server-online'
 import { tierListsRoutes } from './tier-lists'
@@ -54,6 +55,7 @@ export const api = createElysia()
 	.use(eforumRoutes)
 	.use(loadoutRoutes)
 	.use(routeLoot)
+	.use(personalRoutes)
 	.use(serverOnlineRoutes)
 	.use(internalRoutes)
 	.use(botRoutes)
