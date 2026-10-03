@@ -82,6 +82,7 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 				return artsService.list(take, page, {
 					tags,
 					type: query.type,
+					sort: query.sort,
 				})
 			},
 			{
@@ -90,6 +91,14 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					page: t.Optional(t.Numeric()),
 					tags: t.Optional(t.String()),
 					type: t.Optional(t.Enum(ArtType)),
+					sort: t.Optional(
+						t.Union([
+							t.Literal('newest'),
+							t.Literal('oldest'),
+							t.Literal('views'),
+							t.Literal('stars'),
+						])
+					),
 				}),
 				detail: { tags: ['Arts'] },
 			}

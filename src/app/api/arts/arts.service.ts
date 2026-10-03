@@ -82,7 +82,7 @@ class ArtsService {
 	async list(
 		take: number,
 		page: number,
-		opts?: { author_id?: number; tags?: string[]; type?: ArtType }
+		opts?: { author_id?: number; tags?: string[]; type?: ArtType; sort?: string }
 	) {
 		const where: Prisma.ArtWhereInput = {}
 		if (opts?.author_id) where.author_id = opts.author_id
@@ -93,12 +93,19 @@ class ArtsService {
 			}))
 		}
 
+		const orderBy: Prisma.ArtOrderByWithRelationInput =
+			opts?.sort === 'oldest'
+				? { created_at: 'asc' }
+				: opts?.sort === 'views'
+					? { views: 'desc' }
+					: { created_at: 'desc' }
+
 		const [rows, totalCount] = await Promise.all([
 			prisma.art.findMany({
 				where,
 				skip: page * take,
-				take,
-				orderBy: { created_at: 'desc' },
+				take: opts?.sort === 'stars' ? take * 5 : take,
+				orderBy,
 				include: {
 					author: {
 						select: {
@@ -116,8 +123,15 @@ class ArtsService {
 		const ids = rows.map((r) => r.id)
 		const starCounts = await this.starCounts(ids)
 
+		let data = rows.map((a) => this.mapArt(a, starCounts.get(a.id) ?? 0))
+		if (opts?.sort === 'stars') {
+			data = data
+				.sort((x, y) => y.stars_count - x.stars_count)
+				.slice(0, take)
+		}
+
 		return {
-			data: rows.map((a) => this.mapArt(a, starCounts.get(a.id) ?? 0)),
+			data,
 			total_count: totalCount,
 			page: page + 1,
 			take,
