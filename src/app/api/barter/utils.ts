@@ -79,6 +79,7 @@ export const transformOffer = (
 			if (!info) return null
 
 			return {
+				item_id: req.item,
 				amount: req.amount,
 				lines: info.name,
 				category: info.icon
@@ -149,4 +150,35 @@ export const pickBestMatch = (
 			? curr
 			: best
 	})
+}
+
+export const listCraftable = (
+	barterData: BarterEntry[],
+	listing: Record<string, ListingItem>
+) => {
+	const minLevel = new Map<string, number>()
+	for (const s of barterData) {
+		for (const r of s.recipes) {
+			const cur = minLevel.get(r.item)
+			if (cur === undefined || r.settlementRequiredLevel < cur) {
+				minLevel.set(r.item, r.settlementRequiredLevel)
+			}
+		}
+	}
+	return [...minLevel.entries()]
+		.map(([item_id, level]) => {
+			const info = listing[item_id]
+			if (!info) return null
+			return {
+				item_id,
+				settlement_required_level: level,
+				lines: info.name,
+				category: info.icon
+					.replace(/^\/icons/, '')
+					.replace(/\.png$/, ''),
+				color: info.color,
+			}
+		})
+		.filter((x): x is NonNullable<typeof x> => x !== null)
+		.sort((a, b) => a.settlement_required_level - b.settlement_required_level)
 }

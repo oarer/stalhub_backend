@@ -46,6 +46,7 @@ export type UsedInItem = {
 }
 
 export type BarterItemResult = {
+	item_id: string
 	amount: number
 	lines: Message
 	category: string
