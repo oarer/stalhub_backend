@@ -392,6 +392,8 @@ model Article {
   content   String
   image_url String?
 
+  cover_config Json?
+
   quest_name   String?
   quest_type   QuestType?
   quest_map    Json?

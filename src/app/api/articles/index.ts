@@ -18,6 +18,38 @@ import {
 import { articlesService } from './articles.service'
 import { commentsRoutes } from './comments'
 
+const coverConfigSchema = t.Optional(
+	t.Nullable(
+		t.Object({
+			mode: t.Optional(
+				t.Union([
+					t.Literal('auto'),
+					t.Literal('custom'),
+					t.Literal('hidden'),
+				])
+			),
+			preset: t.Optional(t.String({ maxLength: 32 })),
+			icon: t.Optional(t.String({ maxLength: 64 })),
+			panel: t.Optional(
+				t.Object({
+					title: t.Optional(t.String({ maxLength: 48 })),
+					rows: t.Optional(
+						t.Array(
+							t.Object({
+								label: t.String({ maxLength: 24 }),
+								value: t.String({ maxLength: 16 }),
+								fill: t.Number({ minimum: 0, maximum: 1 }),
+								accent: t.Optional(t.Boolean()),
+							}),
+							{ maxItems: 2 },
+						),
+					),
+				}),
+			),
+		}),
+	),
+)
+
 export const articlesRoutes = createElysia().group('/articles', (app) =>
 	app
 		.use(jwtPlugin)
@@ -185,6 +217,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					flags: body.flags,
 					tags: body.tags?.join(','),
 					image_url: body.image_url ?? undefined,
+					cover_config: body.cover_config ?? undefined,
 					quest_name: body.quest_name,
 					quest_type: body.quest_type,
 					quest_map: normalizeQuestMap(body.quest_map),
@@ -216,6 +249,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					}),
 					type: t.Optional(t.Enum(ArticleType)),
 					image_url: t.Optional(t.Nullable(t.String())),
+					cover_config: coverConfigSchema,
 					quest_name: t.Optional(
 						t.Nullable(t.String({ maxLength: 200 }))
 					),
@@ -259,6 +293,9 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 						...(body.image_url !== undefined && {
 							image_url: body.image_url,
 						}),
+						...(body.cover_config !== undefined && {
+							cover_config: body.cover_config,
+						}),
 						...(body.quest_name !== undefined && {
 							quest_name: body.quest_name,
 						}),
@@ -296,6 +333,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					content: t.Optional(t.String({ maxLength: 50000 })),
 					type: t.Optional(t.Enum(ArticleType)),
 					image_url: t.Optional(t.Nullable(t.String())),
+					cover_config: coverConfigSchema,
 					quest_name: t.Optional(
 						t.Nullable(t.String({ maxLength: 200 }))
 					),

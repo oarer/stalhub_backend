@@ -13,6 +13,10 @@ import {
 } from '@/app/api/metrics/view-dedupe'
 import { prisma } from '@/lib/prisma'
 import { generateSlug } from '@/utils/slug'
+import {
+	type ArticleCoverConfig,
+	normalizeCoverConfig,
+} from './article-cover'
 
 class ArticlesService {
 	async list(
@@ -60,6 +64,7 @@ class ArticlesService {
 				title: a.title,
 				content: a.content,
 				image_url: a.image_url,
+				cover_config: (a.cover_config ?? null) as ArticleCoverConfig | null,
 				quest_name: a.type === ArticleType.QUEST ? a.quest_name : null,
 				quest_type: a.type === ArticleType.QUEST ? a.quest_type : null,
 				quest_map: a.type === ArticleType.QUEST ? a.quest_map : null,
@@ -144,6 +149,8 @@ class ArticlesService {
 			title: article.title,
 			content: article.content,
 			image_url: article.image_url,
+			cover_config:
+				(article.cover_config ?? null) as ArticleCoverConfig | null,
 			quest_name:
 				article.type === ArticleType.QUEST ? article.quest_name : null,
 			quest_type:
@@ -180,6 +187,7 @@ class ArticlesService {
 			flags?: number
 			tags?: string
 			image_url?: string
+			cover_config?: unknown
 			quest_name?: string | null
 			quest_type?: string | null
 			quest_map?: unknown
@@ -189,6 +197,7 @@ class ArticlesService {
 		}
 	) {
 		const articleType = (data.type as ArticleType) ?? ArticleType.OTHER
+		const coverConfig = normalizeCoverConfig(data.cover_config)
 
 		const article = await prisma.article.create({
 			data: {
@@ -197,6 +206,12 @@ class ArticlesService {
 				content: data.content,
 				type: articleType,
 				image_url: data.image_url ?? undefined,
+				...(coverConfig
+					? {
+							cover_config:
+								coverConfig as unknown as Prisma.InputJsonValue,
+						}
+					: {}),
 				quest_name:
 					articleType === ArticleType.QUEST ? data.quest_name : null,
 				quest_type:
@@ -248,6 +263,8 @@ class ArticlesService {
 			title: article.title,
 			content: article.content,
 			image_url: article.image_url,
+			cover_config:
+				(article.cover_config ?? null) as ArticleCoverConfig | null,
 			quest_name:
 				article.type === ArticleType.QUEST ? article.quest_name : null,
 			quest_type:
@@ -286,6 +303,7 @@ class ArticlesService {
 			flags?: number
 			tags?: string
 			image_url?: string | null
+			cover_config?: unknown | null
 			quest_name?: string | null
 			quest_type?: string | null
 			quest_map?: unknown
@@ -314,6 +332,9 @@ class ArticlesService {
 		if (data.flags !== undefined) updateData.flags = data.flags
 		if (data.tags !== undefined) updateData.tags = data.tags
 		if (data.image_url !== undefined) updateData.image_url = data.image_url
+		if (data.cover_config !== undefined)
+			updateData.cover_config =
+				normalizeCoverConfig(data.cover_config) ?? Prisma.JsonNull
 		if (resolvedType === ArticleType.QUEST) {
 			if (data.quest_name !== undefined)
 				updateData.quest_name = data.quest_name
@@ -371,6 +392,8 @@ class ArticlesService {
 			title: article.title,
 			content: article.content,
 			image_url: article.image_url,
+			cover_config:
+				(article.cover_config ?? null) as ArticleCoverConfig | null,
 			quest_name:
 				article.type === ArticleType.QUEST ? article.quest_name : null,
 			quest_type:
@@ -431,6 +454,8 @@ class ArticlesService {
 			title: updated.title,
 			content: updated.content,
 			image_url: updated.image_url,
+			cover_config:
+				(updated.cover_config ?? null) as ArticleCoverConfig | null,
 			quest_name:
 				updated.type === ArticleType.QUEST ? updated.quest_name : null,
 			quest_type:
@@ -497,6 +522,8 @@ class ArticlesService {
 			title: updated.title,
 			content: updated.content,
 			image_url: updated.image_url,
+			cover_config:
+				(updated.cover_config ?? null) as ArticleCoverConfig | null,
 			quest_name:
 				updated.type === ArticleType.QUEST ? updated.quest_name : null,
 			quest_type:
