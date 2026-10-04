@@ -184,7 +184,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					type: body.type,
 					flags: body.flags,
 					tags: body.tags?.join(','),
-					image_url: body.image_url,
+					image_url: body.image_url ?? undefined,
 					quest_name: body.quest_name,
 					quest_type: body.quest_type,
 					quest_map: normalizeQuestMap(body.quest_map),
@@ -215,7 +215,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 						maxLength: 50000,
 					}),
 					type: t.Optional(t.Enum(ArticleType)),
-					image_url: t.Optional(t.String()),
+					image_url: t.Optional(t.Nullable(t.String())),
 					quest_name: t.Optional(
 						t.Nullable(t.String({ maxLength: 200 }))
 					),
