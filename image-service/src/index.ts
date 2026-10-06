@@ -2,13 +2,22 @@ import sharp from 'sharp'
 
 const PORT = Number(process.env.PORT) || 3002
 const MAX_BYTES = Number(process.env.IMAGE_MAX_BYTES) || 20 * 1024 * 1024
-// Кап длинной стороны: без даунскейла 10-МБ кадры остаются
-// многомегабайтными, сколько ни жми quality.
+
 const MAX_DIMENSION = Number(process.env.IMAGE_MAX_DIMENSION) || 2048
 
 const TEXT_DECODER = new TextDecoder()
 
 type CompressibleMime = 'image/jpeg' | 'image/png' | 'image/webp'
+
+/**
+ * Buffer -> тело ответа. Копия в свежий ArrayBuffer, иначе TS
+ * (Buffer<ArrayBufferLike>) не сходится с BodyInit.
+ */
+function toBody(buffer: Buffer): Uint8Array<ArrayBuffer> {
+	const copy = new Uint8Array(buffer.byteLength)
+	copy.set(buffer)
+	return copy
+}
 
 function detectMime(buffer: Uint8Array): CompressibleMime | 'image/gif' | null {
 	if (
@@ -60,13 +69,10 @@ async function compress(
 	if (mime === 'image/jpeg')
 		output = await pipeline.jpeg({ quality: 82, mozjpeg: true }).toBuffer()
 	else if (mime === 'image/png')
-		// Без palette: квантование в 256 цветов даёт бендинг
-		// на фото/градиентах. Размер давит даунскейл + level 6.
 		output = await pipeline
 			.png({ quality: 80, compressionLevel: 6 })
 			.toBuffer()
 	else output = await pipeline.webp({ quality: 80 }).toBuffer()
-	// Never inflate already-optimized files.
 	return output.length < input.length ? output : input
 }
 
@@ -116,13 +122,48 @@ Bun.serve({
 
 			try {
 				const output = await compress(input, mime)
-				return new Response(output, {
+				return new Response(toBody(output), {
 					headers: { 'Content-Type': mime },
 				})
 			} catch (err) {
 				console.error('Compression failed:', err)
 				return Response.json(
 					{ error: 'Compression failed' },
+					{ status: 500 }
+				)
+			}
+		}
+
+		if (req.method === 'POST' && pathname === '/svg-to-png') {
+			const buf = Buffer.from(await req.arrayBuffer())
+			if (!buf.length || buf.length > 5 * 1024 * 1024)
+				return Response.json(
+					{ error: 'SVG must be between 1 byte and 5 MB' },
+					{ status: 413 }
+				)
+			const head = TEXT_DECODER.decode(buf.slice(0, 1024))
+			if (!head.includes('<svg'))
+				return Response.json(
+					{ error: 'Request body is not SVG' },
+					{ status: 422 }
+				)
+			try {
+				const output = await sharp(buf, { density: 192 })
+					.resize({
+						width: 1200,
+						height: 630,
+						fit: 'contain',
+						background: '#0a0a0c',
+					})
+					.png()
+					.toBuffer()
+				return new Response(toBody(output), {
+					headers: { 'Content-Type': 'image/png' },
+				})
+			} catch (err) {
+				console.error('SVG rasterization failed:', err)
+				return Response.json(
+					{ error: 'SVG rasterization failed' },
 					{ status: 500 }
 				)
 			}

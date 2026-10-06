@@ -44,7 +44,7 @@ export async function analyzeScreenshot(
 					],
 				},
 				{
-					timeout: 60_000,
+					timeout: 120_000,
 					headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` },
 				}
 			)

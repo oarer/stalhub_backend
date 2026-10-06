@@ -1,5 +1,6 @@
 import { t } from 'elysia'
 import { ArticleStatus, ArticleType, QuestType } from 'generated/prisma/client'
+import { prisma } from '@/lib/prisma'
 import {
 	checkPermission,
 	fromStore,
@@ -16,6 +17,8 @@ import {
 	saveArticleImage,
 } from './article-media'
 import { articlesService } from './articles.service'
+import { generateBlogDigest } from './blog-digest'
+import { type BlogPublishTarget, publishBlogPost } from './blog-publish'
 import { commentsRoutes } from './comments'
 
 const coverConfigSchema = t.Optional(
@@ -41,13 +44,13 @@ const coverConfigSchema = t.Optional(
 								fill: t.Number({ minimum: 0, maximum: 1 }),
 								accent: t.Optional(t.Boolean()),
 							}),
-							{ maxItems: 2 },
-						),
+							{ maxItems: 2 }
+						)
 					),
-				}),
+				})
 			),
-		}),
-	),
+		})
+	)
 )
 
 export const articlesRoutes = createElysia().group('/articles', (app) =>
@@ -508,6 +511,86 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
+				detail: { tags: ['Articles'] },
+			}
+		)
+
+		.post(
+			'/:id/digest',
+			async ({ params, store, set }) => {
+				const { user_id } = fromStore(store)
+				const is_admin = await checkPermission(
+					user_id,
+					'articles:manage'
+				)
+				if (!is_admin) {
+					set.status = 403
+					return { error: 'Forbidden' }
+				}
+				const num = Number(params.id)
+				const article = await prisma.article.findFirst({
+					where: isNaN(num)
+						? { external_id: params.id }
+						: { OR: [{ external_id: params.id }, { id: num }] },
+					select: { title: true, content: true, tags: true },
+				})
+				if (!article) {
+					set.status = 404
+					return { error: 'Not found' }
+				}
+				return generateBlogDigest({
+					title: article.title,
+					content: article.content,
+					tags: article.tags
+						? article.tags.split(',').filter(Boolean)
+						: [],
+				})
+			},
+			{
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+				detail: { tags: ['Articles'] },
+			}
+		)
+
+		.post(
+			'/:id/publish',
+			async ({ params, body, store, set }) => {
+				const { user_id } = fromStore(store)
+				const is_admin = await checkPermission(
+					user_id,
+					'articles:manage'
+				)
+				if (!is_admin) {
+					set.status = 403
+					return { error: 'Forbidden' }
+				}
+				try {
+					return await publishBlogPost(params.id, {
+						digest: body.digest,
+						targets: (body.targets ?? [
+							'tg',
+							'ds',
+						]) as BlogPublishTarget[],
+						withCover: body.with_cover ?? true,
+					})
+				} catch (err) {
+					set.status = 404
+					return { error: (err as Error).message }
+				}
+			},
+			{
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+				body: t.Object({
+					digest: t.String({ minLength: 1, maxLength: 1500 }),
+					targets: t.Optional(
+						t.Array(t.Union([t.Literal('tg'), t.Literal('ds')]), {
+							maxItems: 2,
+						})
+					),
+					with_cover: t.Optional(t.Boolean()),
+				}),
 				detail: { tags: ['Articles'] },
 			}
 		)

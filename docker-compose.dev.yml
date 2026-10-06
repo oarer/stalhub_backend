@@ -30,6 +30,8 @@ services:
     container_name: StalHub_image_service
     command: sh -c "bun install && bun run --watch src/index.ts"
     restart: unless-stopped
+    ports:
+      - "3002:3002"
     volumes:
       - ./image-service:/app
       - /app/node_modules

@@ -628,6 +628,97 @@ class AnalyticsService {
 		}
 	}
 
+	/** Публичная сводка по всем открытым кланам: без этапов, только агрегаты */
+	async getPublicClansStats() {
+		const clans = await prisma.clan.findMany({
+			where: { is_public: true },
+			select: { id: true, name: true, tag: true },
+		})
+		if (clans.length === 0) return { clans: [], total: null }
+		const sessions = await prisma.stageSession.findMany({
+			where: { clan_id: { in: clans.map((c) => c.id) } },
+			select: {
+				clan_id: true,
+				screenshots: {
+					where: { ai_status: 'done' },
+					select: { ai_result: true },
+				},
+			},
+		})
+		const byClan = new Map<
+			string,
+			{ sessions: number; battles: number; wins: number; losses: number; kills: number; deaths: number }
+		>()
+		for (const c of clans) {
+			byClan.set(c.id, {
+				sessions: 0,
+				battles: 0,
+				wins: 0,
+				losses: 0,
+				kills: 0,
+				deaths: 0,
+			})
+		}
+		for (const s of sessions) {
+			const b = byClan.get(s.clan_id ?? '')
+			if (!b) continue
+			b.sessions++
+			for (const shot of s.screenshots) {
+				const r = shot.ai_result as AIScreenshotResult | null
+				const v = screenshotVictory(r)
+				if (v === true || v === false) {
+					b.battles++
+					if (v) b.wins++
+					else b.losses++
+				}
+				for (const p of r?.players ?? []) {
+					if (!p.is_clan_member) continue
+					b.kills += p.kills ?? 0
+					b.deaths += p.deaths ?? 0
+				}
+			}
+		}
+		const rows = clans.map((c) => {
+			const b = byClan.get(c.id)!
+			const decided = b.wins + b.losses
+			return {
+				clan_id: c.id,
+				tag: c.tag,
+				name: c.name,
+				sessions: b.sessions,
+				battles: b.battles,
+				wins: b.wins,
+				losses: b.losses,
+				winrate: decided > 0 ? b.wins / decided : 0,
+				kills: b.kills,
+				deaths: b.deaths,
+				kd: b.deaths > 0 ? b.kills / b.deaths : b.kills,
+			}
+		})
+		rows.sort((x, y) => y.winrate - x.winrate || y.kd - x.kd)
+		const t = rows.reduce(
+			(acc, r) => ({
+				clans: acc.clans + 1,
+				sessions: acc.sessions + r.sessions,
+				battles: acc.battles + r.battles,
+				wins: acc.wins + r.wins,
+				losses: acc.losses + r.losses,
+				kills: acc.kills + r.kills,
+				deaths: acc.deaths + r.deaths,
+			}),
+			{ clans: 0, sessions: 0, battles: 0, wins: 0, losses: 0, kills: 0, deaths: 0 }
+		)
+		const decided = t.wins + t.losses
+		return {
+			clans: rows,
+			total: {
+				...t,
+				winrate: decided > 0 ? t.wins / decided : 0,
+				kd: t.deaths > 0 ? t.kills / t.deaths : t.kills,
+			},
+		}
+	}
+
 	async regenerateSummary(screenshot_id: number) {
 		const screenshot = await prisma.stageScreenshot.findUnique({
 			where: { id: screenshot_id },

@@ -122,6 +122,19 @@ class PersonalService {
 		)
 		if (!match) throw new Error('Character does not belong to this EXBO account')
 
+		const prev = await prisma.personalProfile.findUnique({
+			where: { user_id },
+		})
+		if (
+			prev &&
+			(prev.character_name.toLowerCase() !==
+				match.information.name.toLowerCase() ||
+				prev.region !== region)
+		) {
+			// другой персонаж — старые слепки статистики больше не валидны
+			await prisma.personalSnapshot.deleteMany({ where: { user_id } })
+		}
+
 		const profile = await prisma.personalProfile.upsert({
 			where: { user_id },
 			create: {
@@ -146,6 +159,23 @@ class PersonalService {
 	}
 
 	async unlink(user_id: number) {
+		// личные сессии этапов + файлы скриншотов
+		const sessions = await prisma.stageSession.findMany({
+			where: { creator_id: user_id, clan_id: null },
+			select: { screenshots: { select: { file_path: true } } },
+		})
+		for (const s of sessions) {
+			for (const shot of s.screenshots) {
+				try {
+					await rm(shot.file_path, { force: true })
+				} catch {}
+			}
+		}
+		await prisma.stageSession.deleteMany({
+			where: { creator_id: user_id, clan_id: null },
+		})
+		// слепки статистики старого персонажа
+		await prisma.personalSnapshot.deleteMany({ where: { user_id } })
 		await prisma.personalProfile.deleteMany({ where: { user_id } })
 		return { success: true }
 	}
@@ -155,6 +185,10 @@ class PersonalService {
 		is_public: boolean,
 		public_fields?: string[]
 	) {
+		const existing = await prisma.personalProfile.findUnique({
+			where: { user_id },
+		})
+		if (!existing) throw new Error('No tracked character')
 		return prisma.personalProfile.update({
 			where: { user_id },
 			data: {
@@ -281,17 +315,37 @@ class PersonalService {
 		}
 	}
 
-	async getPublic(username: string) {
-		const user = await prisma.user.findUnique({
-			where: { username },
+	async getPublic(usernameOrCharacter: string) {
+		const key = usernameOrCharacter.trim()
+		let user = await prisma.user.findUnique({
+			where: { username: key },
 			select: { id: true, username: true, name: true },
 		})
+		// фронт строит ссылку по нику персонажа — поддерживаем оба варианта
+		if (!user) {
+			const profile = await prisma.personalProfile.findFirst({
+				where: { character_name: { equals: key, mode: 'insensitive' } },
+				select: { user_id: true },
+			})
+			if (profile) {
+				user = await prisma.user.findUnique({
+					where: { id: profile.user_id },
+					select: { id: true, username: true, name: true },
+				})
+			}
+		}
 		if (!user) return null
 		const profile = await prisma.personalProfile.findUnique({
 			where: { user_id: user.id },
 		})
 		if (!profile || !profile.is_public) return null
 		const snapshots = await this.getSnapshots(user.id, { limit: 500 })
+		// публичная сводка по этапам: только агрегаты, без отдельных сессий
+		const { per_stage: _omit, ...stageStats } = await this.stageStatsFor(
+			user.id,
+			profile.character_name
+		)
+		void _omit
 		return {
 			user: { username: user.username, name: user.name },
 			profile: {
@@ -301,6 +355,7 @@ class PersonalService {
 				last_snapshot_at: profile.last_snapshot_at,
 			},
 			snapshots,
+			stage_stats: stageStats,
 		}
 	}
 
@@ -419,42 +474,286 @@ class PersonalService {
 		const profile = await prisma.personalProfile.findUnique({
 			where: { user_id },
 		})
-		if (!profile) return { sessions: 0, appearances: 0, kills: 0, per_stage: [] }
+		if (!profile) {
+			return {
+				sessions: 0,
+				appearances: 0,
+				kills: 0,
+				deaths: 0,
+				assists: 0,
+				kd: 0,
+				kda: 0,
+				per_clan: [],
+				per_stage: [],
+				per_map: [],
+			}
+		}
+		return this.stageStatsFor(user_id, profile.character_name)
+	}
+
+	private async stageStatsFor(user_id: number, characterName: string) {
 		const sessions = await prisma.stageSession.findMany({
 			where: { creator_id: user_id, clan_id: null },
 			orderBy: { started_at: 'desc' },
 			take: 100,
 			include: {
+				clan: { select: { id: true, tag: true, name: true } },
 				screenshots: {
 					where: { ai_status: 'done' },
 					select: { ai_result: true },
 				},
 			},
 		})
-		const name = profile.character_name.toLowerCase()
+		// клановые сессии, где светился юзер: посещаемость по user_id или нику.
+		// is_public клана не важен — это личная сводка владельца статистики.
+		const att = await prisma.stageAttendance.findMany({
+			where: {
+				session: { clan_id: { not: null } },
+				OR: [
+					{ user_id },
+					{
+						name: {
+							equals: characterName,
+							mode: 'insensitive',
+						},
+					},
+				],
+			},
+			orderBy: { id: 'desc' },
+			take: 500,
+			select: { session_id: true },
+		})
+		const clanSessionIds = [...new Set(att.map((a) => a.session_id))]
+		const seen = new Set(sessions.map((s) => s.id))
+		const clanSessions =
+			clanSessionIds.length > 0
+				? (
+						await prisma.stageSession.findMany({
+							where: { id: { in: clanSessionIds } },
+							include: {
+								clan: { select: { id: true, tag: true, name: true } },
+								screenshots: {
+									where: { ai_status: 'done' },
+									select: { ai_result: true },
+								},
+							},
+						})
+					).filter((s) => {
+						if (seen.has(s.id)) return false
+						seen.add(s.id)
+						return true
+					})
+				: []
+		const all = [...sessions, ...clanSessions]
+		const name = characterName.toLowerCase()
+		const byClan = new Map<
+			string,
+			{
+				clan_id: string | null
+				tag: string | null
+				name: string | null
+				sessions: Set<number>
+				appearances: number
+				kills: number
+				deaths: number
+				assists: number
+			}
+		>()
+		const per_stage: {
+			session_id: number
+			map_name: string
+			started_at: Date
+			clan: string
+			kills: number
+			deaths: number
+			assists: number
+		}[] = []
 		let appearances = 0
 		let kills = 0
-		const per_stage: { session_id: number; kills: number; deaths: number }[] = []
-		for (const s of sessions) {
+		let deaths = 0
+		let assists = 0
+		const played = new Set<number>()
+		for (const s of all) {
+			// клан сессии: реальный клан либо своя команда из сводки ИИ
+			// (для ручных загрузок) — просто название клана, без «Личных»
+			const summary = s.ai_summary as {
+				teams?: { name?: string | null; is_player_clan?: boolean }[]
+			} | null
+			const aiTeam =
+				summary?.teams?.find((tm) => tm.is_player_clan)?.name?.trim() ||
+				null
+			const key = s.clan?.id ?? (aiTeam ? `team:${aiTeam.toLowerCase()}` : 'personal')
+			if (!byClan.has(key)) {
+				byClan.set(key, {
+					clan_id: s.clan?.id ?? null,
+					tag: s.clan?.tag ?? null,
+					name: s.clan?.name ?? aiTeam,
+					sessions: new Set(),
+					appearances: 0,
+					kills: 0,
+					deaths: 0,
+					assists: 0,
+				})
+			}
+			const bucket = byClan.get(key)!
+			const clanLabel = s.clan
+				? s.clan.tag
+					? `[${s.clan.tag}] ${s.clan.name}`
+					: s.clan.name
+				: (aiTeam ?? 'personal')
 			for (const shot of s.screenshots) {
 				const r = shot.ai_result as {
-					players?: { name: string; kills?: number; deaths?: number }[]
+					players?: {
+						name: string
+						kills?: number
+						deaths?: number
+						assists?: number
+					}[]
 				} | null
 				const me = r?.players?.find(
 					(p) => p.name.trim().toLowerCase() === name
 				)
 				if (me) {
+					const k = me.kills ?? 0
+					const d = me.deaths ?? 0
+					const a = me.assists ?? 0
 					appearances++
-					kills += me.kills ?? 0
+					kills += k
+					deaths += d
+					assists += a
+					played.add(s.id)
+					bucket.sessions.add(s.id)
+					bucket.appearances++
+					bucket.kills += k
+					bucket.deaths += d
+					bucket.assists += a
 					per_stage.push({
 						session_id: s.id,
-						kills: me.kills ?? 0,
-						deaths: me.deaths ?? 0,
+						map_name: s.map_name,
+						started_at: s.started_at,
+						clan: clanLabel,
+						kills: k,
+						deaths: d,
+						assists: a,
 					})
 				}
 			}
 		}
-		return { sessions: sessions.length, appearances, kills, per_stage }
+		const kdOf = (k: number, d: number) => (d > 0 ? k / d : k)
+		const kdaOf = (k: number, d: number, a: number) =>
+			(k + a) / Math.max(1, d)
+		// склеиваем команды из ИИ с реальными кланами по имени/тегу
+		const realBuckets = [...byClan.values()].filter((b) => b.clan_id)
+		for (const [key, b] of [...byClan.entries()]) {
+			if (b.clan_id || b.appearances === 0) continue
+			const team = (b.name ?? '').toLowerCase()
+			if (!team) continue
+			const match = realBuckets.find(
+				(r) =>
+					r.name?.toLowerCase() === team || r.tag?.toLowerCase() === team
+			)
+			if (!match) continue
+			for (const sid of b.sessions) match.sessions.add(sid)
+			match.appearances += b.appearances
+			match.kills += b.kills
+			match.deaths += b.deaths
+			match.assists += b.assists
+			byClan.delete(key)
+		}
+		const per_clan = [...byClan.values()]
+			.filter((b) => b.appearances > 0)
+			.map((b) => ({
+				clan_id: b.clan_id,
+				tag: b.tag,
+				name: b.name,
+				sessions: b.sessions.size,
+				appearances: b.appearances,
+				kills: b.kills,
+				deaths: b.deaths,
+				assists: b.assists,
+				kd: kdOf(b.kills, b.deaths),
+				kda: kdaOf(b.kills, b.deaths, b.assists),
+			}))
+			.sort((x, y) => y.kills - x.kills)
+		// разбивка по картам: победы сессии + мои K/D на карте
+		const byMap = new Map<
+			string,
+			{ sessions: number; wins: number; losses: number; kills: number; deaths: number }
+		>()
+		for (const s of all) {
+			if (!played.has(s.id)) continue
+			const key = s.map_name?.trim() || '—'
+			const b = byMap.get(key) ?? {
+				sessions: 0,
+				wins: 0,
+				losses: 0,
+				kills: 0,
+				deaths: 0,
+			}
+			b.sessions++
+			const summary = s.ai_summary as {
+				victory?: boolean | null
+				teams?: { name: string; is_player_clan?: boolean }[]
+			} | null
+			let v = summary?.victory ?? null
+			if (v == null) {
+				let w = 0
+				let l = 0
+				for (const shot of s.screenshots) {
+					const r = shot.ai_result as {
+						victory?: boolean | null
+						total_score?: number | null
+						opponent_score?: number | null
+					} | null
+					const sv =
+						r?.victory ??
+						(r?.total_score != null && r?.opponent_score != null
+							? r.total_score > r.opponent_score
+								? true
+								: r.total_score < r.opponent_score
+									? false
+									: null
+							: null)
+					if (sv === true) w++
+					else if (sv === false) l++
+				}
+				v = w + l > 0 ? w >= l : null
+			}
+			if (v === true) b.wins++
+			else if (v === false) b.losses++
+			for (const p of per_stage) {
+				if (p.session_id !== s.id) continue
+				b.kills += p.kills
+				b.deaths += p.deaths
+			}
+			byMap.set(key, b)
+		}
+		const per_map = [...byMap.entries()].map(([map, b]) => {
+			const decided = b.wins + b.losses
+			return {
+				map,
+				sessions: b.sessions,
+				wins: b.wins,
+				losses: b.losses,
+				winrate: decided > 0 ? b.wins / decided : 0,
+				kills: b.kills,
+				deaths: b.deaths,
+				kd: kdOf(b.kills, b.deaths),
+			}
+		})
+		per_map.sort((x, y) => y.sessions - x.sessions || y.kd - x.kd)
+		return {
+			sessions: played.size,
+			appearances,
+			kills,
+			deaths,
+			assists,
+			kd: kdOf(kills, deaths),
+			kda: kdaOf(kills, deaths, assists),
+			per_clan,
+			per_stage,
+			per_map,
+		}
 	}
 }
 

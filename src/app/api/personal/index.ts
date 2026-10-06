@@ -50,12 +50,18 @@ export const personalRoutes = createElysia()
 		)
 		.patch(
 			'/visibility',
-			({ body, store }) =>
-				personalService.setVisibility(
-					store.authUserId!,
-					body.is_public,
-					body.public_fields
-				),
+			async ({ body, store, set }) => {
+				try {
+					return await personalService.setVisibility(
+						store.authUserId!,
+						body.is_public,
+						body.public_fields
+					)
+				} catch (err) {
+					set.status = 400
+					return { error: (err as Error).message }
+				}
+			},
 			{
 				beforeHandle: [requireAuth],
 				body: t.Object({
