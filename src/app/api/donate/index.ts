@@ -41,15 +41,21 @@ async function loadListing(): Promise<Map<string, ListingEntry>> {
 export const routeDonate = createElysia().get(
 	'/donate-calculator',
 	async () => {
-		const data = raw as unknown as { computed_at: string; items: DonateItem[] }
+		const data = raw as unknown as {
+			computed_at: string
+			items: DonateItem[]
+		}
 		const listing = await loadListing().catch(() => new Map())
 
 		const missing: string[] = []
 		const items = data.items.map((it) => {
 			const entry = listing.get(it.id)
 			if (!entry) missing.push(it.id)
-			const price = it.market?.has_market ? Number(it.market.price ?? 0) : 0
-			const perCoin = it.stalcoins > 0 && price > 0 ? price / it.stalcoins : 0
+			const price = it.market?.has_market
+				? Number(it.market.price ?? 0)
+				: 0
+			const perCoin =
+				it.stalcoins > 0 && price > 0 ? price / it.stalcoins : 0
 			return {
 				key: it.key,
 				id: it.id,

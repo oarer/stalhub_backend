@@ -1,3 +1,4 @@
+import { scGateway } from '@/app/api/sc-gateway/gateway'
 import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
 
@@ -253,40 +254,38 @@ class ServerOnlineService {
 			if (!momentTime.has(key)) momentTime.set(key, t)
 		}
 
-		const peaks = new Map<string, { date: string; region: string; peak: number }>()
+		const peaks = new Map<
+			string,
+			{ date: string; region: string; peak: number }
+		>()
 		for (const [key, online] of byMoment) {
 			const [region] = key.split('|')
 			const t = momentTime.get(key)!
 			const date = t.toISOString().slice(0, 10)
 			const pkey = `${region}|${date}`
 			const cur = peaks.get(pkey)
-			if (!cur || online > cur.peak) peaks.set(pkey, { date, region, peak: online })
+			if (!cur || online > cur.peak)
+				peaks.set(pkey, { date, region, peak: online })
 		}
 
 		return Array.from(peaks.values()).sort((a, b) =>
-			a.date < b.date ? -1 : a.date > b.date ? 1 : a.region.localeCompare(b.region)
+			a.date < b.date
+				? -1
+				: a.date > b.date
+					? 1
+					: a.region.localeCompare(b.region)
 		)
 	}
 
 	async emissions(region: string) {
 		const reg = region.toUpperCase()
 		if (!/^[A-Z]{2,5}$/.test(reg)) throw new Error('Bad region')
-		const ctrl = new AbortController()
-		const timer = setTimeout(() => ctrl.abort(), 8000)
-		try {
-			const res = await fetch(`https://eapi.stalzone.com/${reg}/emission`, {
-				signal: ctrl.signal,
-			})
-			if (!res.ok) throw new Error(`Upstream ${res.status}`)
-			const data = (await res.json()) as {
-				currentStart?: string | null
-				previousStart?: string | null
-				previousEnd?: string | null
-			}
-			return { region: reg, ...data }
-		} finally {
-			clearTimeout(timer)
-		}
+		const data = await scGateway.get<{
+			currentStart?: string | null
+			previousStart?: string | null
+			previousEnd?: string | null
+		}>(`/${reg}/emission`)
+		return { region: reg, ...data }
 	}
 
 	async history(hours: number) {
