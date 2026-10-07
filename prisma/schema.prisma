@@ -425,6 +425,7 @@ model Art {
   title       String?
   description String?
   image_url   String?
+  image_urls  String[] @default([])
 
   tags  String @default("")
   views Int    @default(0)

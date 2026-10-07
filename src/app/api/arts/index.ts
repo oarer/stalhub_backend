@@ -167,15 +167,21 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 
 		.post(
 			'',
-			async ({ body, store }) => {
+			async ({ body, store, set }) => {
 				const user_id = fromStore(store).user_id
 				await enforceContentSpam(user_id, SPAM_LIMIT_ART)
+
+				if (body.image_urls && body.image_urls.length > 10) {
+					set.status = 400
+					return { error: 'Too many images (max 10)' }
+				}
 
 				return artsService.create(user_id, {
 					title: body.title,
 					description: body.description,
 					type: body.type,
 					image_url: body.image_url,
+					image_urls: body.image_urls,
 					tags: body.tags?.join(','),
 				})
 			},
@@ -186,6 +192,9 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					description: t.Optional(t.String({ maxLength: 2000 })),
 					type: t.Optional(t.Enum(ArtType)),
 					image_url: t.Optional(t.String()),
+					image_urls: t.Optional(
+						t.Array(t.String(), { maxItems: 10 })
+					),
 					tags: t.Optional(t.Array(t.String())),
 				}),
 				detail: { tags: ['Arts'] },
@@ -197,16 +206,25 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 			async ({ params, body, store, set }) => {
 				const { user_id } = fromStore(store)
 				const is_admin = await checkPermission(user_id, 'art:manage')
+				if (body.image_urls && body.image_urls.length > 10) {
+					set.status = 400
+					return { error: 'Too many images (max 10)' }
+				}
 				const result = await artsService.update(
 					Number(params.id),
 					user_id,
 					is_admin,
 					{
 						...(body.title !== undefined && { title: body.title }),
-						...(body.description !== undefined && { description: body.description }),
+						...(body.description !== undefined && {
+							description: body.description,
+						}),
 						...(body.type !== undefined && { type: body.type }),
 						...(body.image_url !== undefined && {
 							image_url: body.image_url,
+						}),
+						...(body.image_urls !== undefined && {
+							image_urls: body.image_urls,
 						}),
 						...(body.tags !== undefined && {
 							tags: body.tags.join(','),
@@ -230,9 +248,14 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
 					title: t.Optional(t.Nullable(t.String({ maxLength: 200 }))),
-					description: t.Optional(t.Nullable(t.String({ maxLength: 2000 }))),
+					description: t.Optional(
+						t.Nullable(t.String({ maxLength: 2000 }))
+					),
 					type: t.Optional(t.Enum(ArtType)),
 					image_url: t.Optional(t.Nullable(t.String())),
+					image_urls: t.Optional(
+						t.Nullable(t.Array(t.String(), { maxItems: 10 }))
+					),
 					tags: t.Optional(t.Array(t.String())),
 				}),
 				detail: { tags: ['Arts'] },

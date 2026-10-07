@@ -1,6 +1,15 @@
 import { scGateway } from '@/app/api/sc-gateway/gateway'
 import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
+import { Regions } from '@/types/api.type'
+
+type EmissionResponse = {
+	currentStart?: string | null
+	previousStart?: string | null
+	previousEnd?: string | null
+}
+
+const EMISSION_REGIONS = Object.values(Regions)
 
 type LauncherSource = {
 	region: string
@@ -277,15 +286,27 @@ class ServerOnlineService {
 		)
 	}
 
-	async emissions(region: string) {
+	async emission(region: string) {
 		const reg = region.toUpperCase()
 		if (!/^[A-Z]{2,5}$/.test(reg)) throw new Error('Bad region')
-		const data = await scGateway.get<{
-			currentStart?: string | null
-			previousStart?: string | null
-			previousEnd?: string | null
-		}>(`/${reg}/emission`)
+		const data = await scGateway.get<EmissionResponse>(`/${reg}/emission`)
 		return { region: reg, ...data }
+	}
+
+	async emissions(regions: string[] = EMISSION_REGIONS) {
+		const settled = await Promise.allSettled(
+			regions.map((r) => this.emission(r))
+		)
+		const fulfilled = settled
+			.filter((r) => r.status === 'fulfilled')
+			.map((r) => r.value)
+		for (const r of settled) {
+			if (r.status === 'rejected') {
+				console.error('[ServerOnline] Emission fetch failed:', r.reason)
+			}
+		}
+		if (fulfilled.length === 0) throw new Error('Upstream unavailable')
+		return fulfilled
 	}
 
 	async history(hours: number) {

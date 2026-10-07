@@ -56,11 +56,16 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 			'',
 			async ({ body, set }) => {
 				try {
+					if (body.image_urls && body.image_urls.length > 10) {
+						set.status = 400
+						return { error: 'Too many images (max 10)' }
+					}
 					return await adminArtsService.create({
 						title: body.title,
 						description: body.description,
 						type: body.type,
 						image_url: body.image_url,
+						image_urls: body.image_urls,
 						tags: body.tags?.join(','),
 						author_id: body.author_id,
 						author_name: body.author_name,
@@ -78,6 +83,9 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 					description: t.Optional(t.String({ maxLength: 2000 })),
 					type: t.Optional(t.Enum(ArtType)),
 					image_url: t.Optional(t.String()),
+					image_urls: t.Optional(
+						t.Array(t.String(), { maxItems: 10 })
+					),
 					tags: t.Optional(t.Array(t.String())),
 					author_id: t.Optional(t.Numeric()),
 					author_name: t.Optional(t.String({ maxLength: 100 })),
@@ -109,14 +117,23 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 		.patch(
 			'/:id',
 			async ({ params, body, set }) => {
+				if (body.image_urls && body.image_urls.length > 10) {
+					set.status = 400
+					return { error: 'Too many images (max 10)' }
+				}
 				const result = await adminArtsService.update(
 					Number(params.id),
 					{
 						...(body.title !== undefined && { title: body.title }),
-						...(body.description !== undefined && { description: body.description }),
+						...(body.description !== undefined && {
+							description: body.description,
+						}),
 						...(body.type !== undefined && { type: body.type }),
 						...(body.image_url !== undefined && {
 							image_url: body.image_url,
+						}),
+						...(body.image_urls !== undefined && {
+							image_urls: body.image_urls,
 						}),
 						...(body.tags !== undefined && {
 							tags: body.tags.join(','),
@@ -143,9 +160,14 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 				params: t.Object({ id: t.Numeric() }),
 				body: t.Object({
 					title: t.Optional(t.Nullable(t.String({ maxLength: 200 }))),
-					description: t.Optional(t.Nullable(t.String({ maxLength: 2000 }))),
+					description: t.Optional(
+						t.Nullable(t.String({ maxLength: 2000 }))
+					),
 					type: t.Optional(t.Enum(ArtType)),
 					image_url: t.Optional(t.Nullable(t.String())),
+					image_urls: t.Optional(
+						t.Nullable(t.Array(t.String(), { maxItems: 10 }))
+					),
 					tags: t.Optional(t.Array(t.String())),
 					author_id: t.Optional(t.Nullable(t.Numeric())),
 					author_name: t.Optional(t.Nullable(t.String())),

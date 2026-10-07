@@ -35,9 +35,12 @@ export const serverOnlineRoutes = createElysia().group(
 				'/emissions',
 				async ({ query, status }) => {
 					try {
-						return await serverOnlineService.emissions(
-							query.region ?? 'RU'
-						)
+						if (query.region) {
+							return await serverOnlineService.emission(
+								query.region
+							)
+						}
+						return await serverOnlineService.emissions()
 					} catch {
 						return status(502, { error: 'Upstream unavailable' })
 					}
