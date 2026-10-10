@@ -1,13 +1,14 @@
 import { Prisma } from 'generated/prisma/client'
 import type { SquadMap } from 'generated/prisma/enums'
 import { prisma } from '@/lib/prisma'
+import { USER_WITH_BADGES_SELECT } from '@/utils/user-select'
 
 const MAX_SLOTS = 5
 
 const memberInclude = () => ({
 	member: {
 		include: {
-			user: { select: { id: true, username: true, name: true } },
+			user: { select: USER_WITH_BADGES_SELECT },
 		},
 	},
 })
@@ -247,6 +248,36 @@ export class SquadService {
 		})
 	}
 
+	async updateName(squad_id: number, clan_id: string, name: string) {
+		const squad = await prisma.clanSquad.findUnique({
+			where: { id: squad_id },
+		})
+		if (!squad) throw new Error('Отряд не найден')
+		if (squad.clan_id !== clan_id)
+			throw new Error('Отряд не из вашего клана')
+
+		const trimmed = name.trim()
+		if (!trimmed) throw new Error('Название отряда пустое')
+
+		if (trimmed !== squad.name) {
+			const existing = await prisma.clanSquad.findUnique({
+				where: {
+					clan_id_map_name: { clan_id, map: squad.map, name: trimmed },
+				},
+			})
+			if (existing)
+				throw new Error(
+					'Отряд с таким названием уже есть на этой карте'
+				)
+		}
+
+		return prisma.clanSquad.update({
+			where: { id: squad_id },
+			data: { name: trimmed },
+			include: squadInclude(),
+		})
+	}
+
 	async setGearOverride(
 		squad_id: number,
 		slot: number,
@@ -339,7 +370,7 @@ export class SquadService {
 				member: {
 					include: {
 						user: {
-							select: { id: true, username: true, name: true },
+							select: USER_WITH_BADGES_SELECT,
 						},
 					},
 				},

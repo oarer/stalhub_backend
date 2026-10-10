@@ -51,6 +51,12 @@ export function isCompressibleImageMime(mime: string): boolean {
 	)
 }
 
+export function blobFromBuffer(buffer: Buffer, mime: string): Blob {
+	const copy = new Uint8Array(buffer.byteLength)
+	copy.set(buffer)
+	return new Blob([copy.buffer], { type: mime })
+}
+
 export async function compressImageBuffer(
 	input: Buffer,
 	mime: ImageMime | string
@@ -59,7 +65,7 @@ export async function compressImageBuffer(
 	try {
 		const baseUrl = env.IMAGE_SERVICE_URL.replace(/\/$/, '')
 		const form = new FormData()
-		form.append('file', new Blob([input], { type: mime }), 'image')
+		form.append('file', blobFromBuffer(input, mime), 'image')
 		const res = await fetch(`${baseUrl}/compress`, {
 			method: 'POST',
 			body: form,

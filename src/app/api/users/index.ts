@@ -17,6 +17,7 @@ import {
 } from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
+import { isSafeUrl, rejectOnXss } from '@/utils/xss-guard'
 import { avatarRoutes } from './avatar'
 import { profileCommentsRoutes } from './routes/comments'
 import { usersService } from './users.service'
@@ -48,9 +49,46 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 
 		.patch(
 			'/@me',
-			async ({ body, store, set }) => {
+			async ({ body, store, set, request }) => {
 				const { name, username, social_links, ...settingsData } = body
 				const user_id = fromStore(store).user_id
+				const ip =
+					request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+					request.headers.get('x-real-ip') ??
+					'?'
+
+				const xss = await rejectOnXss({
+					fields: {
+						name,
+						banner_image: settingsData.banner_image,
+						banner_color: settingsData.banner_color,
+						card_color: settingsData.card_color,
+						...(social_links ?? {}),
+					},
+					user_id,
+					ip,
+					route: 'PATCH /users/@me',
+				})
+				if (xss) {
+					set.status = 400
+					return { error: `Invalid content in field: ${xss.field}` }
+				}
+				if (
+					settingsData.banner_image !== undefined &&
+					!isSafeUrl(settingsData.banner_image)
+				) {
+					set.status = 400
+					return { error: 'Invalid banner_image URL' }
+				}
+				if (social_links !== undefined) {
+					const bad = Object.entries(social_links).find(
+						([, v]) => typeof v !== 'string' || !isSafeUrl(v)
+					)
+					if (bad) {
+						set.status = 400
+						return { error: `Invalid social_links URL: ${bad[0]}` }
+					}
+				}
 
 				if (name !== undefined || username !== undefined) {
 					const result = await usersService.updateProfile(user_id, {

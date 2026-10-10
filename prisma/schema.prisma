@@ -200,6 +200,7 @@ model User {
   clan_history   ClanHistory[]
   clan_invite    ClanInvite?
   authored_notes ClanMemberNote[]
+  personal_profile PersonalProfile?
 }
 
 model UserBadges {
@@ -391,6 +392,8 @@ model Article {
   content   String
   image_url String?
 
+  cover_config Json?
+
   quest_name   String?
   quest_type   QuestType?
   quest_map    Json?
@@ -422,6 +425,7 @@ model Art {
   title       String?
   description String?
   image_url   String?
+  image_urls  String[] @default([])
 
   tags  String @default("")
   views Int    @default(0)
@@ -1080,6 +1084,42 @@ model BanLog {
   @@index([user_id, created_at])
   @@index([rule, created_at])
   @@map("ban_log")
+}
+
+// ================ PERSONAL ANALYTICS ===================
+
+model PersonalProfile {
+  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id Int  @id
+
+  region         String
+  character_name String
+  character_uuid String?
+
+  is_public     Boolean @default(false)
+  public_fields Json    @default("[]")
+
+  last_snapshot_at DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("personal_profiles")
+}
+
+model PersonalSnapshot {
+  id             Int    @id @default(autoincrement())
+  user_id        Int
+  region         String
+  character_name String
+
+  stats   Json  @default("[]")
+  profile Json?
+
+  created_at DateTime @default(now())
+
+  @@index([user_id, created_at])
+  @@map("personal_snapshots")
 }
 
 // всё будет хорошо

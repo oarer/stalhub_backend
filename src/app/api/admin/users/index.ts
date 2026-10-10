@@ -22,10 +22,15 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.use(jwtPlugin)
 		.get(
 			'',
-			async ({ query }) => {
-				const take = query.take ?? 24
-				const page = (query.page ?? 1) - 1
-				return adminUserService.list(take, page, query.search)
+			async ({ query, store }) => {
+				const take = Math.min(Math.max(query.take ?? 24, 1), 100)
+				const page = Math.max((query.page ?? 1) - 1, 0)
+				return adminUserService.list(
+					take,
+					page,
+					query.search,
+					fromStore(store).user_id
+				)
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
@@ -40,10 +45,19 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 
 		.get(
 			'/:user_id',
-			async ({ params, set }) => {
-				const result = await adminUserService.get(
-					Number(params.user_id)
+			async ({ params, store, set }) => {
+				const target_id = Number(params.user_id)
+				const canManage = await adminUserService.canManageUser(
+					fromStore(store).user_id,
+					target_id
 				)
+				if (!canManage) {
+					set.status = 403
+					return {
+						error: 'Cannot view user with equal or higher rank',
+					}
+				}
+				const result = await adminUserService.get(target_id)
 				if (!result) {
 					set.status = 404
 					return { error: 'User not found' }
@@ -117,8 +131,19 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 
 		.get(
 			'/:user_id/sessions',
-			async ({ params }) => {
-				return adminUserService.getSessions(Number(params.user_id))
+			async ({ params, store, set }) => {
+				const target_id = Number(params.user_id)
+				const canManage = await adminUserService.canManageUser(
+					fromStore(store).user_id,
+					target_id
+				)
+				if (!canManage) {
+					set.status = 403
+					return {
+						error: 'Cannot view user with equal or higher rank',
+					}
+				}
+				return adminUserService.getSessions(target_id)
 			},
 			{
 				beforeHandle: [requireAuth, requireAdmin],
@@ -141,7 +166,10 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 						error: 'Cannot modify user with equal or higher rank',
 					}
 				}
-				await adminUserService.revokeSession(params.session_id)
+				await adminUserService.revokeSession(
+					params.session_id,
+					target_id
+				)
 				return { success: true }
 			},
 			{
@@ -156,10 +184,19 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 
 		.get(
 			'/:user_id/roles',
-			async ({ params, set }) => {
-				const result = await adminUserService.getUserRoles(
-					Number(params.user_id)
+			async ({ params, store, set }) => {
+				const target_id = Number(params.user_id)
+				const canManage = await adminUserService.canManageUser(
+					fromStore(store).user_id,
+					target_id
 				)
+				if (!canManage) {
+					set.status = 403
+					return {
+						error: 'Cannot view user with equal or higher rank',
+					}
+				}
+				const result = await adminUserService.getUserRoles(target_id)
 				if (!result) {
 					set.status = 404
 					return { error: 'User not found' }

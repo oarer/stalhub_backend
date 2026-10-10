@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises'
 import axios from 'axios'
 import { aiAnalysisDuration, aiAnalysisTotal } from '@/app/api/metrics'
 import type { ClanRosterEntry } from '@/data/prompt'
@@ -9,11 +8,14 @@ import type { AIScreenshotResult } from '../types'
 const MAX_ATTEMPTS = 3
 
 export async function analyzeScreenshot(
-	file_path: string,
+	input: string | Buffer,
 	roster?: ClanRosterEntry[],
 	stage_number?: number | null
 ): Promise<AIScreenshotResult> {
-	const buf = await readFile(file_path)
+	const buf =
+		typeof input === 'string'
+			? await import('node:fs/promises').then((fs) => fs.readFile(input))
+			: input
 	const dataUrl = `data:image/png;base64,${buf.toString('base64')}`
 	const start = Date.now()
 	const systemPrompt = buildSystemPrompt(roster, stage_number)
@@ -44,7 +46,7 @@ export async function analyzeScreenshot(
 					],
 				},
 				{
-					timeout: 60_000,
+					timeout: 120_000,
 					headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` },
 				}
 			)

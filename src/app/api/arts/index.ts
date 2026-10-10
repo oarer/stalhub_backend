@@ -11,6 +11,7 @@ import {
 import { enforceContentSpam, SPAM_LIMIT_ART } from '@/utils/auto-ban'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
+import { isSafeUrl, rejectOnXss } from '@/utils/xss-guard'
 import { artsService } from './arts.service'
 import { artCommentsRoutes } from './comments'
 
@@ -82,6 +83,7 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 				return artsService.list(take, page, {
 					tags,
 					type: query.type,
+					sort: query.sort,
 				})
 			},
 			{
@@ -90,6 +92,14 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					page: t.Optional(t.Numeric()),
 					tags: t.Optional(t.String()),
 					type: t.Optional(t.Enum(ArtType)),
+					sort: t.Optional(
+						t.Union([
+							t.Literal('newest'),
+							t.Literal('oldest'),
+							t.Literal('views'),
+							t.Literal('stars'),
+						])
+					),
 				}),
 				detail: { tags: ['Arts'] },
 			}
@@ -158,15 +168,49 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 
 		.post(
 			'',
-			async ({ body, store }) => {
+			async ({ body, store, set, request }) => {
 				const user_id = fromStore(store).user_id
+				const xss = await rejectOnXss({
+					fields: {
+						title: body.title,
+						description: body.description,
+						image_url: body.image_url,
+						image_urls: body.image_urls?.join('\n'),
+						tags: body.tags?.join(' '),
+					},
+					user_id,
+					ip:
+						request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+						request.headers.get('x-real-ip') ??
+						'?',
+					route: 'POST /arts',
+				})
+				if (xss) {
+					set.status = 400
+					return { error: `Invalid content in field: ${xss.field}` }
+				}
+				for (const u of [
+					body.image_url,
+					...(body.image_urls ?? []),
+				].filter(Boolean) as string[]) {
+					if (!isSafeUrl(u)) {
+						set.status = 400
+						return { error: 'Invalid image URL' }
+					}
+				}
 				await enforceContentSpam(user_id, SPAM_LIMIT_ART)
+
+				if (body.image_urls && body.image_urls.length > 10) {
+					set.status = 400
+					return { error: 'Too many images (max 10)' }
+				}
 
 				return artsService.create(user_id, {
 					title: body.title,
 					description: body.description,
 					type: body.type,
 					image_url: body.image_url,
+					image_urls: body.image_urls,
 					tags: body.tags?.join(','),
 				})
 			},
@@ -177,6 +221,9 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					description: t.Optional(t.String({ maxLength: 2000 })),
 					type: t.Optional(t.Enum(ArtType)),
 					image_url: t.Optional(t.String()),
+					image_urls: t.Optional(
+						t.Array(t.String(), { maxItems: 10 })
+					),
 					tags: t.Optional(t.Array(t.String())),
 				}),
 				detail: { tags: ['Arts'] },
@@ -185,19 +232,56 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 
 		.patch(
 			'/:id',
-			async ({ params, body, store, set }) => {
+			async ({ params, body, store, set, request }) => {
 				const { user_id } = fromStore(store)
+				const xssPatch = await rejectOnXss({
+					fields: {
+						title: body.title,
+						description: body.description,
+						image_url: body.image_url,
+						image_urls: body.image_urls?.join('\n'),
+						tags: body.tags?.join(' '),
+					},
+					user_id,
+					ip:
+						request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+						request.headers.get('x-real-ip') ??
+						'?',
+					route: 'PATCH /arts/:id',
+				})
+				if (xssPatch) {
+					set.status = 400
+					return { error: `Invalid content in field: ${xssPatch.field}` }
+				}
+				for (const u of [
+					body.image_url,
+					...(body.image_urls ?? []),
+				].filter(Boolean) as string[]) {
+					if (!isSafeUrl(u)) {
+						set.status = 400
+						return { error: 'Invalid image URL' }
+					}
+				}
 				const is_admin = await checkPermission(user_id, 'art:manage')
+				if (body.image_urls && body.image_urls.length > 10) {
+					set.status = 400
+					return { error: 'Too many images (max 10)' }
+				}
 				const result = await artsService.update(
 					Number(params.id),
 					user_id,
 					is_admin,
 					{
 						...(body.title !== undefined && { title: body.title }),
-						...(body.description !== undefined && { description: body.description }),
+						...(body.description !== undefined && {
+							description: body.description,
+						}),
 						...(body.type !== undefined && { type: body.type }),
 						...(body.image_url !== undefined && {
 							image_url: body.image_url,
+						}),
+						...(body.image_urls !== undefined && {
+							image_urls: body.image_urls,
 						}),
 						...(body.tags !== undefined && {
 							tags: body.tags.join(','),
@@ -221,9 +305,14 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
 					title: t.Optional(t.Nullable(t.String({ maxLength: 200 }))),
-					description: t.Optional(t.Nullable(t.String({ maxLength: 2000 }))),
+					description: t.Optional(
+						t.Nullable(t.String({ maxLength: 2000 }))
+					),
 					type: t.Optional(t.Enum(ArtType)),
 					image_url: t.Optional(t.Nullable(t.String())),
+					image_urls: t.Optional(
+						t.Nullable(t.Array(t.String(), { maxItems: 10 }))
+					),
 					tags: t.Optional(t.Array(t.String())),
 				}),
 				detail: { tags: ['Arts'] },

@@ -3,6 +3,7 @@ import { checkPermission, fromStore, requireAuth } from '@/utils/auth.guard'
 import { enforceContentSpam, SPAM_LIMIT_COMMENT } from '@/utils/auto-ban'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
+import { rejectOnXss } from '@/utils/xss-guard'
 import { commentsService } from './comments.service'
 
 export const commentsRoutes = createElysia().group(
@@ -34,8 +35,21 @@ export const commentsRoutes = createElysia().group(
 
 			.post(
 				'',
-				async ({ params, body, store }) => {
+				async ({ params, body, store, set, request }) => {
 					const { user_id } = fromStore(store)
+					const xss = await rejectOnXss({
+						fields: { content: body.content },
+						user_id,
+						ip:
+							request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+							request.headers.get('x-real-ip') ??
+							'?',
+						route: 'POST /articles/:id/comments',
+					})
+					if (xss) {
+						set.status = 400
+						return { error: 'Invalid content' }
+					}
 					await enforceContentSpam(user_id, SPAM_LIMIT_COMMENT)
 					const comment = await commentsService.create(
 						Number(params.id),

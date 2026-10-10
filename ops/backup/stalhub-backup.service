@@ -1,0 +1,12 @@
+[Unit]
+Description=StalHub backup
+Wants=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+Environment=APP_DIR=/var/www/stalhub_backend
+Environment=RESTIC_ENV_FILE=/root/.restic.env
+ExecStart=/opt/stalhub-backup/backup.sh
+LockPersonality=yes
+NoNewPrivileges=yes

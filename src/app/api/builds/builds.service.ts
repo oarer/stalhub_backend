@@ -5,6 +5,7 @@ import { contentViewsTotal } from '@/app/api/metrics'
 import { prisma } from '@/lib/prisma'
 import type { ArtifactAggregate } from '@/types/artifacts.type'
 import type { BuildData } from '@/types/build.type'
+import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
 
 const authorInclude = {
 	author: {
@@ -224,7 +225,7 @@ class BuildsService {
 				? { external_id: id }
 				: { OR: [{ external_id: id }, { id: num }] },
 			include: {
-				author: { select: { id: true, name: true, username: true } },
+				author: { select: AUTHOR_WITH_BADGES_SELECT },
 			},
 		})
 
@@ -294,7 +295,7 @@ class BuildsService {
 				author_id,
 			},
 			include: {
-				author: { select: { id: true, name: true, username: true } },
+				author: { select: AUTHOR_WITH_BADGES_SELECT },
 			},
 		})
 
@@ -345,7 +346,7 @@ class BuildsService {
 			where: { id },
 			data: updateData,
 			include: {
-				author: { select: { id: true, name: true, username: true } },
+				author: { select: AUTHOR_WITH_BADGES_SELECT },
 			},
 		})
 
@@ -408,7 +409,10 @@ class BuildsService {
 
 		const rows = await prisma.star.groupBy({
 			by: ['target_id'],
-			where: { target_type: StarTargetType.BUILD, target_id: { in: ids } },
+			where: {
+				target_type: StarTargetType.BUILD,
+				target_id: { in: ids },
+			},
 			_count: { target_id: true },
 		})
 

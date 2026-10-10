@@ -4,6 +4,7 @@ import type { BarterEntry, BarterRecipe } from '@/types/barter.type'
 import { createElysia } from '@/utils/elysia'
 import {
 	collectUsedIn,
+	listCraftable,
 	loadBarter,
 	loadListing,
 	normalizeTitles,
@@ -32,6 +33,14 @@ export const routeBarter = createElysia()
 				60_000
 			)
 		}
+	})
+	.get('/barter', async () => {
+		const [barterData, listing] = await Promise.all([
+			loadBarter(),
+			loadListing(),
+		])
+		const items = listCraftable(barterData, listing)
+		return { total: items.length, items }
 	})
 	.get('/barter/:item_id', async ({ params, status }) => {
 		const { item_id } = params

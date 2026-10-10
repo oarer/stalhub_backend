@@ -108,6 +108,17 @@ export const squadsRoutes = clanContext
 		}
 	)
 	.patch(
+		'/squads/:id/name',
+		({ params, body, store }) =>
+			squadService.updateName(params.id, store.clan_id!, body.name),
+		{
+			beforeHandle: [requireAuth, requireClanOfficer],
+			params: idParams,
+			body: t.Object({ name: t.String({ minLength: 1, maxLength: 60 }) }),
+			detail: { tags: ['Clan'] },
+		}
+	)
+	.patch(
 		'/squads/:id/map',
 		({ params, body, store }) =>
 			squadService.updateMap(params.id, store.clan_id!, body.map),

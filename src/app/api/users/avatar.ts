@@ -1,6 +1,6 @@
-import { resolve } from 'node:path'
 import { t } from 'elysia'
 import { prisma } from '@/lib/prisma'
+import { readUploadBytes } from '@/lib/uploads'
 import { createElysia } from '@/utils/elysia'
 
 type AvatarProvider = 'discord' | 'telegram'
@@ -86,6 +86,15 @@ async function proxyImage(url: string) {
 	})
 }
 
+const AVATAR_MIME: Record<string, string> = {
+	png: 'image/png',
+	jpg: 'image/jpeg',
+	jpeg: 'image/jpeg',
+	webp: 'image/webp',
+	gif: 'image/gif',
+	avif: 'image/avif',
+}
+
 async function serveUploadedAvatar(pathname: string) {
 	if (
 		!pathname.startsWith('/uploads/users/avatars/') ||
@@ -94,14 +103,25 @@ async function serveUploadedAvatar(pathname: string) {
 		return null
 	}
 
-	const requested = resolve(process.cwd(), pathname.slice(1))
-
-	const file = Bun.file(requested)
-	if (!(await file.exists())) {
+	const bytes = await readUploadBytes(pathname)
+	if (!bytes) {
 		return null
 	}
 
-	return file
+	const ext = pathname.split('.').pop()?.toLowerCase() ?? ''
+	// Response хочет ArrayBuffer; Buffer может быть view на пул —
+	// вырезаем точный кусок (бэкап SAB: Buffer никогда не на SharedArrayBuffer).
+	const body = (bytes.buffer as ArrayBuffer).slice(
+		bytes.byteOffset,
+		bytes.byteOffset + bytes.byteLength
+	)
+	return new Response(body, {
+		status: 200,
+		headers: {
+			'Content-Type': AVATAR_MIME[ext] ?? 'image/png',
+			'Cache-Control': 'public, max-age=86400, s-maxage=86400',
+		},
+	})
 }
 
 function getAvatarUrl(

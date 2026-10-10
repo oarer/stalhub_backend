@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
 
 class CommentsService {
 	async listByArticle(article_id: number, take: number, page: number) {
@@ -12,7 +13,7 @@ class CommentsService {
 				orderBy: { created_at: 'desc' },
 				include: {
 					author: {
-						select: { id: true, name: true, username: true },
+						select: AUTHOR_WITH_BADGES_SELECT,
 					},
 					replies: {
 						orderBy: { created_at: 'asc' },
@@ -50,7 +51,7 @@ class CommentsService {
 				orderBy: { created_at: 'desc' },
 				include: {
 					author: {
-						select: { id: true, name: true, username: true },
+						select: AUTHOR_WITH_BADGES_SELECT,
 					},
 					replies: {
 						orderBy: { created_at: 'asc' },
@@ -97,7 +98,7 @@ class CommentsService {
 				parent_id: data.parent_id ?? null,
 			},
 			include: {
-				author: { select: { id: true, name: true, username: true } },
+				author: { select: AUTHOR_WITH_BADGES_SELECT },
 			},
 		})
 
@@ -165,7 +166,7 @@ class CommentsService {
 				parent_id: data.parent_id ?? null,
 			},
 			include: {
-				author: { select: { id: true, name: true, username: true } },
+				author: { select: AUTHOR_WITH_BADGES_SELECT },
 			},
 		})
 

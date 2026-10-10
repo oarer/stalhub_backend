@@ -2,13 +2,43 @@ import { relative, resolve } from 'node:path'
 import cors from '@elysiajs/cors'
 import { swagger } from '@elysiajs/swagger'
 import { goldService } from '@/app/api/clan/services/gold'
-import { normalizeAndRecordHttpRequest, normalizeRoute } from '@/app/api/metrics'
+import {
+	normalizeAndRecordHttpRequest,
+	normalizeRoute,
+} from '@/app/api/metrics'
 import { clientIp, enforceRateLimit, shouldSkipRps } from '@/utils/auto-ban'
 import { createElysia } from '@/utils/elysia'
+import { isS3Uploads, s3PublicUrl } from '@/lib/uploads'
 import { logger } from '@/utils/logger'
 import { routes } from './app'
 import { crons } from './crons'
 import { env } from './env'
+
+function originOf(url: string | undefined): string | null {
+	if (!url) return null
+	try {
+		const u = new URL(url)
+		return `${u.protocol}//${u.host}`
+	} catch {
+		return null
+	}
+}
+
+const allowedOrigins: string[] = [
+	...new Set(
+		[
+			originOf(env.WEB_ORIGIN),
+			originOf(env.DESKTOP_AUTH_ORIGIN),
+			originOf(env.BLOG_PUBLIC_BASE_URL),
+			originOf(env.BLOG_OG_BASE_URL),
+
+			'http://localhost:3000',
+			'http://localhost:3001',
+		].filter((v): v is string => !!v)
+	),
+]
+
+const STALHUB_ORIGIN_RE = /^https:\/\/([a-z0-9-]+\.)*stalhub\.dev$/
 
 export const app = createElysia()
 	.use(crons)
@@ -22,16 +52,40 @@ export const app = createElysia()
 			},
 		})
 	)
-	.use(cors())
+	.use(
+		cors({
+			origin: [...allowedOrigins, STALHUB_ORIGIN_RE],
+			credentials: true,
+		})
+	)
 	.use(logger)
-	.use(routes)
 
 	// static
 	.get('/uploads/*', async ({ params, set }) => {
+		const decodedPath = decodeURIComponent(params['*'])
+
+		if (
+			decodedPath.includes('..') ||
+			decodedPath.includes('\0') ||
+			decodedPath.includes('\\')
+		) {
+			set.status = 403
+			return 'Forbidden'
+		}
+		
+		if (isS3Uploads()) {
+			const url = s3PublicUrl(`/uploads/${decodedPath}`)
+			if (!url) {
+				set.status = 403
+				return 'Forbidden'
+			}
+			set.status = 302
+			set.headers.location = url
+			return
+		}
+
 		const uploadsDir = resolve(process.cwd(), 'uploads')
 		try {
-			const decodedPath = decodeURIComponent(params['*'])
-
 			const requested = resolve(uploadsDir, decodedPath)
 
 			const rel = relative(uploadsDir, requested)
@@ -87,6 +141,8 @@ export const app = createElysia()
 			duration_seconds: start ? (Date.now() - start) / 1000 : 0,
 		})
 	})
+
+	.use(routes)
 
 	.listen({ port: env.PORT }, ({ hostname, port }) => {
 		const protocol = env.NODE_ENV === 'production' ? 'https' : 'http'

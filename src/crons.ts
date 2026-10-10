@@ -4,6 +4,7 @@ import { refreshBalanceDiffs } from '@/app/api/balance/service'
 import { clanService } from '@/app/api/clan/services/clan'
 import { goldService } from '@/app/api/clan/services/gold'
 import { grenadesService } from '@/app/api/clan/services/grenades'
+import { personalService } from '@/app/api/personal/service'
 import { serverOnlineService } from '@/app/api/server-online/server-online.service'
 import { generateSystemTierLists } from '@/app/api/tier-lists/generator'
 import { updateAllRegions as updateUpgradePrices } from '@/app/api/upgrade-prices/upgrade-prices.service'
@@ -268,6 +269,19 @@ export const crons = createElysia()
 				console.log('[Cron] Generating system tier lists...')
 				await generateSystemTierLists()
 				console.log('[Cron] System tier lists generated.')
+			},
+		})
+	)
+	.use(
+		cron({
+			name: 'personalSnapshots',
+			pattern: '7 */12 * * *',
+			async run() {
+				try {
+					await personalService.snapshotAll()
+				} catch (err) {
+					console.error('[Personal] cron failed:', err)
+				}
 			},
 		})
 	)

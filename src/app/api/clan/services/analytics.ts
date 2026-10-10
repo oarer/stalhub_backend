@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { StageType } from 'generated/prisma/enums'
 import { MSK_OFFSET_MS } from '@/lib/msk'
 import { prisma } from '@/lib/prisma'
+import { deleteUpload, putUpload, readUploadBytes } from '@/lib/uploads'
+import { USER_WITH_BADGES_SELECT } from '@/utils/user-select'
 import type { AIScreenshotResult } from '../types'
 import { analyzeScreenshot } from './ai'
 import { buildAttendanceMonth, mskMonthRange } from './attendance-month'
@@ -14,8 +15,6 @@ function mskDayRange(date: string): [Date, Date] {
 	const start = Date.UTC(y, m - 1, d, 0, 0, 0) - MSK_OFFSET_MS
 	return [new Date(start), new Date(start + 24 * 60 * 60 * 1000)]
 }
-
-const UPLOAD_DIR = path.resolve('uploads', 'screenshots')
 
 function screenshotVictory(r: AIScreenshotResult | null): boolean | null {
 	if (!r) return null
@@ -28,10 +27,6 @@ function screenshotVictory(r: AIScreenshotResult | null): boolean | null {
 }
 
 class AnalyticsService {
-	private async ensureUploadDir() {
-		await mkdir(UPLOAD_DIR, { recursive: true })
-	}
-
 	async createSession(input: {
 		creator_id: number | null
 		region: string
@@ -103,12 +98,10 @@ class AnalyticsService {
 		if (existing > 0) {
 			throw new Error('Only one screenshot per stage is allowed')
 		}
-		await this.ensureUploadDir()
 		const ext = path.extname(file.name) || '.png'
 		const filename = `${session_id}-${randomUUID()}${ext}`
-		const fullPath = path.join(UPLOAD_DIR, filename)
 		const relativePath = path.join('uploads', 'screenshots', filename)
-		await writeFile(fullPath, file.buffer)
+		await putUpload(`/${relativePath}`, file.buffer, file.type || 'image/png')
 
 		const row = await prisma.stageScreenshot.create({
 			data: {
@@ -118,7 +111,7 @@ class AnalyticsService {
 				size_bytes: file.buffer.length,
 			},
 		})
-		void this.runAnalysis(row.id, fullPath)
+		void this.runAnalysis(row.id, relativePath)
 		return row
 	}
 
@@ -128,6 +121,17 @@ class AnalyticsService {
 			select: { id: true },
 		})
 		if (!existing) return
+
+		// file_path — stored путь (uploads/...): байты резолвим через store
+		// (локальный диск или S3), на файловую систему не полагаемся.
+		const bytes = await readUploadBytes(file_path)
+		if (!bytes) {
+			await prisma.stageScreenshot.update({
+				where: { id: screenshot_id },
+				data: { ai_status: 'error', ai_error: 'screenshot file not readable' },
+			})
+			return
+		}
 
 		try {
 			await prisma.stageScreenshot.update({
@@ -149,7 +153,7 @@ class AnalyticsService {
 					).map((m) => ({ name: m.name, role: m.rank }))
 				: undefined
 			const result = await analyzeScreenshot(
-				file_path,
+				bytes,
 				roster,
 				shot?.session.stage_number
 			)
@@ -247,7 +251,7 @@ class AnalyticsService {
 				attendance: {
 					include: {
 						user: {
-							select: { id: true, username: true, name: true },
+							select: USER_WITH_BADGES_SELECT,
 						},
 					},
 				},
@@ -358,9 +362,7 @@ class AnalyticsService {
 			throw new Error('Not your session')
 		}
 		for (const shot of session.screenshots) {
-			try {
-				await rm(shot.file_path, { force: true })
-			} catch {}
+			await deleteUpload(shot.file_path)
 		}
 		return deleteSessionWithRating(session_id)
 	}
@@ -625,6 +627,97 @@ class AnalyticsService {
 					}
 				}),
 			})),
+		}
+	}
+
+	/** Публичная сводка по всем открытым кланам: без этапов, только агрегаты */
+	async getPublicClansStats() {
+		const clans = await prisma.clan.findMany({
+			where: { is_public: true },
+			select: { id: true, name: true, tag: true },
+		})
+		if (clans.length === 0) return { clans: [], total: null }
+		const sessions = await prisma.stageSession.findMany({
+			where: { clan_id: { in: clans.map((c) => c.id) } },
+			select: {
+				clan_id: true,
+				screenshots: {
+					where: { ai_status: 'done' },
+					select: { ai_result: true },
+				},
+			},
+		})
+		const byClan = new Map<
+			string,
+			{ sessions: number; battles: number; wins: number; losses: number; kills: number; deaths: number }
+		>()
+		for (const c of clans) {
+			byClan.set(c.id, {
+				sessions: 0,
+				battles: 0,
+				wins: 0,
+				losses: 0,
+				kills: 0,
+				deaths: 0,
+			})
+		}
+		for (const s of sessions) {
+			const b = byClan.get(s.clan_id ?? '')
+			if (!b) continue
+			b.sessions++
+			for (const shot of s.screenshots) {
+				const r = shot.ai_result as AIScreenshotResult | null
+				const v = screenshotVictory(r)
+				if (v === true || v === false) {
+					b.battles++
+					if (v) b.wins++
+					else b.losses++
+				}
+				for (const p of r?.players ?? []) {
+					if (!p.is_clan_member) continue
+					b.kills += p.kills ?? 0
+					b.deaths += p.deaths ?? 0
+				}
+			}
+		}
+		const rows = clans.map((c) => {
+			const b = byClan.get(c.id)!
+			const decided = b.wins + b.losses
+			return {
+				clan_id: c.id,
+				tag: c.tag,
+				name: c.name,
+				sessions: b.sessions,
+				battles: b.battles,
+				wins: b.wins,
+				losses: b.losses,
+				winrate: decided > 0 ? b.wins / decided : 0,
+				kills: b.kills,
+				deaths: b.deaths,
+				kd: b.deaths > 0 ? b.kills / b.deaths : b.kills,
+			}
+		})
+		rows.sort((x, y) => y.winrate - x.winrate || y.kd - x.kd)
+		const t = rows.reduce(
+			(acc, r) => ({
+				clans: acc.clans + 1,
+				sessions: acc.sessions + r.sessions,
+				battles: acc.battles + r.battles,
+				wins: acc.wins + r.wins,
+				losses: acc.losses + r.losses,
+				kills: acc.kills + r.kills,
+				deaths: acc.deaths + r.deaths,
+			}),
+			{ clans: 0, sessions: 0, battles: 0, wins: 0, losses: 0, kills: 0, deaths: 0 }
+		)
+		const decided = t.wins + t.losses
+		return {
+			clans: rows,
+			total: {
+				...t,
+				winrate: decided > 0 ? t.wins / decided : 0,
+				kd: t.deaths > 0 ? t.kills / t.deaths : t.kills,
+			},
 		}
 	}
 

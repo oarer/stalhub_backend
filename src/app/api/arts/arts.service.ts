@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Prisma } from 'generated/prisma/client'
 import { ArtType, StarTargetType } from 'generated/prisma/client'
@@ -9,6 +8,8 @@ import {
 	type ViewIdentity,
 } from '@/app/api/metrics/view-dedupe'
 import { prisma } from '@/lib/prisma'
+import { putUpload } from '@/lib/uploads'
+import { USER_BADGES_SELECT } from '@/utils/user-select'
 import {
 	compressImageBuffer,
 	detectImageMime,
@@ -25,6 +26,7 @@ type ArtData = {
 	title: string | null
 	description: string | null
 	image_url: string | null
+	image_urls: string[]
 	tags: string[]
 	views: number
 	author: ArtAuthorPayload
@@ -33,6 +35,28 @@ type ArtData = {
 	is_starred?: boolean
 	created_at: Date
 	updated_at: Date
+}
+
+export const ART_IMAGES_MAX_COUNT = 10
+
+export function normalizeArtImages(
+	input: unknown,
+	fallbackUrl?: string | null
+): string[] {
+	const raw = Array.isArray(input) ? input : []
+	const cleaned: string[] = []
+	for (const item of raw) {
+		if (typeof item !== 'string') continue
+		const trimmed = item.trim()
+		if (!trimmed || cleaned.includes(trimmed)) continue
+		cleaned.push(trimmed)
+		if (cleaned.length >= ART_IMAGES_MAX_COUNT) break
+	}
+	if (cleaned.length === 0 && typeof fallbackUrl === 'string') {
+		const fb = fallbackUrl.trim()
+		if (fb) cleaned.push(fb)
+	}
+	return cleaned.slice(0, ART_IMAGES_MAX_COUNT)
 }
 
 class ArtsService {
@@ -44,6 +68,7 @@ class ArtsService {
 			title: string | null
 			description: string | null
 			image_url: string | null
+			image_urls: string[]
 			tags: string
 			views: number
 			author: {
@@ -61,13 +86,20 @@ class ArtsService {
 		isStarred = false,
 		commentsCount = 0
 	): ArtData {
+		const image_urls =
+			art.image_urls?.length > 0
+				? art.image_urls
+				: art.image_url
+					? [art.image_url]
+					: []
 		return {
 			id: art.id,
 			external_id: art.external_id,
 			type: art.type,
 			title: art.title,
 			description: art.description,
-			image_url: art.image_url,
+			image_url: art.image_url ?? image_urls[0] ?? null,
+			image_urls,
 			tags: art.tags ? art.tags.split(',').filter(Boolean) : [],
 			views: art.views,
 			author: resolveArtAuthor(art),
@@ -82,7 +114,12 @@ class ArtsService {
 	async list(
 		take: number,
 		page: number,
-		opts?: { author_id?: number; tags?: string[]; type?: ArtType }
+		opts?: {
+			author_id?: number
+			tags?: string[]
+			type?: ArtType
+			sort?: string
+		}
 	) {
 		const where: Prisma.ArtWhereInput = {}
 		if (opts?.author_id) where.author_id = opts.author_id
@@ -93,12 +130,19 @@ class ArtsService {
 			}))
 		}
 
+		const orderBy: Prisma.ArtOrderByWithRelationInput =
+			opts?.sort === 'oldest'
+				? { created_at: 'asc' }
+				: opts?.sort === 'views'
+					? { views: 'desc' }
+					: { created_at: 'desc' }
+
 		const [rows, totalCount] = await Promise.all([
 			prisma.art.findMany({
 				where,
 				skip: page * take,
-				take,
-				orderBy: { created_at: 'desc' },
+				take: opts?.sort === 'stars' ? take * 5 : take,
+				orderBy,
 				include: {
 					author: {
 						select: {
@@ -106,6 +150,7 @@ class ArtsService {
 							name: true,
 							username: true,
 							social_links: true,
+							badges: { select: USER_BADGES_SELECT },
 						},
 					},
 				},
@@ -116,8 +161,15 @@ class ArtsService {
 		const ids = rows.map((r) => r.id)
 		const starCounts = await this.starCounts(ids)
 
+		let data = rows.map((a) => this.mapArt(a, starCounts.get(a.id) ?? 0))
+		if (opts?.sort === 'stars') {
+			data = data
+				.sort((x, y) => y.stars_count - x.stars_count)
+				.slice(0, take)
+		}
+
 		return {
-			data: rows.map((a) => this.mapArt(a, starCounts.get(a.id) ?? 0)),
+			data,
 			total_count: totalCount,
 			page: page + 1,
 			take,
@@ -186,18 +238,19 @@ class ArtsService {
 		)
 	}
 
-	private mediaTypeTag(image_url?: string): 'рисунок' | 'анимация' {
-		if (!image_url) return 'рисунок'
-		const ext = path.extname(image_url.split('?')[0]).toLowerCase()
+	private mediaTypeTag(
+		image_url?: string,
+		image_urls?: string[]
+	): 'рисунок' | 'анимация' {
+		const first = image_urls?.[0] ?? image_url
+		if (!first) return 'рисунок'
+		const ext = path.extname(first.split('?')[0]).toLowerCase()
 		return ['.mp4', '.webm', '.mov', '.avi', '.mkv'].includes(ext)
 			? 'анимация'
 			: 'рисунок'
 	}
 
 	async saveArtMedia(file: { name: string; type: string; buffer: Buffer }) {
-		const artDir = './uploads/arts'
-		await mkdir(artDir, { recursive: true })
-
 		// Trust magic bytes over file name / Content-Type for images.
 		const detected = detectImageMime(file.buffer)
 		const declaredExt = path.extname(file.name) || '.png'
@@ -211,9 +264,10 @@ class ArtsService {
 			: file.buffer
 
 		const filename = `${randomUUID()}${ext}`
-		await writeFile(path.join(artDir, filename), data)
+		const image_url = `/uploads/arts/${filename}`
+		await putUpload(image_url, data, mime)
 
-		return { image_url: `/uploads/arts/${filename}` }
+		return { image_url }
 	}
 
 	async create(
@@ -224,9 +278,13 @@ class ArtsService {
 			type?: string
 			tags?: string
 			image_url?: string
+			image_urls?: string[]
 		}
 	) {
 		const artType = (data.type as ArtType) ?? ArtType.DEFAULT
+
+		const images = normalizeArtImages(data.image_urls, data.image_url)
+		const cover = images[0] ?? null
 
 		const author = await prisma.user.findUnique({
 			where: { id: author_id },
@@ -235,7 +293,7 @@ class ArtsService {
 
 		const autoTags = [
 			author?.name || author?.username,
-			this.mediaTypeTag(data.image_url),
+			this.mediaTypeTag(data.image_url, images),
 		].filter((t): t is string => !!t)
 
 		const manualTags = data.tags ? data.tags.split(',').filter(Boolean) : []
@@ -247,7 +305,8 @@ class ArtsService {
 				title: data.title ?? null,
 				description: data.description ?? null,
 				type: artType,
-				image_url: data.image_url ?? undefined,
+				image_url: cover ?? undefined,
+				image_urls: images,
 				tags,
 				author_id,
 			},
@@ -276,6 +335,7 @@ class ArtsService {
 			type?: string
 			tags?: string
 			image_url?: string | null
+			image_urls?: string[] | null
 		}
 	) {
 		const existing = await prisma.art.findUnique({ where: { id } })
@@ -285,10 +345,26 @@ class ArtsService {
 
 		const updateData: Record<string, unknown> = {}
 		if (data.title !== undefined) updateData.title = data.title
-		if (data.description !== undefined) updateData.description = data.description
+		if (data.description !== undefined)
+			updateData.description = data.description
 		if (data.type !== undefined) updateData.type = data.type
 		if (data.tags !== undefined) updateData.tags = data.tags
-		if (data.image_url !== undefined) updateData.image_url = data.image_url
+		if (data.image_urls !== undefined) {
+			const images =
+				data.image_urls === null
+					? []
+					: normalizeArtImages(data.image_urls)
+			updateData.image_urls = images
+			// Держим обложку в синхроне с первым кадром галереи.
+			updateData.image_url = images[0] ?? null
+		} else if (data.image_url !== undefined) {
+			const images = normalizeArtImages(
+				data.image_url ? [data.image_url] : [],
+				null
+			)
+			updateData.image_url = data.image_url
+			updateData.image_urls = images
+		}
 
 		const art = await prisma.art.update({
 			where: { id },

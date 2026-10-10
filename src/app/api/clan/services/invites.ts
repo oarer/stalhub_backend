@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
+import { USER_WITH_BADGES_SELECT } from '@/utils/user-select'
 import { hashPassword } from '@/utils/crypto'
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -153,7 +154,7 @@ class ClanInviteService {
 		return prisma.clanInvite.findMany({
 			where: { clan_id: clan_id },
 			include: {
-				user: { select: { id: true, username: true, name: true } },
+				user: { select: USER_WITH_BADGES_SELECT },
 			},
 			orderBy: { created_at: 'desc' },
 		})
@@ -192,7 +193,7 @@ class ClanInviteService {
 		const invite = await prisma.clanInvite.findUnique({
 			where: { code: normalized },
 			include: {
-				user: { select: { id: true, username: true, name: true } },
+				user: { select: USER_WITH_BADGES_SELECT },
 			},
 		})
 		if (!invite) throw new Error('Invalid invite code')

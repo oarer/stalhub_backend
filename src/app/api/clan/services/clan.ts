@@ -1,6 +1,7 @@
 import { apiClient } from '@/app/interceptors/sc.interceptor'
 import { scGateway } from '@/app/api/sc-gateway/gateway'
 import { prisma } from '@/lib/prisma'
+import { USER_WITH_BADGES_SELECT } from '@/utils/user-select'
 import { decryptSecretJson } from '@/utils/crypto'
 import type { RecruitmentSettingsInput } from './recruitment'
 
@@ -438,7 +439,7 @@ export class ClanService {
 		return prisma.clanMember.findMany({
 			where: { clan_id },
 			include: {
-				user: { select: { id: true, username: true, name: true } },
+				user: { select: USER_WITH_BADGES_SELECT },
 			},
 			orderBy: { rank: 'asc' },
 		})

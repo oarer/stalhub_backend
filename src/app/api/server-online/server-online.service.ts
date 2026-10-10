@@ -1,5 +1,15 @@
+import { scGateway } from '@/app/api/sc-gateway/gateway'
 import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
+import { Regions } from '@/types/api.type'
+
+type EmissionResponse = {
+	currentStart?: string | null
+	previousStart?: string | null
+	previousEnd?: string | null
+}
+
+const EMISSION_REGIONS = Object.values(Regions)
 
 type LauncherSource = {
 	region: string
@@ -229,6 +239,74 @@ class ServerOnlineService {
 			const [region, serverId] = key.split('|')
 			return { region, serverId, ...value }
 		})
+	}
+
+	async peaks(days: number) {
+		const clamped = Math.min(Math.max(days, 1), 90)
+		const start = new Date(Date.now() - clamped * 24 * 60 * 60 * 1000)
+
+		const snapshots = await prisma.serverOnlineSnapshot.findMany({
+			where: { created_at: { gte: start } },
+			orderBy: { created_at: 'asc' },
+		})
+
+		// Сумма онлайна по региону на момент снапшота, затем MAX по дню
+		const byMoment = new Map<string, number>()
+		const momentTime = new Map<string, Date>()
+		for (const s of snapshots) {
+			const t = new Date(
+				Math.floor(s.created_at.getTime() / (5 * 60 * 1000)) *
+					(5 * 60 * 1000)
+			)
+			const key = `${s.region}|${t.getTime()}`
+			byMoment.set(key, (byMoment.get(key) ?? 0) + s.online)
+			if (!momentTime.has(key)) momentTime.set(key, t)
+		}
+
+		const peaks = new Map<
+			string,
+			{ date: string; region: string; peak: number }
+		>()
+		for (const [key, online] of byMoment) {
+			const [region] = key.split('|')
+			const t = momentTime.get(key)!
+			const date = t.toISOString().slice(0, 10)
+			const pkey = `${region}|${date}`
+			const cur = peaks.get(pkey)
+			if (!cur || online > cur.peak)
+				peaks.set(pkey, { date, region, peak: online })
+		}
+
+		return Array.from(peaks.values()).sort((a, b) =>
+			a.date < b.date
+				? -1
+				: a.date > b.date
+					? 1
+					: a.region.localeCompare(b.region)
+		)
+	}
+
+	async emission(region: string) {
+		const reg = region.toUpperCase()
+		if (!/^[A-Z]{2,5}$/.test(reg)) throw new Error('Bad region')
+		const data = await scGateway.get<EmissionResponse>(`/${reg}/emission`)
+		return { region: reg, ...data }
+	}
+
+	async emissions(regions: string[] = EMISSION_REGIONS) {
+		const settled = await Promise.allSettled(
+			regions.map((r) => this.emission(r))
+		)
+		const fulfilled = settled
+			.filter((r) => r.status === 'fulfilled')
+			.map((r) => r.value)
+		for (const r of settled) {
+			if (r.status === 'rejected') {
+				console.error('[ServerOnline] Emission fetch failed:', r.reason)
+			}
+		}
+		if (fulfilled.length === 0) throw new Error('Upstream unavailable')
+		return fulfilled
 	}
 
 	async history(hours: number) {

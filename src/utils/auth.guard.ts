@@ -145,6 +145,21 @@ export async function requireAdmin({ store, set }: AuthContext) {
 	}
 }
 
+export function requirePermission(permission: string) {
+	return async ({ store, set }: AuthContext) => {
+		const user_id = store.authUserId as number
+		if (await checkPermission(user_id, permission)) return
+
+		if (
+			permission !== 'user:manage' &&
+			(await checkPermission(user_id, 'user:manage'))
+		)
+			return
+		set.status = 403
+		return { error: 'Forbidden' }
+	}
+}
+
 export async function requireAuth({
 	cookie: { access_token },
 	jwt,

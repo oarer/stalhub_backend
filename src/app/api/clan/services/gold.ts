@@ -1,6 +1,7 @@
 import type { GoldDropStatus } from 'generated/prisma/enums'
 import { mskNow } from '@/lib/msk'
 import { prisma } from '@/lib/prisma'
+import { USER_WITH_BADGES_SELECT } from '@/utils/user-select'
 
 const DROP_TIMES_MSK = [10, 13, 16, 19, 22]
 const RETENTION_DAYS = 30
@@ -8,7 +9,7 @@ const RETENTION_DAYS = 30
 const memberInclude = {
 	member: {
 		include: {
-			user: { select: { id: true, username: true, name: true } },
+			user: { select: USER_WITH_BADGES_SELECT },
 		},
 	},
 } as const

@@ -1,0 +1,12 @@
+[Unit]
+Description=StalHub backup
+
+[Timer]
+OnCalendar=*-*-* 00:05:00
+OnCalendar=*-*-* 12:05:00
+Timezone=Europe/Moscow
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

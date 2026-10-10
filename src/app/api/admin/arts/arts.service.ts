@@ -5,6 +5,7 @@ import {
 	StarTargetType,
 } from 'generated/prisma/client'
 import { resolveArtAuthor } from '@/app/api/arts/art-author'
+import { normalizeArtImages } from '@/app/api/arts/arts.service'
 import { prisma } from '@/lib/prisma'
 import { generateSlug } from '@/utils/slug'
 
@@ -71,7 +72,13 @@ class AdminArtsService {
 				type: a.type,
 				title: a.title,
 				description: a.description,
-				image_url: a.image_url,
+				image_url: a.image_url ?? a.image_urls[0] ?? null,
+				image_urls:
+					a.image_urls.length > 0
+						? a.image_urls
+						: a.image_url
+							? [a.image_url]
+							: [],
 				tags: a.tags ? a.tags.split(',').filter(Boolean) : [],
 				author: resolveArtAuthor(a),
 				stars_count: starCounts.get(a.id) ?? 0,
@@ -113,7 +120,13 @@ class AdminArtsService {
 			type: art.type,
 			title: art.title,
 			description: art.description,
-			image_url: art.image_url,
+			image_url: art.image_url ?? art.image_urls[0] ?? null,
+			image_urls:
+				art.image_urls.length > 0
+					? art.image_urls
+					: art.image_url
+						? [art.image_url]
+						: [],
 			tags: art.tags ? art.tags.split(',').filter(Boolean) : [],
 			author: resolveArtAuthor(art),
 			stars_count,
@@ -128,6 +141,7 @@ class AdminArtsService {
 		description?: string
 		type?: string
 		image_url?: string | null
+		image_urls?: string[]
 		tags?: string
 		author_id?: number
 		author_name?: string
@@ -135,12 +149,16 @@ class AdminArtsService {
 	}) {
 		const artType = (data.type as ArtType) ?? ArtType.DEFAULT
 
+		const images = normalizeArtImages(data.image_urls, data.image_url)
+		const cover = images[0] ?? null
+
 		const createData: Prisma.ArtCreateInput = {
 			external_id: generateSlug(data.title ?? 'art'),
 			title: data.title ?? null,
 			description: data.description ?? null,
 			type: artType,
-			image_url: data.image_url ?? undefined,
+			image_url: cover ?? undefined,
+			image_urls: images,
 			tags: data.tags ?? '',
 		}
 
@@ -174,6 +192,7 @@ class AdminArtsService {
 			description?: string | null
 			type?: string
 			image_url?: string | null
+			image_urls?: string[] | null
 			tags?: string
 			author_id?: number | null
 			author_name?: string | null
@@ -185,9 +204,22 @@ class AdminArtsService {
 
 		const updateData: Prisma.ArtUpdateInput = {}
 		if (data.title !== undefined) updateData.title = data.title
-		if (data.description !== undefined) updateData.description = data.description
+		if (data.description !== undefined)
+			updateData.description = data.description
 		if (data.type !== undefined) updateData.type = data.type as ArtType
-		if (data.image_url !== undefined) updateData.image_url = data.image_url
+		if (data.image_urls !== undefined) {
+			const images =
+				data.image_urls === null
+					? []
+					: normalizeArtImages(data.image_urls)
+			updateData.image_urls = images
+			updateData.image_url = images[0] ?? null
+		} else if (data.image_url !== undefined) {
+			updateData.image_url = data.image_url
+			updateData.image_urls = normalizeArtImages(
+				data.image_url ? [data.image_url] : []
+			)
+		}
 		if (data.tags !== undefined) updateData.tags = data.tags
 
 		if (data.author_id !== undefined) {

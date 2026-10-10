@@ -15,7 +15,12 @@ const envVariables = z.object({
 	DISCORD_CLIENT_SECRET: z.string().default(''),
 	DISCORD_REDIRECT_URI: z.string().default(''),
 	DESKTOP_REDIRECT_URI: z.string().default('stalhub://auth/callback'),
-	DESKTOP_AUTH_TTL_SECONDS: z.coerce.number().int().min(30).max(600).default(120),
+	DESKTOP_AUTH_TTL_SECONDS: z.coerce
+		.number()
+		.int()
+		.min(30)
+		.max(600)
+		.default(120),
 	WEB_ORIGIN: z.string().default('https://stalhub.dev'),
 
 	TELEGRAM_CLIENT_ID: z.string().default(''),
@@ -38,6 +43,12 @@ const envVariables = z.object({
 	DISCORD_BOT_TOKEN: z.string().default(''),
 	DISCORD_BOT_CLIENT_ID: z.string().default(''),
 	DISCORD_BOT_SERVICE_JWT: z.string().default(''),
+
+	TG_BOT_TOKEN: z.string().default(''),
+	TG_CHAT_ID: z.string().default(''),
+	BLOG_DISCORD_WEBHOOK_URL: z.string().default(''),
+	BLOG_PUBLIC_BASE_URL: z.string().default('https://stalhub.dev'),
+	BLOG_OG_BASE_URL: z.string().default(''),
 
 	SC_DB_LISTING_URL: z.string().default('https://cdn.stalhub.dev/db/listing'),
 	SC_DB_LISTING_DIR: z.string().default('runtime/listing'),
@@ -65,6 +76,18 @@ const envVariables = z.object({
 		.min(1000)
 		.max(120000)
 		.default(15000),
+
+
+	S3_UPLOADS_ENABLED: z
+		.string()
+		.default('false')
+		.transform((v) => v.toLowerCase() !== 'false' && v !== '0'),
+	S3_ENDPOINT: z.string().default('https://s3.ru1.storage.beget.cloud'),
+	S3_REGION: z.string().default('ru-1'),
+	S3_UPLOADS_BUCKET: z.string().default(''),
+	S3_ACCESS_KEY_ID: z.string().default(''),
+	S3_SECRET_ACCESS_KEY: z.string().default(''),
+	S3_PUBLIC_BASE_URL: z.string().default(''),
 
 	FORUM_COOKIE: z.string().default(''),
 	FORUM_USER_AGENT: z

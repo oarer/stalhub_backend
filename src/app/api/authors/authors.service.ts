@@ -1,7 +1,8 @@
 import { ArticleStatus } from 'generated/prisma/client'
 import { prisma } from '@/lib/prisma'
+import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
 
-const AUTHOR_SELECT = { id: true, name: true, username: true } as const
+const AUTHOR_SELECT = AUTHOR_WITH_BADGES_SELECT
 
 export class AuthorsService {
 	async getTopAuthorOfWeek() {

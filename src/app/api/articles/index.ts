@@ -1,5 +1,6 @@
 import { t } from 'elysia'
 import { ArticleStatus, ArticleType, QuestType } from 'generated/prisma/client'
+import { prisma } from '@/lib/prisma'
 import {
 	checkPermission,
 	fromStore,
@@ -10,13 +11,48 @@ import {
 import { enforceContentSpam, SPAM_LIMIT_ARTICLE } from '@/utils/auto-ban'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
+import { isSafeUrl, rejectOnXss } from '@/utils/xss-guard'
 import {
 	ARTICLE_IMAGE_MAX_BYTES,
 	normalizeQuestMap,
 	saveArticleImage,
 } from './article-media'
 import { articlesService } from './articles.service'
+import { generateBlogDigest } from './blog-digest'
+import { type BlogPublishTarget, publishBlogPost } from './blog-publish'
 import { commentsRoutes } from './comments'
+
+const coverConfigSchema = t.Optional(
+	t.Nullable(
+		t.Object({
+			mode: t.Optional(
+				t.Union([
+					t.Literal('auto'),
+					t.Literal('custom'),
+					t.Literal('hidden'),
+				])
+			),
+			preset: t.Optional(t.String({ maxLength: 32 })),
+			icon: t.Optional(t.String({ maxLength: 64 })),
+			panel: t.Optional(
+				t.Object({
+					title: t.Optional(t.String({ maxLength: 48 })),
+					rows: t.Optional(
+						t.Array(
+							t.Object({
+								label: t.String({ maxLength: 24 }),
+								value: t.String({ maxLength: 16 }),
+								fill: t.Number({ minimum: 0, maximum: 1 }),
+								accent: t.Optional(t.Boolean()),
+							}),
+							{ maxItems: 2 }
+						)
+					),
+				})
+			),
+		})
+	)
+)
 
 export const articlesRoutes = createElysia().group('/articles', (app) =>
 	app
@@ -34,6 +70,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				)
 				return articlesService.list(take, page, {
 					all: is_admin,
+					type: query.type as ArticleType | undefined,
 					...(!is_admin && { author_id: user_id }),
 				})
 			},
@@ -42,6 +79,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
+					type: t.Optional(t.Enum(ArticleType)),
 				}),
 				detail: { tags: ['Articles'] },
 			}
@@ -54,6 +92,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				const page = (query.page ?? 1) - 1
 				return articlesService.list(take, page, {
 					author_id: fromStore(store).user_id,
+					type: query.type as ArticleType | undefined,
 				})
 			},
 			{
@@ -61,6 +100,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
+					type: t.Optional(t.Enum(ArticleType)),
 				}),
 				detail: { tags: ['Articles'] },
 			}
@@ -71,12 +111,15 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			async ({ query }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
-				return articlesService.list(take, page)
+				return articlesService.list(take, page, {
+					type: query.type as ArticleType | undefined,
+				})
 			},
 			{
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
+					type: t.Optional(t.Enum(ArticleType)),
 				}),
 				detail: { tags: ['Articles'] },
 			}
@@ -151,7 +194,8 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 
 		.post(
 			'',
-			async ({ body, store, set }) => {
+			async ({ body, store, set, request }) => {
+				let is_stalhub_admin = false
 				if (body.type === ArticleType.STALHUB) {
 					const is_admin = await checkPermission(
 						fromStore(store).user_id,
@@ -163,25 +207,65 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 							error: 'Only admins can create STALHUB articles',
 						}
 					}
+					is_stalhub_admin = true
 				}
 
 				const user_id = fromStore(store).user_id
 
+				const xss = await rejectOnXss({
+					fields: {
+						title: body.title,
+						content: body.content,
+						image_url: body.image_url,
+						quest_name: body.quest_name,
+						reward_text: body.reward_text,
+						tags: body.tags?.join(' '),
+					},
+					user_id,
+					ip:
+						request.headers
+							.get('x-forwarded-for')
+							?.split(',')[0]
+							?.trim() ??
+						request.headers.get('x-real-ip') ??
+						'?',
+					route: 'POST /articles',
+				})
+				if (xss) {
+					set.status = 400
+					return { error: `Invalid content in field: ${xss.field}` }
+				}
+				if (body.image_url && !isSafeUrl(body.image_url)) {
+					set.status = 400
+					return { error: 'Invalid image_url' }
+				}
+
 				await enforceContentSpam(user_id, SPAM_LIMIT_ARTICLE)
 
-				return articlesService.create(user_id, {
+				const created = await articlesService.create(user_id, {
 					title: body.title,
 					content: body.content,
 					type: body.type,
 					flags: body.flags,
 					tags: body.tags?.join(','),
-					image_url: body.image_url,
+					image_url: body.image_url ?? undefined,
+					cover_config: body.cover_config ?? undefined,
 					quest_name: body.quest_name,
 					quest_type: body.quest_type,
 					quest_map: normalizeQuestMap(body.quest_map),
 					reward_text: body.reward_text,
 					reward_money: body.reward_money,
 				})
+
+				if (is_stalhub_admin) {
+					const published = await articlesService.setStatus(
+						created.id,
+						ArticleStatus.APPROVED
+					)
+					return published ?? created
+				}
+
+				return created
 			},
 			{
 				beforeHandle: [requireAuth],
@@ -195,7 +279,8 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 						maxLength: 50000,
 					}),
 					type: t.Optional(t.Enum(ArticleType)),
-					image_url: t.Optional(t.String()),
+					image_url: t.Optional(t.Nullable(t.String())),
+					cover_config: coverConfigSchema,
 					quest_name: t.Optional(
 						t.Nullable(t.String({ maxLength: 200 }))
 					),
@@ -216,8 +301,41 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 
 		.patch(
 			'/:id',
-			async ({ params, body, store, set }) => {
+			async ({ params, body, store, set, request }) => {
 				const { user_id } = fromStore(store)
+				const xssPatch = await rejectOnXss({
+					fields: {
+						title: body.title,
+						content: body.content,
+						image_url: body.image_url,
+						quest_name: body.quest_name,
+						reward_text: body.reward_text,
+						tags: body.tags?.join(' '),
+					},
+					user_id,
+					ip:
+						request.headers
+							.get('x-forwarded-for')
+							?.split(',')[0]
+							?.trim() ??
+						request.headers.get('x-real-ip') ??
+						'?',
+					route: 'PATCH /articles/:id',
+				})
+				if (xssPatch) {
+					set.status = 400
+					return {
+						error: `Invalid content in field: ${xssPatch.field}`,
+					}
+				}
+				if (
+					body.image_url !== undefined &&
+					body.image_url !== null &&
+					!isSafeUrl(body.image_url)
+				) {
+					set.status = 400
+					return { error: 'Invalid image_url' }
+				}
 				const is_admin = await checkPermission(
 					user_id,
 					'articles:manage'
@@ -238,6 +356,9 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 						}),
 						...(body.image_url !== undefined && {
 							image_url: body.image_url,
+						}),
+						...(body.cover_config !== undefined && {
+							cover_config: body.cover_config,
 						}),
 						...(body.quest_name !== undefined && {
 							quest_name: body.quest_name,
@@ -276,6 +397,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					content: t.Optional(t.String({ maxLength: 50000 })),
 					type: t.Optional(t.Enum(ArticleType)),
 					image_url: t.Optional(t.Nullable(t.String())),
+					cover_config: coverConfigSchema,
 					quest_name: t.Optional(
 						t.Nullable(t.String({ maxLength: 200 }))
 					),
@@ -450,6 +572,86 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
+				detail: { tags: ['Articles'] },
+			}
+		)
+
+		.post(
+			'/:id/digest',
+			async ({ params, store, set }) => {
+				const { user_id } = fromStore(store)
+				const is_admin = await checkPermission(
+					user_id,
+					'articles:manage'
+				)
+				if (!is_admin) {
+					set.status = 403
+					return { error: 'Forbidden' }
+				}
+				const num = Number(params.id)
+				const article = await prisma.article.findFirst({
+					where: isNaN(num)
+						? { external_id: params.id }
+						: { OR: [{ external_id: params.id }, { id: num }] },
+					select: { title: true, content: true, tags: true },
+				})
+				if (!article) {
+					set.status = 404
+					return { error: 'Not found' }
+				}
+				return generateBlogDigest({
+					title: article.title,
+					content: article.content,
+					tags: article.tags
+						? article.tags.split(',').filter(Boolean)
+						: [],
+				})
+			},
+			{
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+				detail: { tags: ['Articles'] },
+			}
+		)
+
+		.post(
+			'/:id/publish',
+			async ({ params, body, store, set }) => {
+				const { user_id } = fromStore(store)
+				const is_admin = await checkPermission(
+					user_id,
+					'articles:manage'
+				)
+				if (!is_admin) {
+					set.status = 403
+					return { error: 'Forbidden' }
+				}
+				try {
+					return await publishBlogPost(params.id, {
+						digest: body.digest,
+						targets: (body.targets ?? [
+							'tg',
+							'ds',
+						]) as BlogPublishTarget[],
+						withCover: body.with_cover ?? true,
+					})
+				} catch (err) {
+					set.status = 404
+					return { error: (err as Error).message }
+				}
+			},
+			{
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+				body: t.Object({
+					digest: t.String({ minLength: 1, maxLength: 1500 }),
+					targets: t.Optional(
+						t.Array(t.Union([t.Literal('tg'), t.Literal('ds')]), {
+							maxItems: 2,
+						})
+					),
+					with_cover: t.Optional(t.Boolean()),
+				}),
 				detail: { tags: ['Articles'] },
 			}
 		)

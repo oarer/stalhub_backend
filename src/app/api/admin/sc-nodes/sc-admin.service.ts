@@ -1,32 +1,73 @@
 import { createHash } from 'node:crypto'
-import { prisma } from '@/lib/prisma'
-import { encryptSecret } from '@/utils/crypto'
 import {
 	QUOTA_PER_MINUTE_NODE,
 	QUOTA_PER_MINUTE_TOKEN,
 } from '@/app/api/sc-gateway/config'
 import { invalidateNodeCache } from '@/app/api/sc-gateway/nodes'
-import { peekNodeUsage } from '@/app/api/sc-gateway/quota'
-import {
-	scGatewayNodesUp,
-	scGatewayTokensUp,
-} from '@/app/api/sc-gateway/sc-metrics'
 import {
 	invalidateTokenCache,
 	storeTokens,
 	tailOf,
 	tokenUsageSnapshot,
 } from '@/app/api/sc-gateway/pool'
+import { peekNodeUsage } from '@/app/api/sc-gateway/quota'
+import {
+	scGatewayNodesUp,
+	scGatewayTokensUp,
+} from '@/app/api/sc-gateway/sc-metrics'
+import { prisma } from '@/lib/prisma'
+import { encryptSecret } from '@/utils/crypto'
 
 function hashToken(value: string): string {
 	return createHash('sha256').update(value).digest('hex')
 }
 
+const SC_NODE_DENY_HOSTS = new Set([
+	'localhost',
+	'postgres',
+	'redis',
+	'app',
+	'image-service',
+	'prometheus',
+	'grafana',
+	'node-exporter',
+	'postgres-exporter',
+	'host.docker.internal',
+])
+
+function assertSafeNodeBaseUrl(raw: string): string {
+	const trimmed = raw.trim().replace(/\/+$/, '')
+	let u: URL
+	try {
+		u = new URL(trimmed)
+	} catch {
+		throw new Error('Invalid base_url')
+	}
+	if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+		throw new Error('Invalid base_url scheme')
+	}
+	if (u.username || u.password) throw new Error('Invalid base_url')
+	const host = u.hostname.toLowerCase().replace(/\.$/, '')
+	if (SC_NODE_DENY_HOSTS.has(host)) throw new Error('Invalid base_url host')
+	if (
+		host === '127.0.0.1' ||
+		host === '0.0.0.0' ||
+		host === '::1' ||
+		host.startsWith('10.') ||
+		host.startsWith('192.168.') ||
+		host.startsWith('169.254.') ||
+		/^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+		host.endsWith('.local') ||
+		host.endsWith('.internal')
+	) {
+		throw new Error('Invalid base_url host')
+	}
+	return trimmed
+}
+
 export const scAdminService = {
 	quotaPerMinute: QUOTA_PER_MINUTE_TOKEN,
 	nodeQuotaPerMinute: QUOTA_PER_MINUTE_NODE,
-
-	// ---------- nodes ----------
 
 	async listNodes() {
 		const rows = await prisma.scApiNode.findMany({
@@ -58,7 +99,7 @@ export const scAdminService = {
 		const row = await prisma.scApiNode.create({
 			data: {
 				name: input.name.trim(),
-				base_url: input.base_url.trim().replace(/\/+$/, ''),
+				base_url: assertSafeNodeBaseUrl(input.base_url),
 				api_key: input.api_key?.trim()
 					? encryptSecret(input.api_key.trim())
 					: '',
@@ -85,7 +126,7 @@ export const scAdminService = {
 		const data: Record<string, unknown> = {}
 		if (input.name !== undefined) data.name = input.name.trim()
 		if (input.base_url !== undefined)
-			data.base_url = input.base_url.trim().replace(/\/+$/, '')
+			data.base_url = assertSafeNodeBaseUrl(input.base_url)
 		if (input.api_key !== undefined)
 			data.api_key = input.api_key.trim()
 				? encryptSecret(input.api_key.trim())
@@ -133,7 +174,6 @@ export const scAdminService = {
 		}
 	},
 
-	// ---------- tokens ----------
 
 	async listTokens() {
 		return tokenUsageSnapshot()
@@ -158,7 +198,6 @@ export const scAdminService = {
 		return { id: row.id, label: row.label, tail: row.token_tail }
 	},
 
-	/** Bulk upload: newline/comma/space separated text or string array. */
 	async bulkTokens(input: { tokens: string | string[]; label?: string }) {
 		const raw = Array.isArray(input.tokens)
 			? input.tokens
@@ -173,7 +212,10 @@ export const scAdminService = {
 		return { ...result, total: values.length }
 	},
 
-	async updateToken(id: number, input: { label?: string; enabled?: boolean }) {
+	async updateToken(
+		id: number,
+		input: { label?: string; enabled?: boolean }
+	) {
 		const data: Record<string, unknown> = {}
 		if (input.label !== undefined) data.label = input.label.trim()
 		if (input.enabled !== undefined) data.enabled = input.enabled
@@ -187,8 +229,6 @@ export const scAdminService = {
 		invalidateTokenCache()
 		return { success: true }
 	},
-
-	// ---------- overview ----------
 
 	async overview() {
 		const [nodes, tokens, dbNodes, dbTokens] = await Promise.all([

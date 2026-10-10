@@ -13,6 +13,7 @@ import { routeBarter } from './barter'
 import { buildsRoutes } from './builds'
 import { clanRoutes } from './clan'
 import { clansPublicRoutes } from './clan/routes/public'
+import { routeDonate } from './donate'
 import { eforumRoutes } from './eforum'
 import { exboRoutes } from './exbo'
 import { routeHealth } from './health'
@@ -22,6 +23,7 @@ import { botRoutes } from './internal/bot'
 import { loadoutRoutes } from './loadout'
 import { routeLoot } from './loot'
 import { metricsRoute } from './metrics'
+import { personalRoutes } from './personal'
 import { playersRoute } from './player'
 import { serverOnlineRoutes } from './server-online'
 import { tierListsRoutes } from './tier-lists'
@@ -37,6 +39,7 @@ export const api = createElysia()
 	.use(balanceRoutes)
 	.use(playersRoute)
 	.use(routeBarter)
+	.use(routeDonate)
 	.use(routeAttachments)
 	.use(routeHideout)
 	.use(metricsRoute)
@@ -54,6 +57,7 @@ export const api = createElysia()
 	.use(eforumRoutes)
 	.use(loadoutRoutes)
 	.use(routeLoot)
+	.use(personalRoutes)
 	.use(serverOnlineRoutes)
 	.use(internalRoutes)
 	.use(botRoutes)

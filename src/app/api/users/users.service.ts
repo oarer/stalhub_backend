@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import {
 	type AvatarSource,
@@ -13,7 +12,9 @@ import {
 import { decompress } from '@/app/api/builds/builds.service'
 import { clanService, normalizeSchedule } from '@/app/api/clan/services/clan'
 import { prisma } from '@/lib/prisma'
+import { deleteUpload, putUpload } from '@/lib/uploads'
 import { authService } from '@/utils/auth.service'
+import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
 import { decryptSecretJson } from '@/utils/crypto'
 
 const USERNAME_COOLDOWN_DAYS = 30
@@ -67,9 +68,6 @@ class UsersService {
 		user_id: number,
 		file: { name: string; type: string; buffer: Buffer }
 	) {
-		const bannerDir = './uploads/users/banners'
-		await mkdir(bannerDir, { recursive: true })
-
 		const existing = await prisma.userCustomization.findUnique({
 			where: { user_id },
 			select: { banner_image: true },
@@ -80,15 +78,13 @@ class UsersService {
 			oldPath.startsWith('/uploads/users/banners/') &&
 			!oldPath.includes('..')
 		) {
-			await rm(path.join('.', oldPath), { force: true }).catch(() => {})
+			await deleteUpload(oldPath)
 		}
 
 		const ext = path.extname(file.name) || '.png'
 		const filename = `${user_id}-${randomUUID()}${ext}`
-		const fullPath = path.join(bannerDir, filename)
-		await writeFile(fullPath, file.buffer)
-
 		const banner_image = `/uploads/users/banners/${filename}`
+		await putUpload(banner_image, file.buffer, file.type || 'image/png')
 		await prisma.userCustomization.upsert({
 			where: { user_id },
 			update: { banner_image, banner_mode: 'IMAGE' },
@@ -102,9 +98,6 @@ class UsersService {
 		user_id: number,
 		file: { name: string; type: string; buffer: Buffer }
 	) {
-		const avatarDir = './uploads/users/avatars'
-		await mkdir(avatarDir, { recursive: true })
-
 		const existing = await prisma.userCustomization.findUnique({
 			where: { user_id },
 			select: { avatar_image: true },
@@ -115,15 +108,13 @@ class UsersService {
 			oldPath.startsWith('/uploads/users/avatars/') &&
 			!oldPath.includes('..')
 		) {
-			await rm(path.join('.', oldPath), { force: true }).catch(() => {})
+			await deleteUpload(oldPath)
 		}
 
 		const ext = path.extname(file.name) || '.png'
 		const filename = `${user_id}-${randomUUID()}${ext}`
-		const fullPath = path.join(avatarDir, filename)
-		await writeFile(fullPath, file.buffer)
-
 		const avatar_image = `/uploads/users/avatars/${filename}`
+		await putUpload(avatar_image, file.buffer, file.type || 'image/png')
 		await prisma.userCustomization.upsert({
 			where: { user_id },
 			update: { avatar_image },
@@ -144,7 +135,7 @@ class UsersService {
 			oldPath.startsWith('/uploads/users/avatars/') &&
 			!oldPath.includes('..')
 		) {
-			await rm(path.join('.', oldPath), { force: true }).catch(() => {})
+			await deleteUpload(oldPath)
 		}
 
 		await prisma.userCustomization.updateMany({
@@ -576,11 +567,7 @@ class UsersService {
 			prisma.star.count({ where: { user_id } }),
 		])
 
-		const authorSelect = {
-			id: true,
-			name: true,
-			username: true,
-		} as const
+		const authorSelect = AUTHOR_WITH_BADGES_SELECT
 
 		const starTargets: {
 			type: string
