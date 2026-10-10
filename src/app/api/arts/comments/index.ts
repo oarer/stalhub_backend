@@ -15,7 +15,7 @@ export const artCommentsRoutes = createElysia().group('/:id/comments', (app) =>
 			async ({ params, query }) => {
 				const take = query.take ?? 50
 				const page = (query.page ?? 1) - 1
-				return commentsService.listByArt(Number(params.id), take, page)
+				return commentsService.listByArt(params.id, take, page)
 			},
 			{
 				params: t.Object({ id: t.String() }),
@@ -49,7 +49,7 @@ export const artCommentsRoutes = createElysia().group('/:id/comments', (app) =>
 				}
 				await enforceContentSpam(user_id, SPAM_LIMIT_COMMENT)
 				const comment = await commentsService.createForArt(
-					Number(params.id),
+					params.id,
 					user_id,
 					{
 						content: body.content,

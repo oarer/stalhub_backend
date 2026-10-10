@@ -2,7 +2,34 @@ import { prisma } from '@/lib/prisma'
 import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
 
 class CommentsService {
-	async listByArticle(article_id: number, take: number, page: number) {
+	private async resolveArticleId(id: number | string) {
+		const num = Number(id)
+		const article = await prisma.article.findFirst({
+			where: isNaN(num)
+				? { external_id: String(id) }
+				: { OR: [{ external_id: String(id) }, { id: num }] },
+			select: { id: true },
+		})
+		return article?.id ?? null
+	}
+
+	private async resolveArtId(id: number | string) {
+		const num = Number(id)
+		const art = await prisma.art.findFirst({
+			where: isNaN(num)
+				? { external_id: String(id) }
+				: { OR: [{ external_id: String(id) }, { id: num }] },
+			select: { id: true },
+		})
+		return art?.id ?? null
+	}
+
+	async listByArticle(id: number | string, take: number, page: number) {
+		const article_id = await this.resolveArticleId(id)
+		if (article_id === null) {
+			return { data: [], total_count: 0, page: page + 1, take }
+		}
+
 		const skip = page * take
 
 		const [rows, totalCount] = await Promise.all([
@@ -40,7 +67,12 @@ class CommentsService {
 		}
 	}
 
-	async listByArt(art_id: number, take: number, page: number) {
+	async listByArt(id: number | string, take: number, page: number) {
+		const art_id = await this.resolveArtId(id)
+		if (art_id === null) {
+			return { data: [], total_count: 0, page: page + 1, take }
+		}
+
 		const skip = page * take
 
 		const [rows, totalCount] = await Promise.all([
@@ -79,10 +111,13 @@ class CommentsService {
 	}
 
 	async createForArt(
-		art_id: number,
+		id: number | string,
 		author_id: number,
 		data: { content: string; parent_id?: number | null }
 	) {
+		const art_id = await this.resolveArtId(id)
+		if (art_id === null) return null
+
 		if (data.parent_id) {
 			const parent = await prisma.articleComment.findFirst({
 				where: { id: data.parent_id, art_id },
@@ -147,10 +182,13 @@ class CommentsService {
 	}
 
 	async create(
-		article_id: number,
+		id: number | string,
 		author_id: number,
 		data: { content: string; parent_id?: number | null }
 	) {
+		const article_id = await this.resolveArticleId(id)
+		if (article_id === null) return null
+
 		if (data.parent_id) {
 			const parent = await prisma.articleComment.findFirst({
 				where: { id: data.parent_id, article_id },
