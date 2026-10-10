@@ -11,6 +11,7 @@ import {
 import { enforceContentSpam, SPAM_LIMIT_ARTICLE } from '@/utils/auto-ban'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
+import { isSafeUrl, rejectOnXss } from '@/utils/xss-guard'
 import {
 	ARTICLE_IMAGE_MAX_BYTES,
 	normalizeQuestMap,
@@ -193,7 +194,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 
 		.post(
 			'',
-			async ({ body, store, set }) => {
+			async ({ body, store, set, request }) => {
 				let is_stalhub_admin = false
 				if (body.type === ArticleType.STALHUB) {
 					const is_admin = await checkPermission(
@@ -210,6 +211,34 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				}
 
 				const user_id = fromStore(store).user_id
+
+				const xss = await rejectOnXss({
+					fields: {
+						title: body.title,
+						content: body.content,
+						image_url: body.image_url,
+						quest_name: body.quest_name,
+						reward_text: body.reward_text,
+						tags: body.tags?.join(' '),
+					},
+					user_id,
+					ip:
+						request.headers
+							.get('x-forwarded-for')
+							?.split(',')[0]
+							?.trim() ??
+						request.headers.get('x-real-ip') ??
+						'?',
+					route: 'POST /articles',
+				})
+				if (xss) {
+					set.status = 400
+					return { error: `Invalid content in field: ${xss.field}` }
+				}
+				if (body.image_url && !isSafeUrl(body.image_url)) {
+					set.status = 400
+					return { error: 'Invalid image_url' }
+				}
 
 				await enforceContentSpam(user_id, SPAM_LIMIT_ARTICLE)
 
@@ -228,7 +257,6 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					reward_money: body.reward_money,
 				})
 
-				// Патч-ноуты от админа сразу публикуем
 				if (is_stalhub_admin) {
 					const published = await articlesService.setStatus(
 						created.id,
@@ -273,8 +301,41 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 
 		.patch(
 			'/:id',
-			async ({ params, body, store, set }) => {
+			async ({ params, body, store, set, request }) => {
 				const { user_id } = fromStore(store)
+				const xssPatch = await rejectOnXss({
+					fields: {
+						title: body.title,
+						content: body.content,
+						image_url: body.image_url,
+						quest_name: body.quest_name,
+						reward_text: body.reward_text,
+						tags: body.tags?.join(' '),
+					},
+					user_id,
+					ip:
+						request.headers
+							.get('x-forwarded-for')
+							?.split(',')[0]
+							?.trim() ??
+						request.headers.get('x-real-ip') ??
+						'?',
+					route: 'PATCH /articles/:id',
+				})
+				if (xssPatch) {
+					set.status = 400
+					return {
+						error: `Invalid content in field: ${xssPatch.field}`,
+					}
+				}
+				if (
+					body.image_url !== undefined &&
+					body.image_url !== null &&
+					!isSafeUrl(body.image_url)
+				) {
+					set.status = 400
+					return { error: 'Invalid image_url' }
+				}
 				const is_admin = await checkPermission(
 					user_id,
 					'articles:manage'

@@ -51,7 +51,14 @@ async function fetchRemoteImage(url: string): Promise<CoverImage | null> {
 async function readLocalUpload(imageUrl: string): Promise<CoverImage | null> {
 	try {
 		const relative = imageUrl.replace(/^\/+/, '')
-		const file = Bun.file(resolve(process.cwd(), relative))
+		const uploadsDir = resolve(process.cwd(), 'uploads')
+		const abs = resolve(process.cwd(), relative)
+
+		if (abs !== uploadsDir && !abs.startsWith(uploadsDir + '/')) {
+			console.warn(`[BlogCover] Blocked path escape: ${imageUrl}`)
+			return null
+		}
+		const file = Bun.file(abs)
 		if (!(await file.exists())) return null
 		const buffer = Buffer.from(await file.arrayBuffer())
 		if (!buffer.length || buffer.length > MAX_IMAGE_BYTES) return null
@@ -144,6 +151,16 @@ export async function resolveBlogCoverImage(article: {
 }): Promise<CoverResolveResult> {
 	if (article.image_url) {
 		if (article.image_url.startsWith('/uploads/')) {
+			if (
+				article.image_url.includes('..') ||
+				article.image_url.includes('\0') ||
+				article.image_url.includes('\\') ||
+				!/^\/uploads\/[A-Za-z0-9\-_/]+\.(png|jpe?g|webp|gif|avif)$/i.test(
+					article.image_url.split('?')[0] ?? ''
+				)
+			) {
+				return { cover: null, coverError: 'invalid image_url' }
+			}
 			const local = await readLocalUpload(article.image_url)
 			if (local) return { cover: local }
 			return { cover: null, coverError: 'local upload not readable' }

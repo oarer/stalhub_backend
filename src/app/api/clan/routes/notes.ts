@@ -1,5 +1,6 @@
 import { t } from 'elysia'
 import { requireAuth } from '@/utils/auth.guard'
+import { rejectOnXss } from '@/utils/xss-guard'
 import { clanContext } from '../context'
 import { requireClanOfficer } from '../guards'
 import { notesService } from '../services/notes'
@@ -16,8 +17,22 @@ export const notesRoutes = clanContext.group('/notes', (app) =>
 		)
 		.post(
 			'',
-			({ store, body }) =>
-				notesService.upsert(store.clan_id!, store.authUserId!, body.member_id, body.content),
+			async ({ store, body, set, request }) => {
+				const xss = await rejectOnXss({
+					fields: { content: body.content },
+					user_id: store.authUserId as number | undefined,
+					ip:
+						request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+						request.headers.get('x-real-ip') ??
+						'?',
+					route: 'POST /clan/notes',
+				})
+				if (xss) {
+					set.status = 400
+					return { error: 'Invalid content' }
+				}
+				return notesService.upsert(store.clan_id!, store.authUserId!, body.member_id, body.content)
+			},
 			{
 				beforeHandle: [requireAuth, requireClanOfficer],
 				body: t.Object({
@@ -29,8 +44,22 @@ export const notesRoutes = clanContext.group('/notes', (app) =>
 		)
 		.patch(
 			'/:note_id',
-			({ params, body }) =>
-				notesService.update(params.note_id, body.content),
+			async ({ params, body, store, set, request }) => {
+				const xss = await rejectOnXss({
+					fields: { content: body.content },
+					user_id: store.authUserId as number | undefined,
+					ip:
+						request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+						request.headers.get('x-real-ip') ??
+						'?',
+					route: 'PATCH /clan/notes/:note_id',
+				})
+				if (xss) {
+					set.status = 400
+					return { error: 'Invalid content' }
+				}
+				return notesService.update(params.note_id, body.content)
+			},
 			{
 				beforeHandle: [requireAuth, requireClanOfficer],
 				params: t.Object({ note_id: t.Numeric() }),

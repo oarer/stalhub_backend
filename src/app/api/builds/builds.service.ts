@@ -3,9 +3,9 @@ import { getRegionCache } from '@/app/api/artifacts/cache'
 import { resolveArtifactPrice } from '@/app/api/artifacts/pricing'
 import { contentViewsTotal } from '@/app/api/metrics'
 import { prisma } from '@/lib/prisma'
-import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
 import type { ArtifactAggregate } from '@/types/artifacts.type'
 import type { BuildData } from '@/types/build.type'
+import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
 
 const authorInclude = {
 	author: {
@@ -409,7 +409,10 @@ class BuildsService {
 
 		const rows = await prisma.star.groupBy({
 			by: ['target_id'],
-			where: { target_type: StarTargetType.BUILD, target_id: { in: ids } },
+			where: {
+				target_type: StarTargetType.BUILD,
+				target_id: { in: ids },
+			},
 			_count: { target_id: true },
 		})
 

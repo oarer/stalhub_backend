@@ -11,6 +11,7 @@ import {
 import { enforceContentSpam, SPAM_LIMIT_ART } from '@/utils/auto-ban'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
+import { isSafeUrl, rejectOnXss } from '@/utils/xss-guard'
 import { artsService } from './arts.service'
 import { artCommentsRoutes } from './comments'
 
@@ -167,8 +168,36 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 
 		.post(
 			'',
-			async ({ body, store, set }) => {
+			async ({ body, store, set, request }) => {
 				const user_id = fromStore(store).user_id
+				const xss = await rejectOnXss({
+					fields: {
+						title: body.title,
+						description: body.description,
+						image_url: body.image_url,
+						image_urls: body.image_urls?.join('\n'),
+						tags: body.tags?.join(' '),
+					},
+					user_id,
+					ip:
+						request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+						request.headers.get('x-real-ip') ??
+						'?',
+					route: 'POST /arts',
+				})
+				if (xss) {
+					set.status = 400
+					return { error: `Invalid content in field: ${xss.field}` }
+				}
+				for (const u of [
+					body.image_url,
+					...(body.image_urls ?? []),
+				].filter(Boolean) as string[]) {
+					if (!isSafeUrl(u)) {
+						set.status = 400
+						return { error: 'Invalid image URL' }
+					}
+				}
 				await enforceContentSpam(user_id, SPAM_LIMIT_ART)
 
 				if (body.image_urls && body.image_urls.length > 10) {
@@ -203,8 +232,36 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 
 		.patch(
 			'/:id',
-			async ({ params, body, store, set }) => {
+			async ({ params, body, store, set, request }) => {
 				const { user_id } = fromStore(store)
+				const xssPatch = await rejectOnXss({
+					fields: {
+						title: body.title,
+						description: body.description,
+						image_url: body.image_url,
+						image_urls: body.image_urls?.join('\n'),
+						tags: body.tags?.join(' '),
+					},
+					user_id,
+					ip:
+						request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+						request.headers.get('x-real-ip') ??
+						'?',
+					route: 'PATCH /arts/:id',
+				})
+				if (xssPatch) {
+					set.status = 400
+					return { error: `Invalid content in field: ${xssPatch.field}` }
+				}
+				for (const u of [
+					body.image_url,
+					...(body.image_urls ?? []),
+				].filter(Boolean) as string[]) {
+					if (!isSafeUrl(u)) {
+						set.status = 400
+						return { error: 'Invalid image URL' }
+					}
+				}
 				const is_admin = await checkPermission(user_id, 'art:manage')
 				if (body.image_urls && body.image_urls.length > 10) {
 					set.status = 400

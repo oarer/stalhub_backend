@@ -7,12 +7,12 @@ import { scAdminService } from './sc-admin.service'
 export const scAdminRoutes = createElysia().group('/sc', (app) =>
 	app
 		.use(jwtPlugin)
-		// ---------- overview ----------
+
 		.get('/overview', () => scAdminService.overview(), {
 			beforeHandle: [requireAuth, requireAdmin],
 			detail: { tags: ['Admin'] },
 		})
-		// ---------- nodes ----------
+
 		.get('/nodes', () => scAdminService.listNodes(), {
 			beforeHandle: [requireAuth, requireAdmin],
 			detail: { tags: ['Admin'] },
@@ -22,7 +22,11 @@ export const scAdminRoutes = createElysia().group('/sc', (app) =>
 			async ({ body, set }) => {
 				try {
 					return await scAdminService.createNode(body)
-				} catch {
+				} catch (err) {
+					if ((err as Error).message.startsWith('Invalid base_url')) {
+						set.status = 400
+						return { error: 'Invalid base_url' }
+					}
 					set.status = 409
 					return { error: 'Node with this name already exists' }
 				}
@@ -48,7 +52,11 @@ export const scAdminRoutes = createElysia().group('/sc', (app) =>
 						Number(params.id),
 						body
 					)
-				} catch {
+				} catch (err) {
+					if ((err as Error).message.startsWith('Invalid base_url')) {
+						set.status = 400
+						return { error: 'Invalid base_url' }
+					}
 					set.status = 404
 					return { error: 'Node not found' }
 				}
@@ -99,7 +107,7 @@ export const scAdminRoutes = createElysia().group('/sc', (app) =>
 				detail: { tags: ['Admin'] },
 			}
 		)
-		// ---------- tokens ----------
+
 		.get('/tokens', () => scAdminService.listTokens(), {
 			beforeHandle: [requireAuth, requireAdmin],
 			detail: { tags: ['Admin'] },

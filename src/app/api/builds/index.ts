@@ -7,10 +7,11 @@ import {
 	requireAuth,
 	requireOptionalAuth,
 } from '@/utils/auth.guard'
-import { validateBuildData } from '@/utils/build.validation'
 import { enforceContentSpam, SPAM_LIMIT_BUILD } from '@/utils/auto-ban'
+import { validateBuildData } from '@/utils/build.validation'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
+import { rejectOnXss } from '@/utils/xss-guard'
 import { buildsService } from './builds.service'
 
 export const buildsRoutes = createElysia().group('/builds', (app) =>
@@ -73,7 +74,7 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 
 		.post(
 			'',
-			async ({ body, store, set }) => {
+			async ({ body, store, set, request }) => {
 				const validation = validateBuildData(body.data)
 				if (!validation.ok) {
 					set.status = 422
@@ -81,6 +82,25 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 				}
 
 				const user_id = fromStore(store).user_id
+				const xss = await rejectOnXss({
+					fields: {
+						title: body.title,
+						tags: body.tags?.join(' '),
+					},
+					user_id,
+					ip:
+						request.headers
+							.get('x-forwarded-for')
+							?.split(',')[0]
+							?.trim() ??
+						request.headers.get('x-real-ip') ??
+						'?',
+					route: 'POST /builds',
+				})
+				if (xss) {
+					set.status = 400
+					return { error: `Invalid content in field: ${xss.field}` }
+				}
 				await enforceContentSpam(user_id, SPAM_LIMIT_BUILD)
 
 				return buildsService.create(user_id, {
@@ -107,8 +127,31 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 
 		.patch(
 			'/:id',
-			async ({ params, body, store, set }) => {
+			async ({ params, body, store, set, request }) => {
 				const { user_id } = fromStore(store)
+				if (body.title !== undefined || body.tags !== undefined) {
+					const xssPatch = await rejectOnXss({
+						fields: {
+							title: body.title,
+							tags: body.tags?.join(' '),
+						},
+						user_id,
+						ip:
+							request.headers
+								.get('x-forwarded-for')
+								?.split(',')[0]
+								?.trim() ??
+							request.headers.get('x-real-ip') ??
+							'?',
+						route: 'PATCH /builds/:id',
+					})
+					if (xssPatch) {
+						set.status = 400
+						return {
+							error: `Invalid content in field: ${xssPatch.field}`,
+						}
+					}
+				}
 				const is_admin = await checkPermission(user_id, 'builds:manage')
 
 				let validatedData: BuildData | undefined

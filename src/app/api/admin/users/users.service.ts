@@ -45,7 +45,8 @@ class AdminUserService {
 			updateData.banner_image = data.banner_image
 		if (data.card_background !== undefined)
 			updateData.card_background = data.card_background
-		if (data.card_color !== undefined) updateData.card_color = data.card_color
+		if (data.card_color !== undefined)
+			updateData.card_color = data.card_color
 		if (data.avatar !== undefined) {
 			updateData.avatar = data.avatar
 			if (data.avatar === null) updateData.avatar_image = null
@@ -94,7 +95,12 @@ class AdminUserService {
 		return actorRank > targetRank
 	}
 
-	async list(take: number, page: number, search?: string) {
+	async list(
+		take: number,
+		page: number,
+		search?: string,
+		actorUserId?: number
+	) {
 		const where = search
 			? {
 					OR: [
@@ -126,7 +132,6 @@ class AdminUserService {
 					name: true,
 					joined_at: true,
 					roles: true,
-					sessions: true,
 					user_settings: {
 						select: {
 							banned: true,
@@ -145,10 +150,26 @@ class AdminUserService {
 			prisma.user.count({ where }),
 		])
 
-		const data = rawData.map(({ user_settings, ...rest }) => ({
+		let data = rawData.map(({ user_settings, ...rest }) => ({
 			...rest,
 			banned: this.isEffectivelyBanned(user_settings),
 		}))
+		if (actorUserId !== undefined) {
+			const actorRank = await this.getUserMaxRank(actorUserId)
+			const ranks = await prisma.user.findMany({
+				where: { id: { in: data.map((u) => u.id) } },
+				select: { id: true, roles: { select: { rank: true } } },
+			})
+			const rankById = new Map(
+				ranks.map((r) => [
+					r.id,
+					r.roles.length
+						? Math.max(...r.roles.map((x) => x.rank))
+						: 0,
+				])
+			)
+			data = data.filter((u) => (rankById.get(u.id) ?? 0) < actorRank)
+		}
 
 		return { data, total_count: totalCount, page: page + 1, take }
 	}
@@ -277,9 +298,12 @@ class AdminUserService {
 		})
 	}
 
-	async revokeSession(session_id: string) {
+	async revokeSession(session_id: string, user_id?: number) {
 		await prisma.sessions.updateMany({
-			where: { session_id },
+			where:
+				user_id === undefined
+					? { session_id }
+					: { session_id, user_id },
 			data: { revoked: true },
 		})
 	}
