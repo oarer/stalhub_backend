@@ -1,4 +1,3 @@
-import { rm } from 'node:fs/promises'
 import type { StageType } from 'generated/prisma/enums'
 import {
 	assertRecruitingAllowed,
@@ -6,11 +5,12 @@ import {
 	normalizeSchedule,
 	type SundayActivity,
 } from '@/app/api/clan/services/clan'
-import { prisma } from '@/lib/prisma'
 import {
 	applySessionRating,
 	deleteSessionWithRating,
 } from '@/app/api/clan/services/rating'
+import { prisma } from '@/lib/prisma'
+import { deleteUpload } from '@/lib/uploads'
 
 export type AdminClanStatus = 'FROZEN' | 'ACTIVE'
 
@@ -34,7 +34,11 @@ class AdminClanService {
 		return prisma.clanSeason.findMany({ orderBy: { starts_at: 'desc' } })
 	}
 
-	async createSeason(data: { name: string; starts_at: string; ends_at: string }) {
+	async createSeason(data: {
+		name: string
+		starts_at: string
+		ends_at: string
+	}) {
 		return this.saveSeason(null, data)
 	}
 
@@ -52,7 +56,11 @@ class AdminClanService {
 		const starts_at = new Date(data.starts_at)
 		const ends_at = new Date(data.ends_at)
 		if (!data.name.trim()) throw new Error('Season name is required')
-		if (Number.isNaN(starts_at.getTime()) || Number.isNaN(ends_at.getTime()) || ends_at <= starts_at)
+		if (
+			Number.isNaN(starts_at.getTime()) ||
+			Number.isNaN(ends_at.getTime()) ||
+			ends_at <= starts_at
+		)
 			throw new Error('Season end must be after its start')
 		const overlap = await prisma.clanSeason.findFirst({
 			where: {
@@ -66,12 +74,18 @@ class AdminClanService {
 		const values = { name: data.name.trim(), starts_at, ends_at }
 		return season_id == null
 			? prisma.clanSeason.create({ data: values })
-			: prisma.clanSeason.update({ where: { id: season_id }, data: values })
+			: prisma.clanSeason.update({
+					where: { id: season_id },
+					data: values,
+				})
 	}
 
 	async removeSeason(season_id: number) {
-		const events = await prisma.clanRatingEvent.count({ where: { season_id } })
-		if (events > 0) throw new Error('Season with rating events cannot be deleted')
+		const events = await prisma.clanRatingEvent.count({
+			where: { season_id },
+		})
+		if (events > 0)
+			throw new Error('Season with rating events cannot be deleted')
 		await prisma.clanSeason.delete({ where: { id: season_id } })
 		return { ok: true }
 	}
@@ -321,7 +335,8 @@ class AdminClanService {
 			},
 		})
 		const victory =
-			(updated.ai_summary as { victory?: boolean | null } | null)?.victory ?? null
+			(updated.ai_summary as { victory?: boolean | null } | null)
+				?.victory ?? null
 		await applySessionRating(session_id, victory)
 		return updated
 	}
@@ -334,9 +349,7 @@ class AdminClanService {
 		if (!session) return null
 
 		for (const shot of session.screenshots) {
-			try {
-				await rm(shot.file_path, { force: true })
-			} catch {}
+			await deleteUpload(shot.file_path)
 		}
 		return deleteSessionWithRating(session_id)
 	}

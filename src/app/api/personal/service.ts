@@ -1,18 +1,16 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { apiClient } from '@/app/interceptors/sc.interceptor'
 import { analyticsService } from '@/app/api/clan/services/analytics'
 import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
+import { deleteUpload, putUpload } from '@/lib/uploads'
 import type { PlayerResponse } from '@/types/player.type'
 import { decryptSecretJson, encryptSecret } from '@/utils/crypto'
 
 interface ExboCharacterEntry {
 	information: { id: string; name: string }
 }
-
-const UPLOAD_DIR = path.resolve('uploads', 'screenshots')
 
 async function getUserAccessToken(user_id: number): Promise<string> {
 	const auth = await prisma.eXBOAuth.findUnique({
@@ -166,9 +164,7 @@ class PersonalService {
 		})
 		for (const s of sessions) {
 			for (const shot of s.screenshots) {
-				try {
-					await rm(shot.file_path, { force: true })
-				} catch {}
+				await deleteUpload(shot.file_path)
 			}
 		}
 		await prisma.stageSession.deleteMany({
@@ -414,12 +410,10 @@ class PersonalService {
 		if (existing > 0) {
 			throw new Error('Only one screenshot per stage is allowed')
 		}
-		await mkdir(UPLOAD_DIR, { recursive: true })
 		const ext = path.extname(file.name) || '.png'
 		const filename = `${session_id}-personal-${randomUUID()}${ext}`
-		const fullPath = path.join(UPLOAD_DIR, filename)
 		const relativePath = path.join('uploads', 'screenshots', filename)
-		await writeFile(fullPath, file.buffer)
+		await putUpload(`/${relativePath}`, file.buffer, file.type || 'image/png')
 		const row = await prisma.stageScreenshot.create({
 			data: {
 				session_id,
@@ -428,7 +422,7 @@ class PersonalService {
 				size_bytes: file.buffer.length,
 			},
 		})
-		void analyticsService.runAnalysis(row.id, fullPath)
+		void analyticsService.runAnalysis(row.id, relativePath)
 		return row
 	}
 
@@ -460,9 +454,7 @@ class PersonalService {
 			throw new Error('Session not found')
 		}
 		for (const shot of session.screenshots) {
-			try {
-				await rm(shot.file_path, { force: true })
-			} catch {}
+			await deleteUpload(shot.file_path)
 		}
 		const { deleteSessionWithRating } = await import(
 			'@/app/api/clan/services/rating'

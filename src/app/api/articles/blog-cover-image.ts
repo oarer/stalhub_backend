@@ -1,6 +1,6 @@
-import { resolve } from 'node:path'
 import axios from 'axios'
 import { env } from '@/env'
+import { readUploadBytes } from '@/lib/uploads'
 
 export interface CoverImage {
 	buffer: Buffer
@@ -51,28 +51,43 @@ async function fetchRemoteImage(url: string): Promise<CoverImage | null> {
 async function readLocalUpload(imageUrl: string): Promise<CoverImage | null> {
 	try {
 		const relative = imageUrl.replace(/^\/+/, '')
-		const uploadsDir = resolve(process.cwd(), 'uploads')
-		const abs = resolve(process.cwd(), relative)
 
-		if (abs !== uploadsDir && !abs.startsWith(uploadsDir + '/')) {
+		if (
+			relative !== 'uploads' &&
+			!relative.startsWith('uploads/') &&
+			!imageUrl.startsWith('/uploads/')
+		) {
 			console.warn(`[BlogCover] Blocked path escape: ${imageUrl}`)
 			return null
 		}
-		const file = Bun.file(abs)
-		if (!(await file.exists())) return null
-		const buffer = Buffer.from(await file.arrayBuffer())
-		if (!buffer.length || buffer.length > MAX_IMAGE_BYTES) return null
+		const buffer = await readUploadBytes(imageUrl)
+		if (!buffer || !buffer.length || buffer.length > MAX_IMAGE_BYTES) return null
 		const ext = relative.split('.').pop() ?? 'jpg'
 		return {
 			buffer,
 			filename: `cover.${ext}`,
-			mime: file.type || 'image/jpeg',
+			mime: mimeFromExt(ext),
 		}
 	} catch (err) {
 		console.warn(
 			`[BlogCover] Failed to read local upload: ${(err as Error).message}`
 		)
 		return null
+	}
+}
+
+function mimeFromExt(ext: string): string {
+	switch (ext.toLowerCase()) {
+		case 'png':
+			return 'image/png'
+		case 'webp':
+			return 'image/webp'
+		case 'gif':
+			return 'image/gif'
+		case 'avif':
+			return 'image/avif'
+		default:
+			return 'image/jpeg'
 	}
 }
 

@@ -30,6 +30,7 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 .env*
+ops/backup/restic.env
 docker-compose.override.yml
 
 # vercel

@@ -8,6 +8,7 @@ import {
 } from '@/app/api/metrics'
 import { clientIp, enforceRateLimit, shouldSkipRps } from '@/utils/auto-ban'
 import { createElysia } from '@/utils/elysia'
+import { isS3Uploads, s3PublicUrl } from '@/lib/uploads'
 import { logger } from '@/utils/logger'
 import { routes } from './app'
 import { crons } from './crons'
@@ -61,10 +62,30 @@ export const app = createElysia()
 
 	// static
 	.get('/uploads/*', async ({ params, set }) => {
+		const decodedPath = decodeURIComponent(params['*'])
+
+		if (
+			decodedPath.includes('..') ||
+			decodedPath.includes('\0') ||
+			decodedPath.includes('\\')
+		) {
+			set.status = 403
+			return 'Forbidden'
+		}
+		
+		if (isS3Uploads()) {
+			const url = s3PublicUrl(`/uploads/${decodedPath}`)
+			if (!url) {
+				set.status = 403
+				return 'Forbidden'
+			}
+			set.status = 302
+			set.headers.location = url
+			return
+		}
+
 		const uploadsDir = resolve(process.cwd(), 'uploads')
 		try {
-			const decodedPath = decodeURIComponent(params['*'])
-
 			const requested = resolve(uploadsDir, decodedPath)
 
 			const rel = relative(uploadsDir, requested)

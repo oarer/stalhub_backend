@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Prisma } from 'generated/prisma/client'
 import { ArtType, StarTargetType } from 'generated/prisma/client'
@@ -9,6 +8,7 @@ import {
 	type ViewIdentity,
 } from '@/app/api/metrics/view-dedupe'
 import { prisma } from '@/lib/prisma'
+import { putUpload } from '@/lib/uploads'
 import { USER_BADGES_SELECT } from '@/utils/user-select'
 import {
 	compressImageBuffer,
@@ -251,9 +251,6 @@ class ArtsService {
 	}
 
 	async saveArtMedia(file: { name: string; type: string; buffer: Buffer }) {
-		const artDir = './uploads/arts'
-		await mkdir(artDir, { recursive: true })
-
 		// Trust magic bytes over file name / Content-Type for images.
 		const detected = detectImageMime(file.buffer)
 		const declaredExt = path.extname(file.name) || '.png'
@@ -267,9 +264,10 @@ class ArtsService {
 			: file.buffer
 
 		const filename = `${randomUUID()}${ext}`
-		await writeFile(path.join(artDir, filename), data)
+		const image_url = `/uploads/arts/${filename}`
+		await putUpload(image_url, data, mime)
 
-		return { image_url: `/uploads/arts/${filename}` }
+		return { image_url }
 	}
 
 	async create(

@@ -77,6 +77,18 @@ const envVariables = z.object({
 		.max(120000)
 		.default(15000),
 
+
+	S3_UPLOADS_ENABLED: z
+		.string()
+		.default('false')
+		.transform((v) => v.toLowerCase() !== 'false' && v !== '0'),
+	S3_ENDPOINT: z.string().default('https://s3.ru1.storage.beget.cloud'),
+	S3_REGION: z.string().default('ru-1'),
+	S3_UPLOADS_BUCKET: z.string().default(''),
+	S3_ACCESS_KEY_ID: z.string().default(''),
+	S3_SECRET_ACCESS_KEY: z.string().default(''),
+	S3_PUBLIC_BASE_URL: z.string().default(''),
+
 	FORUM_COOKIE: z.string().default(''),
 	FORUM_USER_AGENT: z
 		.string()

@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { StageType } from 'generated/prisma/enums'
 import { MSK_OFFSET_MS } from '@/lib/msk'
 import { prisma } from '@/lib/prisma'
+import { deleteUpload, putUpload, readUploadBytes } from '@/lib/uploads'
 import { USER_WITH_BADGES_SELECT } from '@/utils/user-select'
 import type { AIScreenshotResult } from '../types'
 import { analyzeScreenshot } from './ai'
@@ -16,8 +16,6 @@ function mskDayRange(date: string): [Date, Date] {
 	return [new Date(start), new Date(start + 24 * 60 * 60 * 1000)]
 }
 
-const UPLOAD_DIR = path.resolve('uploads', 'screenshots')
-
 function screenshotVictory(r: AIScreenshotResult | null): boolean | null {
 	if (!r) return null
 	if (r.victory === true || r.victory === false) return r.victory
@@ -29,10 +27,6 @@ function screenshotVictory(r: AIScreenshotResult | null): boolean | null {
 }
 
 class AnalyticsService {
-	private async ensureUploadDir() {
-		await mkdir(UPLOAD_DIR, { recursive: true })
-	}
-
 	async createSession(input: {
 		creator_id: number | null
 		region: string
@@ -104,12 +98,10 @@ class AnalyticsService {
 		if (existing > 0) {
 			throw new Error('Only one screenshot per stage is allowed')
 		}
-		await this.ensureUploadDir()
 		const ext = path.extname(file.name) || '.png'
 		const filename = `${session_id}-${randomUUID()}${ext}`
-		const fullPath = path.join(UPLOAD_DIR, filename)
 		const relativePath = path.join('uploads', 'screenshots', filename)
-		await writeFile(fullPath, file.buffer)
+		await putUpload(`/${relativePath}`, file.buffer, file.type || 'image/png')
 
 		const row = await prisma.stageScreenshot.create({
 			data: {
@@ -119,7 +111,7 @@ class AnalyticsService {
 				size_bytes: file.buffer.length,
 			},
 		})
-		void this.runAnalysis(row.id, fullPath)
+		void this.runAnalysis(row.id, relativePath)
 		return row
 	}
 
@@ -129,6 +121,17 @@ class AnalyticsService {
 			select: { id: true },
 		})
 		if (!existing) return
+
+		// file_path — stored путь (uploads/...): байты резолвим через store
+		// (локальный диск или S3), на файловую систему не полагаемся.
+		const bytes = await readUploadBytes(file_path)
+		if (!bytes) {
+			await prisma.stageScreenshot.update({
+				where: { id: screenshot_id },
+				data: { ai_status: 'error', ai_error: 'screenshot file not readable' },
+			})
+			return
+		}
 
 		try {
 			await prisma.stageScreenshot.update({
@@ -150,7 +153,7 @@ class AnalyticsService {
 					).map((m) => ({ name: m.name, role: m.rank }))
 				: undefined
 			const result = await analyzeScreenshot(
-				file_path,
+				bytes,
 				roster,
 				shot?.session.stage_number
 			)
@@ -359,9 +362,7 @@ class AnalyticsService {
 			throw new Error('Not your session')
 		}
 		for (const shot of session.screenshots) {
-			try {
-				await rm(shot.file_path, { force: true })
-			} catch {}
+			await deleteUpload(shot.file_path)
 		}
 		return deleteSessionWithRating(session_id)
 	}

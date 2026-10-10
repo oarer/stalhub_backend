@@ -1,11 +1,10 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, readdir, stat, writeFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
 import {
 	compressImageBuffer,
 	detectImageMime,
 	IMAGE_MIME_EXTENSIONS,
 } from '@/utils/image-compress'
+import { listUploadSizes, putUpload } from '@/lib/uploads'
 
 export const ARTICLE_IMAGE_MAX_BYTES = 10 * 1024 * 1024
 export const ARTICLE_IMAGE_MAX_COUNT = 50
@@ -103,21 +102,11 @@ export async function saveArticleImage(articleId: number, file: File) {
 	// Recompress without resizing; gif passes through untouched.
 	const buffer = await compressImageBuffer(raw, file.type)
 	const relativeDir = `articles/${articleId}/image`
-	const directory = resolve(process.cwd(), 'uploads', relativeDir)
-	await mkdir(directory, { recursive: true })
 
-	const entries = await readdir(directory, { withFileTypes: true })
-	const storedSizes = await Promise.all(
-		entries
-			.filter((entry) => entry.isFile() && entry.name !== '.upload.lock')
-			.map(
-				async (entry) =>
-					(await stat(resolve(directory, entry.name))).size
-			)
-	)
+	const storedSizes = await listUploadSizes(`uploads/${relativeDir}`)
 	assertArticleImageQuota(storedSizes, buffer.length)
 
-	const filename = `${randomUUID()}.${extension}`
-	await writeFile(resolve(directory, filename), buffer, { flag: 'wx' })
-	return `/uploads/${relativeDir}/${filename}`
+	const publicPath = `/uploads/${relativeDir}/${randomUUID()}.${extension}`
+	await putUpload(publicPath, buffer, file.type)
+	return publicPath
 }
