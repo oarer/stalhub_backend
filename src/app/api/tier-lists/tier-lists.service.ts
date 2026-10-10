@@ -10,6 +10,7 @@ import {
 } from '@/app/api/metrics/view-dedupe'
 import { prisma } from '@/lib/prisma'
 import { generateSlug } from '@/utils/slug'
+import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
 
 function serialize(tierList: {
 	id: number
@@ -64,7 +65,7 @@ function serialize(tierList: {
 }
 
 const AUTHOR_SELECT = {
-	select: { id: true, name: true, username: true },
+	select: AUTHOR_WITH_BADGES_SELECT,
 } as const
 
 class TierListsService {
@@ -93,7 +94,7 @@ class TierListsService {
 				orderBy: { created_at: 'desc' },
 				include: {
 					author: {
-						select: { id: true, name: true, username: true },
+						select: AUTHOR_WITH_BADGES_SELECT,
 					},
 					_count: { select: { entries: true } },
 				},
@@ -137,7 +138,7 @@ class TierListsService {
 				orderBy: { created_at: 'desc' },
 				include: {
 					author: {
-						select: { id: true, name: true, username: true },
+						select: AUTHOR_WITH_BADGES_SELECT,
 					},
 					_count: { select: { entries: true } },
 				},
@@ -262,7 +263,7 @@ class TierListsService {
 					: undefined,
 			},
 			include: {
-				author: { select: { id: true, name: true, username: true } },
+				author: { select: AUTHOR_WITH_BADGES_SELECT },
 				entries: { orderBy: { position: 'asc' } },
 			},
 		})
@@ -352,7 +353,7 @@ class TierListsService {
 			where: { id: tierListId },
 			data: updateData,
 			include: {
-				author: { select: { id: true, name: true, username: true } },
+				author: { select: AUTHOR_WITH_BADGES_SELECT },
 				entries: { orderBy: { position: 'asc' } },
 			},
 		})

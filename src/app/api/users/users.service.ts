@@ -14,6 +14,7 @@ import { decompress } from '@/app/api/builds/builds.service'
 import { clanService, normalizeSchedule } from '@/app/api/clan/services/clan'
 import { prisma } from '@/lib/prisma'
 import { authService } from '@/utils/auth.service'
+import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
 import { decryptSecretJson } from '@/utils/crypto'
 
 const USERNAME_COOLDOWN_DAYS = 30
@@ -576,11 +577,7 @@ class UsersService {
 			prisma.star.count({ where: { user_id } }),
 		])
 
-		const authorSelect = {
-			id: true,
-			name: true,
-			username: true,
-		} as const
+		const authorSelect = AUTHOR_WITH_BADGES_SELECT
 
 		const starTargets: {
 			type: string

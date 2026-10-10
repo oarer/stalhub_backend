@@ -3,6 +3,7 @@ import { getRegionCache } from '@/app/api/artifacts/cache'
 import { resolveArtifactPrice } from '@/app/api/artifacts/pricing'
 import { contentViewsTotal } from '@/app/api/metrics'
 import { prisma } from '@/lib/prisma'
+import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
 import type { ArtifactAggregate } from '@/types/artifacts.type'
 import type { BuildData } from '@/types/build.type'
 
@@ -224,7 +225,7 @@ class BuildsService {
 				? { external_id: id }
 				: { OR: [{ external_id: id }, { id: num }] },
 			include: {
-				author: { select: { id: true, name: true, username: true } },
+				author: { select: AUTHOR_WITH_BADGES_SELECT },
 			},
 		})
 
@@ -294,7 +295,7 @@ class BuildsService {
 				author_id,
 			},
 			include: {
-				author: { select: { id: true, name: true, username: true } },
+				author: { select: AUTHOR_WITH_BADGES_SELECT },
 			},
 		})
 
@@ -345,7 +346,7 @@ class BuildsService {
 			where: { id },
 			data: updateData,
 			include: {
-				author: { select: { id: true, name: true, username: true } },
+				author: { select: AUTHOR_WITH_BADGES_SELECT },
 			},
 		})
 

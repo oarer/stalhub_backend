@@ -4,6 +4,7 @@ import path from 'node:path'
 import type { StageType } from 'generated/prisma/enums'
 import { MSK_OFFSET_MS } from '@/lib/msk'
 import { prisma } from '@/lib/prisma'
+import { USER_WITH_BADGES_SELECT } from '@/utils/user-select'
 import type { AIScreenshotResult } from '../types'
 import { analyzeScreenshot } from './ai'
 import { buildAttendanceMonth, mskMonthRange } from './attendance-month'
@@ -247,7 +248,7 @@ class AnalyticsService {
 				attendance: {
 					include: {
 						user: {
-							select: { id: true, username: true, name: true },
+							select: USER_WITH_BADGES_SELECT,
 						},
 					},
 				},

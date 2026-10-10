@@ -13,6 +13,7 @@ import {
 } from '@/app/api/metrics/view-dedupe'
 import { prisma } from '@/lib/prisma'
 import { generateSlug } from '@/utils/slug'
+import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
 import {
 	type ArticleCoverConfig,
 	normalizeCoverConfig,
@@ -44,7 +45,7 @@ class ArticlesService {
 				orderBy: { created_at: 'desc' },
 				include: {
 					author: {
-						select: { id: true, name: true, username: true },
+						select: AUTHOR_WITH_BADGES_SELECT,
 					},
 				},
 			}),
@@ -101,7 +102,7 @@ class ArticlesService {
 				? { external_id: id }
 				: { OR: [{ external_id: id }, { id: num }] },
 			include: {
-				author: { select: { id: true, name: true, username: true } },
+				author: { select: AUTHOR_WITH_BADGES_SELECT },
 			},
 		})
 
@@ -242,7 +243,7 @@ class ArticlesService {
 				author_id,
 			},
 			include: {
-				author: { select: { id: true, name: true, username: true } },
+				author: { select: AUTHOR_WITH_BADGES_SELECT },
 			},
 		})
 
@@ -362,7 +363,7 @@ class ArticlesService {
 			where: { id },
 			data: updateData,
 			include: {
-				author: { select: { id: true, name: true, username: true } },
+				author: { select: AUTHOR_WITH_BADGES_SELECT },
 			},
 		})
 
@@ -434,7 +435,7 @@ class ArticlesService {
 			where: { id },
 			data: { status: newStatus, status_reason: null },
 			include: {
-				author: { select: { id: true, name: true, username: true } },
+				author: { select: AUTHOR_WITH_BADGES_SELECT },
 			},
 		})
 
@@ -502,7 +503,7 @@ class ArticlesService {
 			where: { id },
 			data: updateData,
 			include: {
-				author: { select: { id: true, name: true, username: true } },
+				author: { select: AUTHOR_WITH_BADGES_SELECT },
 			},
 		})
 

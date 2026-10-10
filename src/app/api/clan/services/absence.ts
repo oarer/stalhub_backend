@@ -1,5 +1,6 @@
 import { isBeforeMskHour, mskDate } from '@/lib/msk'
 import { prisma } from '@/lib/prisma'
+import { USER_WITH_BADGES_SELECT } from '@/utils/user-select'
 
 export const ABSENCE_EVENT_TYPES = [
 	'TOURNAMENT',
@@ -28,7 +29,7 @@ export class AbsenceService {
 		return prisma.absence.findMany({
 			where: { clan_id, date },
 			include: {
-				user: { select: { id: true, username: true, name: true } },
+				user: { select: USER_WITH_BADGES_SELECT },
 			},
 			orderBy: { updated_at: 'desc' },
 		})
@@ -38,7 +39,7 @@ export class AbsenceService {
 		return prisma.absence.findMany({
 			where: { clan_id, date: { gte: from, lte: to } },
 			include: {
-				user: { select: { id: true, username: true, name: true } },
+				user: { select: USER_WITH_BADGES_SELECT },
 			},
 			orderBy: { date: 'asc' },
 		})
@@ -71,7 +72,7 @@ export class AbsenceService {
 			},
 			update: { clan_id, events: normalized as never, note: note ?? null },
 			include: {
-				user: { select: { id: true, username: true, name: true } },
+				user: { select: USER_WITH_BADGES_SELECT },
 			},
 		})
 	}

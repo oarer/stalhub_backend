@@ -9,6 +9,7 @@ import {
 	type ViewIdentity,
 } from '@/app/api/metrics/view-dedupe'
 import { prisma } from '@/lib/prisma'
+import { USER_BADGES_SELECT } from '@/utils/user-select'
 import {
 	compressImageBuffer,
 	detectImageMime,
@@ -149,6 +150,7 @@ class ArtsService {
 							name: true,
 							username: true,
 							social_links: true,
+							badges: { select: USER_BADGES_SELECT },
 						},
 					},
 				},

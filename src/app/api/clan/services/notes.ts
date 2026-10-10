@@ -1,11 +1,12 @@
 import { prisma } from '@/lib/prisma'
+import { USER_WITH_BADGES_SELECT } from '@/utils/user-select'
 
 export class NotesService {
 	async listAll(clan_id: string) {
 		return prisma.clanMemberNote.findMany({
 			where: { clan_id },
 			include: {
-				author: { select: { id: true, username: true, name: true } },
+				author: { select: USER_WITH_BADGES_SELECT },
 				member: { select: { id: true, name: true } },
 			},
 			orderBy: { created_at: 'desc' },
@@ -27,7 +28,7 @@ export class NotesService {
 				where: { id: existing.id },
 				data: { content: content.slice(0, 512), author_id },
 				include: {
-					author: { select: { id: true, username: true, name: true } },
+					author: { select: USER_WITH_BADGES_SELECT },
 				},
 			})
 		}
@@ -35,7 +36,7 @@ export class NotesService {
 		return prisma.clanMemberNote.create({
 			data: { clan_id, author_id, member_id, content: content.slice(0, 512) },
 			include: {
-				author: { select: { id: true, username: true, name: true } },
+				author: { select: USER_WITH_BADGES_SELECT },
 			},
 		})
 	}
@@ -48,7 +49,7 @@ export class NotesService {
 			where: { id: note_id },
 			data: { content: content.slice(0, 512) },
 			include: {
-				author: { select: { id: true, username: true, name: true } },
+				author: { select: USER_WITH_BADGES_SELECT },
 			},
 		})
 	}
