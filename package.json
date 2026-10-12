@@ -16,7 +16,7 @@
 		"@prisma/client": "^7.8.0",
 		"axios": "^1.20.0",
 		"dotenv": "^17.4.2",
-		"elysia": "^1.4.28",
+		"elysia": "^1.4.30",
 		"logixlysia": "^6.3.1",
 		"pg": "^8.20.0",
 		"prisma": "^7.8.0",
