@@ -1,0 +1,104 @@
+import { cron } from '@elysiajs/cron'
+import { env } from '@/env'
+import { requireAdmin, requireAuth } from '@/utils/auth.guard'
+import { createElysia } from '@/utils/elysia'
+import { jwtPlugin } from '@/utils/jwt.plugin'
+import { auctionPool, isAuctionDbEnabled } from './auction-db'
+import { backfillOnce, ingestStatus, sweepOnce } from './ingest'
+import { auctionProgress } from './progress'
+import { applyAuctionSchema } from './schema'
+
+export const routeAuctionHistory = createElysia()
+	.use(jwtPlugin)
+	.use(
+		cron({
+			name: 'auction-history-sweep',
+			pattern: env.AUCTION_SWEEP_CRON,
+			timezone: 'Europe/Moscow',
+			run: () => {
+				sweepOnce().catch((err) =>
+					console.error('[AuctionHistory] sweep cron failed:', err)
+				)
+			},
+		})
+	)
+	.onStart(async () => {
+		if (!isAuctionDbEnabled()) {
+			console.log('[AuctionHistory] disabled (no AUCTION_DATABASE_URL)')
+			return
+		}
+		const ok = await applyAuctionSchema()
+		if (!ok) {
+			setTimeout(
+				() =>
+					applyAuctionSchema()
+						.then((retryOk) => {
+							if (retryOk) backfillOnce().catch(() => {})
+						})
+						.catch(() => {}),
+				60_000
+			)
+			return
+		}
+
+		backfillOnce().catch((err) =>
+			console.error('[AuctionHistory] initial backfill failed:', err)
+		)
+	})
+	.get('/auction-history/status', async ({ status }) => {
+		const st = ingestStatus()
+		if (!st.enabled) {
+			return status(503, {
+				status: 503,
+				message: 'Auction history DB not configured',
+			})
+		}
+		const pool = auctionPool()
+		let db: Record<string, unknown> = {}
+		if (pool) {
+			try {
+				const [items, size] = await Promise.all([
+					pool.query(
+						'SELECT count(*)::int AS items, COALESCE(sum(deals_count),0)::bigint AS deals FROM items'
+					),
+					pool.query(
+						`SELECT (SELECT pg_size_pretty(COALESCE(sum(total_bytes), 0)::bigint)
+						 FROM hypertable_detailed_size('deals')) AS deals_size,
+						 pg_size_pretty(pg_database_size(current_database())) AS db_size`
+					),
+				])
+				db = { ...items.rows[0], ...size.rows[0] }
+			} catch (err) {
+				db = {
+					error: err instanceof Error ? err.message : 'db error',
+				}
+			}
+		}
+		return { ...st, db }
+	})
+	.get(
+		'/auction-history/progress',
+		async ({ status }) => {
+			const [progress, st] = await Promise.all([
+				auctionProgress().catch((err) => {
+					console.error(
+						'[AuctionHistory] progress failed:',
+						err instanceof Error ? err.message : String(err)
+					)
+					return null
+				}),
+				ingestStatus(),
+			])
+			if (!progress) {
+				return status(503, {
+					status: 503,
+					message: 'Auction history DB not available',
+				})
+			}
+			return { ...progress, ...st }
+		},
+		{
+			beforeHandle: [requireAuth, requireAdmin],
+			detail: { tags: ['Admin'] },
+		}
+	)
