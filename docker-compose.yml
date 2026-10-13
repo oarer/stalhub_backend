@@ -12,12 +12,15 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       IMAGE_SERVICE_URL: http://image-service:3002
       IMAGE_SERVICE_TIMEOUT_MS: 60000
+      AUCTION_DATABASE_URL: ${AUCTION_DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@auction-db:5432/auction}
       NO_PROXY: localhost,127.0.0.1,::1,app,image-service,host.docker.internal
       no_proxy: localhost,127.0.0.1,::1,app,image-service,host.docker.internal
     depends_on:
       redis:
         condition: service_healthy
       postgres:
+        condition: service_healthy
+      auction-db:
         condition: service_healthy
       image-service:
         condition: service_started
@@ -36,6 +39,7 @@ services:
       - ./uploads:/app/uploads
       - ./runtime:/app/runtime
       - ./scripts:/app/scripts:ro
+      - ./auction-db:/app/auction-db
 
   image-service:
     build: ./image-service
@@ -106,6 +110,24 @@ services:
       timeout: 5s
       retries: 5
 
+  auction-db:
+    image: timescale/timescaledb-ha:pg17
+    container_name: StalHub_auction_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: auction
+    ports:
+      - "5433:5432"
+    volumes:
+      - auction_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   prometheus:
     image: prom/prometheus:latest
     container_name: StalHub_prometheus
@@ -146,4 +168,5 @@ services:
 volumes:
   redis_data:
   pg_data:
+  auction_data:
   grafana_data:

@@ -54,6 +54,16 @@ const envVariables = z.object({
 	SC_DB_LISTING_DIR: z.string().default('runtime/listing'),
 	SC_DB_DIFFS_DIR: z.string().default('runtime/balance_diffs'),
 
+	AUCTION_DATABASE_URL: z.string().default(''),
+	AUCTION_SWEEP_CRON: z.string().default('*/5 * * * *'),
+	AUCTION_SWEEP_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(1),
+	AUCTION_SWEEP_DELAY_MS: z.coerce.number().int().min(0).max(60000).default(500),
+	AUCTION_SWEEP_MAX_PAGES: z.coerce.number().int().min(1).max(50).default(10),
+	AUCTION_BACKFILL_CAP: z.coerce.number().int().min(200).max(50000).default(5000),
+	AUCTION_BACKFILL_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(1),
+	AUCTION_BACKFILL_DELAY_MS: z.coerce.number().int().min(0).max(60000).default(500),
+	AUCTION_QUOTA_BACKOFF_MS: z.coerce.number().int().min(1000).max(600000).default(60000),
+
 	LOOT_KEY: z.string().default('dev'),
 	LOOT_SOURCE_DIR: z.string().default(''),
 	LOOT_SHUFFLEBAGS_DIR: z.string().default(''),
