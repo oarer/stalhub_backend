@@ -56,6 +56,7 @@ const envVariables = z.object({
 
 	AUCTION_DATABASE_URL: z.string().default(''),
 	AUCTION_SWEEP_CRON: z.string().default('*/5 * * * *'),
+	AUCTION_ROLLUP_CRON: z.string().default('15 3 * * *'),
 	AUCTION_SWEEP_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(4),
 	AUCTION_SWEEP_DELAY_MS: z.coerce.number().int().min(0).max(60000).default(250),
 	AUCTION_SWEEP_MAX_PAGES: z.coerce.number().int().min(1).max(200).default(10),

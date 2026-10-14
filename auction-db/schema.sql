@@ -86,10 +86,11 @@ ALTER TABLE deals SET (
 
 SELECT add_compression_policy('deals', INTERVAL '7 days', if_not_exists => TRUE);
 
--- Сырые сделки живут 30 дней (хвост под "последние продажи" и свежие
--- медианы). Удаление — авто-политикой, мгновенным дропом чанков.
--- Глубже историю держат deal_buckets (навсегда) + candles_daily.
-SELECT add_retention_policy('deals', INTERVAL '30 days', if_not_exists => TRUE);
+-- Сырые сделки живут 90 дней (хвост под "последние продажи", свежие
+-- медианы и спрос — вся математика окна 90д считается по сырым).
+-- Удаление — авто-политикой, мгновенным дропом чанков.
+-- Глубже историю держат deal_buckets + candles_daily + buyer_daily.
+SELECT add_retention_policy('deals', INTERVAL '90 days', if_not_exists => TRUE);
 
 -- ---------------------------------------------------------------------
 -- deal_buckets: предагрегация сырых сделок со счётчиком.
@@ -100,7 +101,13 @@ SELECT add_retention_policy('deals', INTERVAL '30 days', if_not_exists => TRUE);
 -- в ~10-50x меньше строк. Медиана/avg/min/max/сделки/спрос из бакетов
 -- считаются ТОЧНО (взвешенно по trades), buyer даёт топ покупателей.
 -- Теряем только внутридневное время и атрибуты старых сделок
--- (они остаются в сырых 30 дней).
+-- (они остаются в сырых 90 дней).
+--
+-- Размер лота (amount) хранится ТОЧНЫМ ключом сознательно, не группами:
+-- цена штуки зависит от размера пачки (опт дешевле розницы), и смешанная
+-- медиана врёт. Группировка "топ размеров + разное" делается на чтении
+-- (порог ~5% сделок размера за день), а не на записи: укрупнение при
+-- записи необратимо, а из точных бакетов всегда можно собрать любые группы.
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS deal_buckets (
 	item_id INTEGER NOT NULL REFERENCES items (id) ON DELETE CASCADE,
@@ -131,6 +138,77 @@ ALTER TABLE deal_buckets SET (
 SELECT add_compression_policy('deal_buckets', INTERVAL '30 days', if_not_exists => TRUE);
 
 -- ---------------------------------------------------------------------
+-- deal_hours: внутридневка. Строка = (предмет, день UTC, час UTC, вариант):
+-- сделки/штуки/деньги + мин/макс цены штуки. avg — generated (volume/units).
+-- Без разреза по buyer и размеру (они в бакетах) — лёгкая таблица для
+-- вопроса "когда продавать". Навсегда, объём крошечный.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS deal_hours (
+	item_id INTEGER NOT NULL REFERENCES items (id) ON DELETE CASCADE,
+	day DATE NOT NULL,
+	hour SMALLINT NOT NULL,
+	qlt SMALLINT NOT NULL DEFAULT -1,
+	ptn SMALLINT NOT NULL DEFAULT 0,
+	trades BIGINT NOT NULL DEFAULT 0,
+	units BIGINT NOT NULL DEFAULT 0,
+	volume NUMERIC(18, 2) NOT NULL DEFAULT 0,
+	avg NUMERIC(14, 2)
+		GENERATED ALWAYS AS (
+			CASE WHEN units > 0 THEN volume / units END
+		) STORED,
+	low NUMERIC(14, 2),
+	high NUMERIC(14, 2),
+	PRIMARY KEY (item_id, day, hour, qlt, ptn),
+	CONSTRAINT deal_hours_hour_range CHECK (hour BETWEEN 0 AND 23)
+);
+
+SELECT create_hypertable(
+	'deal_hours',
+	'day',
+	chunk_time_interval => INTERVAL '1 month',
+	if_not_exists => TRUE
+);
+
+ALTER TABLE deal_hours SET (
+	timescaledb.compress,
+	timescaledb.compress_segmentby = 'item_id,qlt,ptn',
+	timescaledb.compress_orderby = 'day DESC, hour DESC'
+);
+
+SELECT add_compression_policy('deal_hours', INTERVAL '30 days', if_not_exists => TRUE);
+
+-- ---------------------------------------------------------------------
+-- buyer_daily: сводка по никам за день. Строка = (предмет, день, buyer):
+-- сколько сделок, штук и денег. Пустой buyer ('') = анонимные сделки.
+-- Строится роллапом из deal_buckets (там buyer уже в ключе).
+-- Хранится навсегда (крошечная: предметы x дни x активные ники).
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS buyer_daily (
+	item_id INTEGER NOT NULL REFERENCES items (id) ON DELETE CASCADE,
+	day DATE NOT NULL,
+	buyer TEXT NOT NULL DEFAULT '',
+	trades BIGINT NOT NULL DEFAULT 0,
+	units BIGINT NOT NULL DEFAULT 0,
+	volume NUMERIC(18, 2) NOT NULL DEFAULT 0,
+	PRIMARY KEY (item_id, day, buyer)
+);
+
+SELECT create_hypertable(
+	'buyer_daily',
+	'day',
+	chunk_time_interval => INTERVAL '1 month',
+	if_not_exists => TRUE
+);
+
+ALTER TABLE buyer_daily SET (
+	timescaledb.compress,
+	timescaledb.compress_segmentby = 'item_id,buyer',
+	timescaledb.compress_orderby = 'day DESC'
+);
+
+SELECT add_compression_policy('buyer_daily', INTERVAL '30 days', if_not_exists => TRUE);
+
+-- ---------------------------------------------------------------------
 -- candles_daily: суточные свечи по каждой паре (qlt, ptn).
 -- Строится роллапом раз в сутки из deals. Основной путь чтения для
 -- графиков: страница предмета = один SELECT, сырые deals не сканируются.
@@ -147,6 +225,14 @@ CREATE TABLE IF NOT EXISTS candles_daily (
 	low NUMERIC(14, 2) NOT NULL,
 	high NUMERIC(14, 2) NOT NULL,
 	median NUMERIC(14, 2) NOT NULL,
+	-- обогащение из бакетов (считается роллапом, всё точное):
+	stddev NUMERIC(14, 2) NOT NULL DEFAULT 0,
+	p10 NUMERIC(14, 2) NOT NULL,
+	p25 NUMERIC(14, 2) NOT NULL,
+	p75 NUMERIC(14, 2) NOT NULL,
+	p90 NUMERIC(14, 2) NOT NULL,
+	-- distinct непустых buyer за день
+	buyers INTEGER NOT NULL DEFAULT 0,
 	PRIMARY KEY (item_id, day, qlt, ptn)
 );
 

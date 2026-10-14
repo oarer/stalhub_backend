@@ -12,6 +12,7 @@ import {
 	sweepOnce,
 } from './ingest'
 import { auctionProgress } from './progress'
+import { rollupStatus, runRollupOnce } from './rollup'
 import { applyAuctionSchema } from './schema'
 
 export const routeAuctionHistory = createElysia()
@@ -24,6 +25,18 @@ export const routeAuctionHistory = createElysia()
 			run: () => {
 				sweepOnce().catch((err) =>
 					console.error('[AuctionHistory] sweep cron failed:', err)
+				)
+			},
+		})
+	)
+	.use(
+		cron({
+			name: 'auction-history-rollup',
+			pattern: env.AUCTION_ROLLUP_CRON,
+			timezone: 'Europe/Moscow',
+			run: () => {
+				runRollupOnce().catch((err) =>
+					console.error('[AuctionHistory] rollup cron failed:', err)
 				)
 			},
 		})
@@ -52,7 +65,7 @@ export const routeAuctionHistory = createElysia()
 		)
 	})
 	.get('/auction-history/status', async ({ status }) => {
-		const st = ingestStatus()
+		const st = { ...ingestStatus(), ...rollupStatus() }
 		if (!st.enabled) {
 			return status(503, {
 				status: 503,
@@ -93,7 +106,7 @@ export const routeAuctionHistory = createElysia()
 					)
 					return null
 				}),
-				ingestStatus(),
+				{ ...ingestStatus(), ...rollupStatus() },
 			])
 			if (!progress) {
 				return status(503, {
@@ -111,7 +124,7 @@ export const routeAuctionHistory = createElysia()
 	.post(
 		'/auction-history/deepen',
 		async ({ status }) => {
-			const st = ingestStatus()
+			const st = { ...ingestStatus(), ...rollupStatus() }
 			if (!st.enabled) {
 				return status(503, {
 					status: 503,
@@ -138,7 +151,7 @@ export const routeAuctionHistory = createElysia()
 	.post(
 		'/auction-history/census',
 		async ({ status }) => {
-			const st = ingestStatus()
+			const st = { ...ingestStatus(), ...rollupStatus() }
 			if (st.censusRunning) {
 				return status(409, {
 					status: 409,
@@ -148,6 +161,27 @@ export const routeAuctionHistory = createElysia()
 
 			runCensusOnce().catch((err) =>
 				console.error('[AuctionHistory] census failed:', err)
+			)
+			return { started: true }
+		},
+		{
+			beforeHandle: [requireAuth, requireAdmin],
+			detail: { tags: ['Admin'] },
+		}
+	)
+	.post(
+		'/auction-history/rollup',
+		async ({ status }) => {
+			const st = { ...ingestStatus(), ...rollupStatus() }
+			if (st.rollupRunning) {
+				return status(409, {
+					status: 409,
+					message: 'Rollup already running',
+				})
+			}
+
+			runRollupOnce().catch((err) =>
+				console.error('[AuctionHistory] rollup failed:', err)
 			)
 			return { started: true }
 		},
