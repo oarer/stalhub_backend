@@ -1,3 +1,4 @@
+import { env } from '@/env'
 import { auctionPool } from './auction-db'
 
 export interface AuctionHistoryProgress {
@@ -6,6 +7,7 @@ export interface AuctionHistoryProgress {
 		backfilled: number
 		pending: number
 		backfillPct: number
+		capped: number
 	}
 	deals: {
 		total: number
@@ -24,7 +26,7 @@ export const auctionProgress = async (): Promise<AuctionHistoryProgress | null> 
 	const pool = auctionPool()
 	if (!pool) return null
 
-	const [itemsRes, topRes, sizeRes] = await Promise.all([
+	const [itemsRes, topRes, sizeRes, cappedRes] = await Promise.all([
 		pool.query(
 			`SELECT count(*)::int AS total,
 				count(*) FILTER (WHERE hist_oldest IS NOT NULL)::int AS backfilled,
@@ -42,6 +44,10 @@ export const auctionProgress = async (): Promise<AuctionHistoryProgress | null> 
 			 FROM hypertable_detailed_size('deals')) AS deals,
 			 pg_size_pretty(pg_database_size(current_database())) AS db`
 		),
+		pool.query(
+			`SELECT count(*)::int AS capped FROM items WHERE deals_count >= $1`,
+			[env.AUCTION_BACKFILL_CAP]
+		),
 	])
 
 	const items = itemsRes.rows[0] as {
@@ -53,6 +59,7 @@ export const auctionProgress = async (): Promise<AuctionHistoryProgress | null> 
 	}
 	const backfilled = items.backfilled
 	const pending = items.total - backfilled
+	const capped = (cappedRes.rows[0] as { capped: number }).capped
 
 	return {
 		items: {
@@ -63,6 +70,7 @@ export const auctionProgress = async (): Promise<AuctionHistoryProgress | null> 
 				items.total > 0
 					? Math.round((backfilled / items.total) * 1000) / 10
 					: 0,
+			capped,
 		},
 		deals: {
 			total: Number(items.deals),

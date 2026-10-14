@@ -4,7 +4,13 @@ import { requireAdmin, requireAuth } from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 import { auctionPool, isAuctionDbEnabled } from './auction-db'
-import { backfillOnce, ingestStatus, sweepOnce } from './ingest'
+import {
+	backfillOnce,
+	deepenOnce,
+	ingestStatus,
+	runCensusOnce,
+	sweepOnce,
+} from './ingest'
 import { auctionProgress } from './progress'
 import { applyAuctionSchema } from './schema'
 
@@ -96,6 +102,54 @@ export const routeAuctionHistory = createElysia()
 				})
 			}
 			return { ...progress, ...st }
+		},
+		{
+			beforeHandle: [requireAuth, requireAdmin],
+			detail: { tags: ['Admin'] },
+		}
+	)
+	.post(
+		'/auction-history/deepen',
+		async ({ status }) => {
+			const st = ingestStatus()
+			if (!st.enabled) {
+				return status(503, {
+					status: 503,
+					message: 'Auction history DB not configured',
+				})
+			}
+			if (st.running || st.deepening) {
+				return status(409, {
+					status: 409,
+					message: 'Ingest already running',
+				})
+			}
+
+			deepenOnce().catch((err) =>
+				console.error('[AuctionHistory] deepen failed:', err)
+			)
+			return { started: true }
+		},
+		{
+			beforeHandle: [requireAuth, requireAdmin],
+			detail: { tags: ['Admin'] },
+		}
+	)
+	.post(
+		'/auction-history/census',
+		async ({ status }) => {
+			const st = ingestStatus()
+			if (st.censusRunning) {
+				return status(409, {
+					status: 409,
+					message: 'Census already running',
+				})
+			}
+
+			runCensusOnce().catch((err) =>
+				console.error('[AuctionHistory] census failed:', err)
+			)
+			return { started: true }
 		},
 		{
 			beforeHandle: [requireAuth, requireAdmin],

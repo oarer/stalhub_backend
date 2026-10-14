@@ -86,6 +86,50 @@ ALTER TABLE deals SET (
 
 SELECT add_compression_policy('deals', INTERVAL '7 days', if_not_exists => TRUE);
 
+-- Сырые сделки живут 30 дней (хвост под "последние продажи" и свежие
+-- медианы). Удаление — авто-политикой, мгновенным дропом чанков.
+-- Глубже историю держат deal_buckets (навсегда) + candles_daily.
+SELECT add_retention_policy('deals', INTERVAL '30 days', if_not_exists => TRUE);
+
+-- ---------------------------------------------------------------------
+-- deal_buckets: предагрегация сырых сделок со счётчиком.
+-- Строка = (день UTC, вариант, цена штуки, размер лота, buyer):
+-- сколько таких сделок было. Пустой buyer ('') = анонимная сделка.
+--
+-- Зачем: цены кластеризуются на круглых числах, повторы схлопываются
+-- в ~10-50x меньше строк. Медиана/avg/min/max/сделки/спрос из бакетов
+-- считаются ТОЧНО (взвешенно по trades), buyer даёт топ покупателей.
+-- Теряем только внутридневное время и атрибуты старых сделок
+-- (они остаются в сырых 30 дней).
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS deal_buckets (
+	item_id INTEGER NOT NULL REFERENCES items (id) ON DELETE CASCADE,
+	day DATE NOT NULL,
+	qlt SMALLINT NOT NULL DEFAULT -1,
+	ptn SMALLINT NOT NULL DEFAULT 0,
+	unit_price NUMERIC(14, 2) NOT NULL,
+	amount INTEGER NOT NULL DEFAULT 1,
+	buyer TEXT NOT NULL DEFAULT '',
+	trades BIGINT NOT NULL DEFAULT 0,
+	units BIGINT NOT NULL DEFAULT 0,
+	PRIMARY KEY (item_id, day, qlt, ptn, unit_price, amount, buyer)
+);
+
+SELECT create_hypertable(
+	'deal_buckets',
+	'day',
+	chunk_time_interval => INTERVAL '1 month',
+	if_not_exists => TRUE
+);
+
+ALTER TABLE deal_buckets SET (
+	timescaledb.compress,
+	timescaledb.compress_segmentby = 'item_id,qlt,ptn,buyer',
+	timescaledb.compress_orderby = 'day DESC'
+);
+
+SELECT add_compression_policy('deal_buckets', INTERVAL '30 days', if_not_exists => TRUE);
+
 -- ---------------------------------------------------------------------
 -- candles_daily: суточные свечи по каждой паре (qlt, ptn).
 -- Строится роллапом раз в сутки из deals. Основной путь чтения для
