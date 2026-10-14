@@ -56,12 +56,18 @@ const envVariables = z.object({
 
 	AUCTION_DATABASE_URL: z.string().default(''),
 	AUCTION_SWEEP_CRON: z.string().default('*/5 * * * *'),
-	AUCTION_SWEEP_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(1),
-	AUCTION_SWEEP_DELAY_MS: z.coerce.number().int().min(0).max(60000).default(500),
-	AUCTION_SWEEP_MAX_PAGES: z.coerce.number().int().min(1).max(50).default(10),
+	AUCTION_SWEEP_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(4),
+	AUCTION_SWEEP_DELAY_MS: z.coerce.number().int().min(0).max(60000).default(250),
+	AUCTION_SWEEP_MAX_PAGES: z.coerce.number().int().min(1).max(200).default(10),
 	AUCTION_BACKFILL_CAP: z.coerce.number().int().min(200).max(50000).default(5000),
 	AUCTION_BACKFILL_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(1),
 	AUCTION_BACKFILL_DELAY_MS: z.coerce.number().int().min(0).max(60000).default(500),
+
+	AUCTION_DEEPEN_CAP: z.coerce.number().int().min(1000).max(25000000).default(100000),
+	AUCTION_DEEPEN_MAX_AGE_DAYS: z.coerce.number().int().min(7).max(3650).default(90),
+	AUCTION_DEEPEN_TOP: z.coerce.number().int().min(1).max(500).default(50),
+	AUCTION_DEEPEN_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
+	AUCTION_DEEPEN_DELAY_MS: z.coerce.number().int().min(0).max(60000).default(400),
 	AUCTION_QUOTA_BACKOFF_MS: z.coerce.number().int().min(1000).max(600000).default(60000),
 
 	LOOT_KEY: z.string().default('dev'),
