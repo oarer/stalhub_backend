@@ -41,7 +41,11 @@ export const toRow = (h: LotHistory): DealRow | null => {
 	if (Number.isNaN(time.getTime())) return null
 	const price = Number(h.price)
 	if (!Number.isFinite(price)) return null
-	const amount = Number.isInteger(h.amount) ? (h.amount as number) : 1
+
+	const amount =
+		Number.isInteger(h.amount) && (h.amount as number) >= 1
+			? (h.amount as number)
+			: 1
 	const add = (h.additional ?? {}) as Record<string, unknown>
 	const qlt =
 		typeof add.qlt === 'number' && Number.isInteger(add.qlt) ? add.qlt : -1
@@ -279,6 +283,87 @@ const upsertBuckets = async (
 	return list.length
 }
 
+type HourGroup = {
+	day: string
+	hour: number
+	qlt: number
+	ptn: number
+	trades: number
+	units: number
+	vol: number
+	low: number
+	high: number
+}
+
+const upsertHours = async (
+	itemDbId: number,
+	rows: DealRow[]
+): Promise<number> => {
+	const pool = auctionPool()
+	if (!pool || rows.length === 0) return 0
+	const groups = new Map<string, HourGroup>()
+	for (const r of rows) {
+		const day = r.time.toISOString().slice(0, 10)
+		const hour = r.time.getUTCHours()
+		const unit = unitPriceOf(r.price, r.amount)
+		const key = `${day}|${hour}|${r.qlt}|${r.ptn}`
+		const g = groups.get(key)
+		if (g) {
+			g.trades += 1
+			g.units += r.amount
+			g.vol = Math.round((g.vol + unit * r.amount) * 100) / 100
+			if (unit < g.low) g.low = unit
+			if (unit > g.high) g.high = unit
+		} else {
+			groups.set(key, {
+				day,
+				hour,
+				qlt: r.qlt,
+				ptn: r.ptn,
+				trades: 1,
+				units: r.amount,
+				vol: Math.round(unit * r.amount * 100) / 100,
+				low: unit,
+				high: unit,
+			})
+		}
+	}
+	const list = [...groups.values()]
+	const values: string[] = []
+	const params: unknown[] = []
+	list.forEach((g, i) => {
+		const o = i * 10
+		values.push(
+			`($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5}, $${o + 6}, $${o + 7}, $${o + 8}, $${o + 9}, $${o + 10})`
+		)
+		params.push(
+			itemDbId,
+			g.day,
+			g.hour,
+			g.qlt,
+			g.ptn,
+			g.trades,
+			g.units,
+			g.vol,
+			g.low,
+			g.high
+		)
+	})
+	await pool.query(
+		`INSERT INTO deal_hours
+		 (item_id, day, hour, qlt, ptn, trades, units, volume, low, high)
+		 VALUES ${values.join(', ')}
+		 ON CONFLICT (item_id, day, hour, qlt, ptn)
+		 DO UPDATE SET trades = deal_hours.trades + EXCLUDED.trades,
+			units = deal_hours.units + EXCLUDED.units,
+			volume = deal_hours.volume + EXCLUDED.volume,
+			low = LEAST(deal_hours.low, EXCLUDED.low),
+			high = GREATEST(deal_hours.high, EXCLUDED.high)`,
+		params
+	)
+	return list.length
+}
+
 const touchItem = async (
 	itemDbId: number,
 	rows: DealRow[],
@@ -405,6 +490,7 @@ export const backfillOnce = async (): Promise<IngestStats> => {
 						const inserted = await upsertRows(k.id, rows)
 						await touchItem(k.id, rows, inserted)
 						await upsertBuckets(k.id, rows)
+						await upsertHours(k.id, rows)
 						stats.rows += rows.length
 						stats.inserted += inserted
 					}
@@ -478,6 +564,7 @@ export const sweepOnce = async (): Promise<IngestStats> => {
 						const inserted = await upsertRows(k.id, rows)
 						await touchItem(k.id, rows, inserted)
 						await upsertBuckets(k.id, rows)
+						await upsertHours(k.id, rows)
 						stats.rows += rows.length
 						stats.inserted += inserted
 					}
@@ -567,6 +654,7 @@ export const deepenOnce = async (topN?: number): Promise<IngestStats> => {
 						const inserted = await upsertRows(job.id, rows)
 						await touchItem(job.id, rows, inserted)
 						await upsertBuckets(job.id, rows)
+						await upsertHours(job.id, rows)
 						stats.rows += rows.length
 						stats.inserted += inserted
 					}
