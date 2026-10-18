@@ -1,3 +1,4 @@
+import './setup-typebox'
 import { relative, resolve } from 'node:path'
 import cors from '@elysia/cors'
 import { openapi } from '@elysia/openapi'
@@ -68,56 +69,68 @@ export const app = createElysia()
 	.use(logger)
 
 	// static
-	.get('/uploads/*', async ({ params, set }: { params: Record<string, string>; set: { status?: number | string; headers: Record<string, string | number | string[]> } }) => {
-		const decodedPath = decodeURIComponent(params['*'])
-
-		if (
-			decodedPath.includes('..') ||
-			decodedPath.includes('\0') ||
-			decodedPath.includes('\\')
-		) {
-			set.status = 403
-			return 'Forbidden'
-		}
-
-		if (isS3Uploads()) {
-			const url = s3PublicUrl(`/uploads/${decodedPath}`)
-			if (!url) {
-				set.status = 403
-				return 'Forbidden'
+	.get(
+		'/uploads/*',
+		async ({
+			params,
+			set,
+		}: {
+			params: Record<string, string>
+			set: {
+				status?: number | string
+				headers: Record<string, string | number | string[]>
 			}
-			set.status = 302
-			set.headers.location = url
-			return
-		}
-
-		const uploadsDir = resolve(process.cwd(), 'uploads')
-		try {
-			const requested = resolve(uploadsDir, decodedPath)
-
-			const rel = relative(uploadsDir, requested)
+		}) => {
+			const decodedPath = decodeURIComponent(params['*'])
 
 			if (
-				rel.startsWith('..') ||
-				resolve(uploadsDir, rel) !== requested
+				decodedPath.includes('..') ||
+				decodedPath.includes('\0') ||
+				decodedPath.includes('\\')
 			) {
 				set.status = 403
 				return 'Forbidden'
 			}
 
-			const file = Bun.file(requested)
-
-			if (!(await file.exists())) {
-				set.status = 404
-				return 'Not found'
+			if (isS3Uploads()) {
+				const url = s3PublicUrl(`/uploads/${decodedPath}`)
+				if (!url) {
+					set.status = 403
+					return 'Forbidden'
+				}
+				set.status = 302
+				set.headers.location = url
+				return
 			}
 
-			return file
-		} catch {
-			set.status = 400
-			return 'Bad request'
+			const uploadsDir = resolve(process.cwd(), 'uploads')
+			try {
+				const requested = resolve(uploadsDir, decodedPath)
+
+				const rel = relative(uploadsDir, requested)
+
+				if (
+					rel.startsWith('..') ||
+					resolve(uploadsDir, rel) !== requested
+				) {
+					set.status = 403
+					return 'Forbidden'
+				}
+
+				const file = Bun.file(requested)
+
+				if (!(await file.exists())) {
+					set.status = 404
+					return 'Not found'
+				}
+
+				return file
+			} catch {
+				set.status = 400
+				return 'Bad request'
+			}
 		}
-	})
+	)
 
 	.request(async ({ request, set, store, server }) => {
 		;(store as Record<string, unknown>)._reqStart = Date.now()

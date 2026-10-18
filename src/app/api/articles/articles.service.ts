@@ -14,10 +14,7 @@ import {
 import { prisma } from '@/lib/prisma'
 import { generateSlug } from '@/utils/slug'
 import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
-import {
-	type ArticleCoverConfig,
-	normalizeCoverConfig,
-} from './article-cover'
+import { type ArticleCoverConfig, normalizeCoverConfig } from './article-cover'
 
 class ArticlesService {
 	async list(
@@ -65,7 +62,8 @@ class ArticlesService {
 				title: a.title,
 				content: a.content,
 				image_url: a.image_url,
-				cover_config: (a.cover_config ?? null) as ArticleCoverConfig | null,
+				cover_config: (a.cover_config ??
+					null) as ArticleCoverConfig | null,
 				quest_name: a.type === ArticleType.QUEST ? a.quest_name : null,
 				quest_type: a.type === ArticleType.QUEST ? a.quest_type : null,
 				quest_map: a.type === ArticleType.QUEST ? a.quest_map : null,
@@ -150,8 +148,8 @@ class ArticlesService {
 			title: article.title,
 			content: article.content,
 			image_url: article.image_url,
-			cover_config:
-				(article.cover_config ?? null) as ArticleCoverConfig | null,
+			cover_config: (article.cover_config ??
+				null) as ArticleCoverConfig | null,
 			quest_name:
 				article.type === ArticleType.QUEST ? article.quest_name : null,
 			quest_type:
@@ -264,8 +262,8 @@ class ArticlesService {
 			title: article.title,
 			content: article.content,
 			image_url: article.image_url,
-			cover_config:
-				(article.cover_config ?? null) as ArticleCoverConfig | null,
+			cover_config: (article.cover_config ??
+				null) as ArticleCoverConfig | null,
 			quest_name:
 				article.type === ArticleType.QUEST ? article.quest_name : null,
 			quest_type:
@@ -393,8 +391,8 @@ class ArticlesService {
 			title: article.title,
 			content: article.content,
 			image_url: article.image_url,
-			cover_config:
-				(article.cover_config ?? null) as ArticleCoverConfig | null,
+			cover_config: (article.cover_config ??
+				null) as ArticleCoverConfig | null,
 			quest_name:
 				article.type === ArticleType.QUEST ? article.quest_name : null,
 			quest_type:
@@ -455,8 +453,8 @@ class ArticlesService {
 			title: updated.title,
 			content: updated.content,
 			image_url: updated.image_url,
-			cover_config:
-				(updated.cover_config ?? null) as ArticleCoverConfig | null,
+			cover_config: (updated.cover_config ??
+				null) as ArticleCoverConfig | null,
 			quest_name:
 				updated.type === ArticleType.QUEST ? updated.quest_name : null,
 			quest_type:
@@ -523,8 +521,8 @@ class ArticlesService {
 			title: updated.title,
 			content: updated.content,
 			image_url: updated.image_url,
-			cover_config:
-				(updated.cover_config ?? null) as ArticleCoverConfig | null,
+			cover_config: (updated.cover_config ??
+				null) as ArticleCoverConfig | null,
 			quest_name:
 				updated.type === ArticleType.QUEST ? updated.quest_name : null,
 			quest_type:

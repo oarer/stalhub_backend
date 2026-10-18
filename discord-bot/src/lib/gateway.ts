@@ -29,7 +29,9 @@ interface GatewayClose {
 export function describeClose(close: GatewayClose): string {
 	const base = GATEWAY_CLOSE_REASONS[close.code]
 	const suffix = close.reason ? ` (${close.reason})` : ''
-	return base ? `${base}${suffix}` : `Unknown gateway close code ${close.code}`
+	return base
+		? `${base}${suffix}`
+		: `Unknown gateway close code ${close.code}`
 }
 
 export function isFatalCloseCode(code: number): boolean {

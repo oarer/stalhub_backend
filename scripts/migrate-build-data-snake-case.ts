@@ -17,7 +17,9 @@ function compress(data: unknown): string {
 	return 'v1:' + Buffer.from(compressed).toString('base64')
 }
 
-function migrateArt<T extends Record<string, unknown>>(art: T): Record<string, unknown> {
+function migrateArt<T extends Record<string, unknown>>(
+	art: T
+): Record<string, unknown> {
 	const instance_id = art.instance_id ?? art.instanceId
 	const item_id = art.item_id ?? art.itemId
 	const selected_stats = art.selected_stats ?? art.selectedStats

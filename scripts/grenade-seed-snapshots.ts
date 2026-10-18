@@ -26,21 +26,27 @@ if (!clan_id) {
 	console.error(
 		'Usage: bun run scripts/grenade-seed-snapshots.ts <clan_id> [eventType] [dateOffset]'
 	)
-	console.error('  eventType: TOURNAMENT | BRAWL | BASE_CAPTURE (default: TOURNAMENT)')
-	console.error('  dateOffset: days offset from today, e.g. -1 for yesterday (default: 0)')
+	console.error(
+		'  eventType: TOURNAMENT | BRAWL | BASE_CAPTURE (default: TOURNAMENT)'
+	)
+	console.error(
+		'  dateOffset: days offset from today, e.g. -1 for yesterday (default: 0)'
+	)
 	process.exit(1)
 }
 
 const VALID_EVENT_TYPES = ['TOURNAMENT', 'BRAWL', 'BASE_CAPTURE'] as const
 type StageType = (typeof VALID_EVENT_TYPES)[number]
 
-const eventType: StageType =
-	VALID_EVENT_TYPES.includes(eventTypeArg as StageType)
-		? (eventTypeArg as StageType)
-		: 'TOURNAMENT'
+const eventType: StageType = VALID_EVENT_TYPES.includes(
+	eventTypeArg as StageType
+)
+	? (eventTypeArg as StageType)
+	: 'TOURNAMENT'
 
-const dateOffset =
-	Number.isFinite(Number(dateOffsetArg)) ? Number(dateOffsetArg) : 0
+const dateOffset = Number.isFinite(Number(dateOffsetArg))
+	? Number(dateOffsetArg)
+	: 0
 
 const CHECKPOINTS = [
 	'BEFORE_STAGES',
@@ -154,10 +160,10 @@ async function main() {
 		)
 	}
 
-	console.log(`\n[${ts()}] Done! Created 3-stage grenade event for clan "${clan_id}".`)
 	console.log(
-		`[${ts()}] Stage deltas (per member sample):`
+		`\n[${ts()}] Done! Created 3-stage grenade event for clan "${clan_id}".`
 	)
+	console.log(`[${ts()}] Stage deltas (per member sample):`)
 
 	for (const m of members.slice(0, 5)) {
 		const totals = cumulativeTotals.get(m.name)!

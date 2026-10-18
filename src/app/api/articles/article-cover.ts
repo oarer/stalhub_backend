@@ -31,7 +31,9 @@ function toFiniteNumber(value: unknown): number | null {
  * Normalize user-provided cover config. Returns null when there is
  * nothing to store (auto panel).
  */
-export function normalizeCoverConfig(value: unknown): ArticleCoverConfig | null {
+export function normalizeCoverConfig(
+	value: unknown
+): ArticleCoverConfig | null {
 	if (!value || typeof value !== 'object' || Array.isArray(value)) return null
 
 	const root = value as Record<string, unknown>
@@ -62,8 +64,10 @@ export function normalizeCoverConfig(value: unknown): ArticleCoverConfig | null 
 	for (const raw of rowsRaw.slice(0, MAX_ROWS)) {
 		if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue
 		const row = raw as Record<string, unknown>
-		const label = typeof row.label === 'string' ? row.label.trim().slice(0, 24) : ''
-		const val = typeof row.value === 'string' ? row.value.trim().slice(0, 16) : ''
+		const label =
+			typeof row.label === 'string' ? row.label.trim().slice(0, 24) : ''
+		const val =
+			typeof row.value === 'string' ? row.value.trim().slice(0, 16) : ''
 		if (!label && !val) continue
 		const fillNum = toFiniteNumber(row.fill) ?? 0
 		rows.push({
@@ -80,13 +84,13 @@ export function normalizeCoverConfig(value: unknown): ArticleCoverConfig | null 
 		mode: 'custom' as const,
 		...(presetRaw ? { preset: presetRaw } : {}),
 		...(icon ? { icon } : {}),
-		...((titleRaw || rows.length
+		...(titleRaw || rows.length
 			? {
 					panel: {
 						...(titleRaw ? { title: titleRaw.slice(0, 48) } : {}),
 						...(rows.length ? { rows } : {}),
 					},
 				}
-			: {})),
+			: {}),
 	}
 }

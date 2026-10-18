@@ -45,7 +45,9 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 		.use(exboAuth)
 		.use(exboCredentials)
 
-		.post('/desktop/exchange', {
+		.post(
+			'/desktop/exchange',
+			{
 				body: t.Object({
 					code: t.String({ minLength: 20, maxLength: 100 }),
 					code_verifier: t.String({ minLength: 43, maxLength: 128 }),
@@ -57,7 +59,8 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 					),
 				}),
 				detail: { tags: ['Auth'] },
-			}, async ({
+			},
+			async ({
 				body,
 				headers,
 				cookie: { access_token, refresh_token },
@@ -88,7 +91,7 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 					user.id,
 					desktopUa
 						? `StalHubApp_${desktopUa}`
-						: h['user-agent'] ?? 'Stalhub Desktop',
+						: (h['user-agent'] ?? 'Stalhub Desktop'),
 					h['x-forwarded-for'] ?? ''
 				)
 				const roles = user.roles.map((role) => role.name)
@@ -116,11 +119,15 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 						? authService.userPayload(fullSession)
 						: null,
 				}
-			})
-		.get('/desktop/start', {
+			}
+		)
+		.get(
+			'/desktop/start',
+			{
 				query: desktopLoginQuery,
 				detail: { tags: ['Auth'] },
-			}, ({ query, set }) => {
+			},
+			({ query, set }) => {
 				if (!query.desktop_state || !query.code_challenge) {
 					set.status = 400
 					return {
@@ -131,8 +138,11 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 				url.searchParams.set('desktop_state', query.desktop_state)
 				url.searchParams.set('code_challenge', query.code_challenge)
 				return { url: url.toString() }
-			})
-		.post('/desktop/issue', {
+			}
+		)
+		.post(
+			'/desktop/issue',
+			{
 				body: t.Object({
 					desktop_state: t.String({
 						pattern: '^[A-Za-z0-9_-]{43,128}$',
@@ -143,7 +153,8 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 				}),
 				beforeHandle: [requireAuth],
 				detail: { tags: ['Auth'] },
-			}, async ({ body, store }) => {
+			},
+			async ({ body, store }) => {
 				const code = await createDesktopAuthCode(
 					fromStore(store).user_id,
 					body.code_challenge
@@ -152,14 +163,18 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 				url.searchParams.set('code', code)
 				url.searchParams.set('state', body.desktop_state)
 				return { success: true, url: url.toString() }
-			})
-		.post('/login', {
+			}
+		)
+		.post(
+			'/login',
+			{
 				body: t.Object({
 					username: t.String({ minLength: 1 }),
 					password: t.String({ minLength: 1 }),
 				}),
 				detail: { tags: ['Auth'] },
-			}, async ({
+			},
+			async ({
 				body,
 				headers,
 				request,
@@ -221,14 +236,18 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 				access_token.set({ value: access_token_value, ...accessCookie })
 
 				return { success: true }
-			})
+			}
+		)
 
-		.post('/refresh', {
+		.post(
+			'/refresh',
+			{
 				cookie: cookieSchema,
 				detail: {
 					tags: ['Auth'],
 				},
-			}, async ({ cookie: { refresh_token, access_token }, jwt, set }) => {
+			},
+			async ({ cookie: { refresh_token, access_token }, jwt, set }) => {
 				const payload = await jwt.verify(refresh_token.value)
 
 				if (
@@ -279,5 +298,6 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 				})
 
 				return { success: true }
-			})
+			}
+		)
 )

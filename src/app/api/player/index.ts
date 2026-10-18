@@ -11,36 +11,51 @@ export const playersRoute = createElysia()
 		await playerService.init()
 	})
 	.group('/player', (app) =>
-		app.use(jwtPlugin)
-			.get('/popular', {
+		app
+			.use(jwtPlugin)
+			.get(
+				'/popular',
+				{
 					query: t.Object({
 						limit: t.Optional(t.Numeric()),
 					}),
 					detail: {
 						tags: ['Player'],
 					},
-				}, async ({ query }) => {
+				},
+				async ({ query }) => {
 					const limit = query.limit ? Number(query.limit) : 10
 					return playerService.getPopularPlayers(limit)
-				})
+				}
+			)
 
-			.get('/recent', {
+			.get(
+				'/recent',
+				{
 					detail: {
 						tags: ['Player'],
 					},
-				}, async () => {
+				},
+				async () => {
 					return playerService.getRecentPlayers()
-				})
+				}
+			)
 
-			.get('/blacklist', {
+			.get(
+				'/blacklist',
+				{
 					detail: {
 						tags: ['Player'],
 					},
-				}, async () => {
+				},
+				async () => {
 					return playerService.getBlacklist()
-				})
+				}
+			)
 
-			.post('/blacklist', {
+			.post(
+				'/blacklist',
+				{
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
 						uuid: t.String({ error: 'Property uuid is missing' }),
@@ -48,11 +63,15 @@ export const playersRoute = createElysia()
 					detail: {
 						tags: ['Player'],
 					},
-				}, async ({ body: { uuid } }) => {
+				},
+				async ({ body: { uuid } }) => {
 					return playerService.addToBlacklist(uuid)
-				})
+				}
+			)
 
-			.delete('/blacklist', {
+			.delete(
+				'/blacklist',
+				{
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
 						uuid: t.String({ error: 'Property uuid is missing' }),
@@ -60,11 +79,15 @@ export const playersRoute = createElysia()
 					detail: {
 						tags: ['Player'],
 					},
-				}, async ({ body: { uuid } }) => {
+				},
+				async ({ body: { uuid } }) => {
 					return playerService.removeFromBlacklist(uuid)
-				})
+				}
+			)
 
-			.post('', {
+			.post(
+				'',
+				{
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
 						uuid: t.String({ error: 'Property uuid is missing' }),
@@ -78,15 +101,19 @@ export const playersRoute = createElysia()
 					detail: {
 						tags: ['Player'],
 					},
-				}, async ({ body, set }) => {
+				},
+				async ({ body, set }) => {
 					return playerService.create({
 						uuid: body.uuid,
 						description: body.description,
 						role: body.role,
 					})
-				})
+				}
+			)
 
-			.patch('', {
+			.patch(
+				'',
+				{
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
 						uuid: t.String({ error: 'Property uuid is missing' }),
@@ -96,32 +123,42 @@ export const playersRoute = createElysia()
 					detail: {
 						tags: ['Player'],
 					},
-				}, async ({ body, set }) => {
+				},
+				async ({ body, set }) => {
 					const result = await playerService.patch(body)
 					return result
-				})
+				}
+			)
 
-			.get('/:region/operations/sessions', {
+			.get(
+				'/:region/operations/sessions',
+				{
 					params: t.Object({
 						region: t.Enum(Regions),
 					}),
 					query: t.Object({
 						username: t.Optional(t.String()),
-						limit: t.Optional(t.Numeric({ minimum: 0, maximum: 100 })),
+						limit: t.Optional(
+							t.Numeric({ minimum: 0, maximum: 100 })
+						),
 						offset: t.Optional(t.Numeric({ minimum: 0 })),
 					}),
 					detail: {
 						tags: ['Player'],
 					},
-				}, async ({ params, query }) => {
+				},
+				async ({ params, query }) => {
 					return playerService.getOperations(params.region, {
 						username: query.username,
 						limit: query.limit ? Number(query.limit) : undefined,
 						offset: query.offset ? Number(query.offset) : undefined,
 					})
-				})
+				}
+			)
 
-			.get('/:region/:character', {
+			.get(
+				'/:region/:character',
+				{
 					params: t.Object({
 						region: t.Enum(Regions),
 						character: t.String(),
@@ -129,7 +166,8 @@ export const playersRoute = createElysia()
 					detail: {
 						tags: ['Player'],
 					},
-				}, async ({ params }) => {
+				},
+				async ({ params }) => {
 					const profile = await playerService.get({
 						region: params.region,
 						character: params.character,
@@ -138,9 +176,12 @@ export const playersRoute = createElysia()
 						player_name: profile.username,
 					})
 					return { ...profile, clan_history }
-				})
+				}
+			)
 
-			.get('/all', {
+			.get(
+				'/all',
+				{
 					query: t.Object({
 						role: t.Enum(PlayerRole, {
 							error: 'Property role is missing',
@@ -149,8 +190,10 @@ export const playersRoute = createElysia()
 					detail: {
 						tags: ['Player'],
 					},
-				}, async ({ query }) => {
+				},
+				async ({ query }) => {
 					const role = query.role as PlayerRole | undefined
 					return playerService.list(role)
-				})
+				}
+			)
 	)

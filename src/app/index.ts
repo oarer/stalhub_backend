@@ -2,10 +2,7 @@ import { createElysia } from '@/utils/elysia'
 import { api } from './api'
 
 export const routes = createElysia()
-	.use(
-		createElysia({ prefix: '/api/v1' })
-			.use(api)
-	)
+	.use(createElysia({ prefix: '/api/v1' }).use(api))
 
 	.get(
 		'/',

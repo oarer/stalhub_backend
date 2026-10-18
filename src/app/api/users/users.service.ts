@@ -603,7 +603,7 @@ class UsersService {
 				map: (item) => ({
 					id: item.id,
 					external_id: item.external_id,
-					title: item.title ?? "",
+					title: item.title ?? '',
 					author: item.author,
 					created_at: item.created_at,
 				}),
@@ -635,7 +635,7 @@ class UsersService {
 				map: (item) => ({
 					id: item.id,
 					external_id: item.external_id,
-					title: item.title ?? "",
+					title: item.title ?? '',
 					author: item.author,
 					created_at: item.created_at,
 				}),

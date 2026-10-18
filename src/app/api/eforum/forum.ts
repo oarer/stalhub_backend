@@ -107,8 +107,7 @@ export async function fetchLastPost(
 			link = `https://forum.exbo.net/d/${slug}/${postNumber}`
 		}
 
-		const replyTo =
-			attrs.replyTo != null ? String(attrs.replyTo) : null
+		const replyTo = attrs.replyTo != null ? String(attrs.replyTo) : null
 		if (replyTo) {
 			await getPostWithDetails(replyTo).catch(() => null)
 		}
@@ -169,10 +168,7 @@ export async function getPostWithDetails(
 
 		let authorName: string | null = null
 		for (const item of data.included ?? []) {
-			if (
-				item.type === 'users' &&
-				String(item.id) === String(userId)
-			) {
+			if (item.type === 'users' && String(item.id) === String(userId)) {
 				authorName = item.attributes?.username ?? null
 				break
 			}

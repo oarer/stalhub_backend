@@ -55,7 +55,6 @@ async function executeDirect<T>(
 		scGatewayRequestsTotal.inc({ node: 'direct', status: '200' })
 		return data
 	} catch (error) {
-
 		const status =
 			error && typeof error === 'object' && 'status' in error
 				? String((error as { status: unknown }).status)
@@ -125,7 +124,6 @@ export async function gatewayRequest<T>(
 
 		const node = await pickNode(cost, triedNodeIds)
 		if (!node) {
-
 			if (!env.SC_GATEWAY_DIRECT_FALLBACK) {
 				await release(token.id, cost)
 				throw {

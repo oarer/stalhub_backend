@@ -70,7 +70,11 @@ export class AbsenceService {
 				events: normalized as never,
 				note: note ?? null,
 			},
-			update: { clan_id, events: normalized as never, note: note ?? null },
+			update: {
+				clan_id,
+				events: normalized as never,
+				note: note ?? null,
+			},
 			include: {
 				user: { select: USER_WITH_BADGES_SELECT },
 			},

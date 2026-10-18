@@ -3,10 +3,13 @@ import { env } from '@/env'
 import { createElysia } from '@/utils/elysia'
 
 export const internalRoutes = createElysia().group('/internal', (app) =>
-	app.post('/bot/notify', {
+	app.post(
+		'/bot/notify',
+		{
 			body: t.Object({ channel_id: t.String(), message: t.String() }),
 			detail: { tags: ['Internal'] },
-		}, async ({ body, headers, set }) => {
+		},
+		async ({ body, headers, set }) => {
 			const auth =
 				(headers as Record<string, string | undefined>)[
 					'x-bot-secret'
@@ -19,5 +22,6 @@ export const internalRoutes = createElysia().group('/internal', (app) =>
 				return { error: 'Invalid bot secret' }
 			}
 			return { ok: true, payload: body }
-		})
+		}
+	)
 )

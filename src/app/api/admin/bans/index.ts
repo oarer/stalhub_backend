@@ -7,7 +7,9 @@ import { abuseStats, listBans } from './bans.service'
 export const bansRoutes = createElysia().group('/bans', (app) =>
 	app
 		.use(jwtPlugin)
-		.get('', {
+		.get(
+			'',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
@@ -17,7 +19,8 @@ export const bansRoutes = createElysia().group('/bans', (app) =>
 					search: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ query }) => {
+			},
+			async ({ query }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				return listBans({
@@ -27,9 +30,14 @@ export const bansRoutes = createElysia().group('/bans', (app) =>
 					take,
 					page,
 				})
-			})
-		.get('/stats', {
+			}
+		)
+		.get(
+			'/stats',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				detail: { tags: ['Admin'] },
-			}, async () => abuseStats())
+			},
+			async () => abuseStats()
+		)
 )

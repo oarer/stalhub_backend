@@ -95,10 +95,13 @@ export const routeAuctionHistory = createElysia()
 		}
 		return { ...st, db }
 	})
-	.get('/auction-history/progress', {
+	.get(
+		'/auction-history/progress',
+		{
 			beforeHandle: [requireAuth, requireAdmin],
 			detail: { tags: ['Admin'] },
-		}, async ({ status }: any) => {
+		},
+		async ({ status }: any) => {
 			const [progress, st] = await Promise.all([
 				auctionProgress().catch((err) => {
 					console.error(
@@ -116,11 +119,15 @@ export const routeAuctionHistory = createElysia()
 				})
 			}
 			return { ...progress, ...st }
-		})
-	.post('/auction-history/deepen', {
+		}
+	)
+	.post(
+		'/auction-history/deepen',
+		{
 			beforeHandle: [requireAuth, requireAdmin],
 			detail: { tags: ['Admin'] },
-		}, async ({ status }: any) => {
+		},
+		async ({ status }: any) => {
 			const st = { ...ingestStatus(), ...rollupStatus() }
 			if (!st.enabled) {
 				return status(503, {
@@ -139,11 +146,15 @@ export const routeAuctionHistory = createElysia()
 				console.error('[AuctionHistory] deepen failed:', err)
 			)
 			return { started: true }
-		})
-	.post('/auction-history/census', {
+		}
+	)
+	.post(
+		'/auction-history/census',
+		{
 			beforeHandle: [requireAuth, requireAdmin],
 			detail: { tags: ['Admin'] },
-		}, async ({ status }: any) => {
+		},
+		async ({ status }: any) => {
 			const st = { ...ingestStatus(), ...rollupStatus() }
 			if (st.censusRunning) {
 				return status(409, {
@@ -156,11 +167,15 @@ export const routeAuctionHistory = createElysia()
 				console.error('[AuctionHistory] census failed:', err)
 			)
 			return { started: true }
-		})
-	.post('/auction-history/rollup', {
+		}
+	)
+	.post(
+		'/auction-history/rollup',
+		{
 			beforeHandle: [requireAuth, requireAdmin],
 			detail: { tags: ['Admin'] },
-		}, async ({ status }: any) => {
+		},
+		async ({ status }: any) => {
 			const st = { ...ingestStatus(), ...rollupStatus() }
 			if (st.rollupRunning) {
 				return status(409, {
@@ -173,4 +188,5 @@ export const routeAuctionHistory = createElysia()
 				console.error('[AuctionHistory] rollup failed:', err)
 			)
 			return { started: true }
-		})
+		}
+	)

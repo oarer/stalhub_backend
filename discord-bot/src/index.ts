@@ -19,11 +19,7 @@ import {
 	listGuildSettings,
 	resolveMember,
 } from './lib/access'
-import {
-	describeClose,
-	fatalExit,
-	isFatalCloseCode,
-} from './lib/gateway'
+import { describeClose, fatalExit, isFatalCloseCode } from './lib/gateway'
 import { error, log, warn } from './lib/logger'
 import { mskDateStr, mskHHMM } from './lib/msk'
 
@@ -109,7 +105,10 @@ async function main() {
 				await handleAbsenceComponent(interaction).catch((err) =>
 					error('Absence component handler failed:', err)
 				)
-			} else if (interaction.customId.startsWith('ss:') && interaction.isButton()) {
+			} else if (
+				interaction.customId.startsWith('ss:') &&
+				interaction.isButton()
+			) {
 				await handleScreenshotComponent(interaction).catch((err) =>
 					error('Screenshot component handler failed:', err)
 				)

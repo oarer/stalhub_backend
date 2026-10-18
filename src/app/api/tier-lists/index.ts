@@ -14,7 +14,9 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 	app
 		.use(jwtPlugin)
 
-		.get('', {
+		.get(
+			'',
+			{
 				beforeHandle: [requireOptionalAuth],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
@@ -28,7 +30,8 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 					category: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Tier Lists'] },
-			}, async ({ query, store }) => {
+			},
+			async ({ query, store }) => {
 				return tierListsService.list({
 					take: query.take ?? 24,
 					page: (query.page ?? 1) - 1,
@@ -40,27 +43,35 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 					category: query.category as string | undefined,
 					user_id: fromStoreOpt(store).user_id,
 				})
-			})
+			}
+		)
 
-		.get('mine', {
+		.get(
+			'mine',
+			{
 				beforeHandle: [requireAuth],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Tier Lists'] },
-			}, async ({ query, store }) => {
+			},
+			async ({ query, store }) => {
 				return tierListsService.listMine(
 					fromStore(store).user_id,
 					query.take ?? 24,
 					(query.page ?? 1) - 1
 				)
-			})
+			}
+		)
 
-		.get('/:id', {
+		.get(
+			'/:id',
+			{
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Tier Lists'] },
-			}, async ({ params, store, request }) => {
+			},
+			async ({ params, store, request }) => {
 				return tierListsService.getById(
 					params.id,
 					fromStoreOpt(store).user_id,
@@ -76,9 +87,12 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 							request.headers.get('user-agent') ?? undefined,
 					}
 				)
-			})
+			}
+		)
 
-		.post('', {
+		.post(
+			'',
+			{
 				beforeHandle: [requireAuth],
 				body: t.Object({
 					title: t.String({ maxLength: 200 }),
@@ -117,11 +131,15 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 					),
 				}),
 				detail: { tags: ['Tier Lists'] },
-			}, async ({ body, store }) => {
+			},
+			async ({ body, store }) => {
 				return tierListsService.create(fromStore(store).user_id, body)
-			})
+			}
+		)
 
-		.patch('/:id', {
+		.patch(
+			'/:id',
+			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
@@ -157,7 +175,8 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 					),
 				}),
 				detail: { tags: ['Tier Lists'] },
-			}, async ({ params, body, store, set }) => {
+			},
+			async ({ params, body, store, set }) => {
 				const { user_id } = fromStore(store)
 				const is_admin = await checkPermission(
 					user_id,
@@ -195,13 +214,17 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 				}
 
 				return result
-			})
+			}
+		)
 
-		.delete('/:id', {
+		.delete(
+			'/:id',
+			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Tier Lists'] },
-			}, async ({ params, store, set }) => {
+			},
+			async ({ params, store, set }) => {
 				const { user_id } = fromStore(store)
 				const is_admin = await checkPermission(
 					user_id,
@@ -219,5 +242,6 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 				}
 
 				return { success: true }
-			})
+			}
+		)
 )

@@ -8,41 +8,70 @@ import { adminClanService } from './clans.service'
 export const clansRoutes = createElysia().group('/clans', (app) =>
 	app
 		.use(jwtPlugin)
-		.get('/seasons', {
-			beforeHandle: [requireAuth, requireAdmin],
-			detail: { tags: ['Admin'] },
-		}, () => adminClanService.listSeasons())
-		.post('/seasons', {
+		.get(
+			'/seasons',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
-				body: t.Object({ name: t.String(), starts_at: t.String(), ends_at: t.String() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ body, set }) => {
+			},
+			() => adminClanService.listSeasons()
+		)
+		.post(
+			'/seasons',
+			{
+				beforeHandle: [requireAuth, requireAdmin],
+				body: t.Object({
+					name: t.String(),
+					starts_at: t.String(),
+					ends_at: t.String(),
+				}),
+				detail: { tags: ['Admin'] },
+			},
+			async ({ body, set }) => {
 				try {
 					return await adminClanService.createSeason(body)
 				} catch (error) {
 					set.status = 400
 					return { error: (error as Error).message }
 				}
-			})
-		.put('/seasons/:season_id', {
+			}
+		)
+		.put(
+			'/seasons/:season_id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ season_id: t.Numeric() }),
-				body: t.Object({ name: t.String(), starts_at: t.String(), ends_at: t.String() }),
+				body: t.Object({
+					name: t.String(),
+					starts_at: t.String(),
+					ends_at: t.String(),
+				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, body, set }) => {
+			},
+			async ({ params, body, set }) => {
 				try {
-					return await adminClanService.updateSeason(params.season_id, body)
+					return await adminClanService.updateSeason(
+						params.season_id,
+						body
+					)
 				} catch (error) {
 					set.status = 400
 					return { error: (error as Error).message }
 				}
-			})
-		.delete('/seasons/:season_id', {
+			}
+		)
+		.delete(
+			'/seasons/:season_id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ season_id: t.Numeric() }),
 				detail: { tags: ['Admin'] },
-			}, ({ params }) => adminClanService.removeSeason(params.season_id))
-		.get('', {
+			},
+			({ params }) => adminClanService.removeSeason(params.season_id)
+		)
+		.get(
+			'',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
@@ -50,34 +79,46 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 					search: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ query }) => {
+			},
+			async ({ query }) => {
 				const take = query.take ?? 20
 				const page = (query.page ?? 1) - 1
 				return adminClanService.list(take, page, query.search)
-			})
+			}
+		)
 
-		.get('/:clan_id', {
+		.get(
+			'/:clan_id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				const result = await adminClanService.get(params.clan_id)
 				if (!result) {
 					set.status = 404
 					return { error: 'Clan not found' }
 				}
 				return result
-			})
+			}
+		)
 
-		.get('/:clan_id/members', {
+		.get(
+			'/:clan_id/members',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ params }) => {
+			},
+			async ({ params }) => {
 				return adminClanService.getMembers(params.clan_id)
-			})
+			}
+		)
 
-		.patch('/:clan_id', {
+		.patch(
+			'/:clan_id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ clan_id: t.String() }),
 				body: t.Object({
@@ -107,7 +148,8 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 					),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, body, set }) => {
+			},
+			async ({ params, body, set }) => {
 				const result = await adminClanService.update(
 					params.clan_id,
 					body as never
@@ -117,16 +159,20 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 					return { error: 'Clan not found' }
 				}
 				return result
-			})
+			}
+		)
 
-		.post('/:clan_id/block', {
+		.post(
+			'/:clan_id/block',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ clan_id: t.String() }),
 				body: t.Object({
 					reason: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, body, set }) => {
+			},
+			async ({ params, body, set }) => {
 				const result = await adminClanService.block(
 					params.clan_id,
 					body.reason
@@ -136,52 +182,68 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 					return { error: 'Clan not found' }
 				}
 				return result
-			})
+			}
+		)
 
-		.delete('/:clan_id/block', {
+		.delete(
+			'/:clan_id/block',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				const result = await adminClanService.unblock(params.clan_id)
 				if (!result) {
 					set.status = 404
 					return { error: 'Clan not found' }
 				}
 				return result
-			})
+			}
+		)
 
-		.delete('/:clan_id', {
+		.delete(
+			'/:clan_id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				const ok = await adminClanService.remove(params.clan_id)
 				if (!ok) {
 					set.status = 404
 					return { error: 'Clan not found' }
 				}
 				return { success: true }
-			})
+			}
+		)
 
-		.post('/:clan_id/sync', {
+		.post(
+			'/:clan_id/sync',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				const result = await adminClanService.sync(params.clan_id)
 				if (!result) {
 					set.status = 404
 					return { error: 'Clan not found' }
 				}
 				return result
-			})
+			}
+		)
 
-		.get('/:clan_id/sessions', {
+		.get(
+			'/:clan_id/sessions',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				const result = await adminClanService.listSessions(
 					params.clan_id
 				)
@@ -190,9 +252,12 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 					return { error: 'Clan not found' }
 				}
 				return result
-			})
+			}
+		)
 
-		.patch('/sessions/:session_id', {
+		.patch(
+			'/sessions/:session_id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ session_id: t.Numeric() }),
 				body: t.Object({
@@ -210,7 +275,8 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 					region: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, body, set }) => {
+			},
+			async ({ params, body, set }) => {
 				const result = await adminClanService.updateSession(
 					params.session_id,
 					body
@@ -220,13 +286,17 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 					return { error: 'Session not found' }
 				}
 				return result
-			})
+			}
+		)
 
-		.delete('/sessions/:session_id', {
+		.delete(
+			'/sessions/:session_id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ session_id: t.Numeric() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				const result = await adminClanService.removeSession(
 					params.session_id
 				)
@@ -235,5 +305,6 @@ export const clansRoutes = createElysia().group('/clans', (app) =>
 					return { error: 'Session not found' }
 				}
 				return result
-			})
+			}
+		)
 )

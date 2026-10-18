@@ -8,25 +8,35 @@ import { badgesService } from './badges.service'
 export const badgesRoutes = createElysia().group('/badges', (app) =>
 	app
 		.use(jwtPlugin)
-		.get('', {
-			beforeHandle: [requireAuth, requireAdmin],
-			detail: { tags: ['Admin'] },
-		}, async () => badgesService.list())
+		.get(
+			'',
+			{
+				beforeHandle: [requireAuth, requireAdmin],
+				detail: { tags: ['Admin'] },
+			},
+			async () => badgesService.list()
+		)
 
-		.get('/:id', {
+		.get(
+			'/:id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.Numeric() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				const result = await badgesService.get(Number(params.id))
 				if (!result) {
 					set.status = 404
 					return { error: 'Badge not found' }
 				}
 				return result
-			})
+			}
+		)
 
-		.post('', {
+		.post(
+			'',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				body: t.Object({
 					name: t.String({ error: 'name is required' }),
@@ -35,7 +45,8 @@ export const badgesRoutes = createElysia().group('/badges', (app) =>
 					image: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ body }) => {
+			},
+			async ({ body }) => {
 				const result = await badgesService.create(
 					body.name,
 					body.icon,
@@ -44,9 +55,12 @@ export const badgesRoutes = createElysia().group('/badges', (app) =>
 				)
 				if ('error' in result) return result
 				return result
-			})
+			}
+		)
 
-		.patch('/:id', {
+		.patch(
+			'/:id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.Numeric() }),
 				body: t.Object({
@@ -56,7 +70,8 @@ export const badgesRoutes = createElysia().group('/badges', (app) =>
 					image: t.Optional(t.Nullable(t.String())),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, body, set }) => {
+			},
+			async ({ params, body, set }) => {
 				const result = await badgesService.update(
 					Number(params.id),
 					body
@@ -67,26 +82,34 @@ export const badgesRoutes = createElysia().group('/badges', (app) =>
 				}
 				if ('error' in result) return result
 				return result
-			})
+			}
+		)
 
-		.delete('/:id', {
+		.delete(
+			'/:id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.Numeric() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ params }) => {
+			},
+			async ({ params }) => {
 				const ok = await badgesService.remove(Number(params.id))
 				if (!ok) return { error: 'Badge not found' }
 				return { success: true }
-			})
+			}
+		)
 
-		.post('/:id/users/:user_id', {
+		.post(
+			'/:id/users/:user_id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({
 					id: t.Numeric(),
 					user_id: t.Numeric(),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				const result = await badgesService.assignToUser(
 					Number(params.user_id),
 					Number(params.id)
@@ -97,16 +120,20 @@ export const badgesRoutes = createElysia().group('/badges', (app) =>
 				}
 				if ('error' in result) return result
 				return result
-			})
+			}
+		)
 
-		.delete('/:id/users/:user_id', {
+		.delete(
+			'/:id/users/:user_id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({
 					id: t.Numeric(),
 					user_id: t.Numeric(),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				const result = await badgesService.removeFromUser(
 					Number(params.user_id),
 					Number(params.id)
@@ -116,13 +143,17 @@ export const badgesRoutes = createElysia().group('/badges', (app) =>
 					return { error: 'User not found' }
 				}
 				return result
-			})
+			}
+		)
 
-		.get('/user/:user_id', {
+		.get(
+			'/user/:user_id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ user_id: t.Numeric() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				const result = await badgesService.getUserBadges(
 					Number(params.user_id)
 				)
@@ -131,5 +162,6 @@ export const badgesRoutes = createElysia().group('/badges', (app) =>
 					return { error: 'User not found' }
 				}
 				return result
-			})
+			}
+		)
 )

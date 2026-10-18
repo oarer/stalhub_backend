@@ -12,14 +12,17 @@ export const profileCommentsRoutes = createElysia().group(
 		app
 			.use(jwtPlugin)
 
-			.get('', {
+			.get(
+				'',
+				{
 					params: t.Object({ id: t.Numeric() }),
 					query: t.Object({
 						take: t.Optional(t.Numeric()),
 						page: t.Optional(t.Numeric()),
 					}),
 					detail: { tags: ['User Profile Comments'] },
-				}, async ({ params, query }) => {
+				},
+				async ({ params, query }) => {
 					const take = query.take ?? 50
 					const page = (query.page ?? 1) - 1
 					return profileCommentsService.listByUser(
@@ -27,9 +30,12 @@ export const profileCommentsRoutes = createElysia().group(
 						take,
 						page
 					)
-				})
+				}
+			)
 
-			.post('', {
+			.post(
+				'',
+				{
 					beforeHandle: [requireAuth],
 					params: t.Object({ id: t.Numeric() }),
 					body: t.Object({
@@ -40,13 +46,17 @@ export const profileCommentsRoutes = createElysia().group(
 						parent_id: t.Optional(t.Number()),
 					}),
 					detail: { tags: ['User Profile Comments'] },
-				}, async ({ params, body, store, set, request }) => {
+				},
+				async ({ params, body, store, set, request }) => {
 					const { user_id } = fromStore(store)
 					const xss = await rejectOnXss({
 						fields: { content: body.content },
 						user_id,
 						ip:
-							request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+							request.headers
+								.get('x-forwarded-for')
+								?.split(',')[0]
+								?.trim() ??
 							request.headers.get('x-real-ip') ??
 							'?',
 						route: 'POST /users/id/:id/comments',
@@ -68,16 +78,20 @@ export const profileCommentsRoutes = createElysia().group(
 					if (!comment) return { error: 'Parent comment not found' }
 
 					return comment
-				})
+				}
+			)
 
-			.delete('/:comment_id', {
+			.delete(
+				'/:comment_id',
+				{
 					beforeHandle: [requireAuth],
 					params: t.Object({
 						id: t.Numeric(),
 						comment_id: t.Numeric(),
 					}),
 					detail: { tags: ['User Profile Comments'] },
-				}, async ({ params, store, set }) => {
+				},
+				async ({ params, store, set }) => {
 					const { user_id } = fromStore(store)
 					const is_admin = await checkPermission(
 						user_id,
@@ -96,5 +110,6 @@ export const profileCommentsRoutes = createElysia().group(
 					}
 
 					return { success: true }
-				})
+				}
+			)
 )

@@ -57,14 +57,12 @@ async function compress(
 	input: Buffer,
 	mime: CompressibleMime
 ): Promise<Buffer> {
-	const pipeline = sharp(input)
-		.rotate()
-		.resize({
-			width: MAX_DIMENSION,
-			height: MAX_DIMENSION,
-			fit: 'inside',
-			withoutEnlargement: true,
-		})
+	const pipeline = sharp(input).rotate().resize({
+		width: MAX_DIMENSION,
+		height: MAX_DIMENSION,
+		fit: 'inside',
+		withoutEnlargement: true,
+	})
 	let output: Buffer
 	if (mime === 'image/jpeg')
 		output = await pipeline.jpeg({ quality: 82, mozjpeg: true }).toBuffer()

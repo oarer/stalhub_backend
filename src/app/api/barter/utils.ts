@@ -11,8 +11,7 @@ import type {
 
 const BARTER_URL =
 	'https://github.com/EXBO-Studio/stalcraft-database/raw/refs/heads/main/ru/barter_recipes.json'
-const LISTING_URL =
-	'https://cdn.stalhub.dev/db/listing.json'
+const LISTING_URL = 'https://cdn.stalhub.dev/db/listing.json'
 
 const fetchJson = async <T>(url: string): Promise<T> => {
 	const res = await fetch(url)
@@ -180,5 +179,7 @@ export const listCraftable = (
 			}
 		})
 		.filter((x): x is NonNullable<typeof x> => x !== null)
-		.sort((a, b) => a.settlement_required_level - b.settlement_required_level)
+		.sort(
+			(a, b) => a.settlement_required_level - b.settlement_required_level
+		)
 }

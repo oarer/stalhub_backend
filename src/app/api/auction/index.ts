@@ -5,7 +5,9 @@ import { auctionService } from './auction.service'
 
 export const auctionRoutes = createElysia().group('/auction', (app) =>
 	app
-		.get('/:region/:id/lots', {
+		.get(
+			'/:region/:id/lots',
+			{
 				params: t.Object({
 					id: t.String(),
 					region: t.Enum(Regions),
@@ -18,7 +20,8 @@ export const auctionRoutes = createElysia().group('/auction', (app) =>
 				detail: {
 					tags: ['Auction'],
 				},
-			}, async ({ params, query }) => {
+			},
+			async ({ params, query }) => {
 				const { id, region } = params
 
 				const limit = query.limit ?? '10'
@@ -32,8 +35,11 @@ export const auctionRoutes = createElysia().group('/auction', (app) =>
 					additional,
 					offset,
 				})
-			})
-		.get('/:region/:id/history', {
+			}
+		)
+		.get(
+			'/:region/:id/history',
+			{
 				params: t.Object({
 					id: t.String(),
 					region: t.Enum(Regions),
@@ -46,7 +52,8 @@ export const auctionRoutes = createElysia().group('/auction', (app) =>
 				detail: {
 					tags: ['Auction'],
 				},
-			}, async ({ params, query }) => {
+			},
+			async ({ params, query }) => {
 				const { id, region } = params
 
 				const limit = query.limit ?? '10'
@@ -60,5 +67,6 @@ export const auctionRoutes = createElysia().group('/auction', (app) =>
 					additional,
 					offset,
 				})
-			})
+			}
+		)
 )

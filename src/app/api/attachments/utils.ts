@@ -1,8 +1,7 @@
 import type { AttachmentItem, WeaponEntry } from '@/types/attachments.type'
 
 const ATTACHMENTS_URL = 'https://cdn.stalhub.dev/db/listing/attachments.json'
-const WEAPONS_URL =
-	'https://cdn.stalhub.dev/db/listing/weapons.json'
+const WEAPONS_URL = 'https://cdn.stalhub.dev/db/listing/weapons.json'
 
 const SUITABLE_TARGETS_KEY = 'weapon.lore.attachment.all_suitable_targets'
 

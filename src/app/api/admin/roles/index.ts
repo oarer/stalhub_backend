@@ -14,12 +14,18 @@ import { roleService } from './roles.service'
 export const rolesRoutes = createElysia().group('/roles', (app) =>
 	app
 		.use(jwtPlugin)
-		.get('', {
-			beforeHandle: [requireAuth, requireAdmin],
-			detail: { tags: ['Admin'] },
-		}, async () => roleService.list())
+		.get(
+			'',
+			{
+				beforeHandle: [requireAuth, requireAdmin],
+				detail: { tags: ['Admin'] },
+			},
+			async () => roleService.list()
+		)
 
-		.post('', {
+		.post(
+			'',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				body: t.Object({
 					name: t.String({ error: 'name is required' }),
@@ -27,7 +33,8 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 					rank: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ store, body, set }) => {
+			},
+			async ({ store, body, set }) => {
 				if (body.rank !== undefined) {
 					const actorRank = await getUserMaxRank(
 						fromStore(store).user_id
@@ -44,9 +51,12 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 					body.description,
 					body.rank
 				)
-			})
+			}
+		)
 
-		.patch('/:id', {
+		.patch(
+			'/:id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
@@ -55,7 +65,8 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 					rank: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ store, params, body, set }) => {
+			},
+			async ({ store, params, body, set }) => {
 				const role = await prisma.role.findUnique({
 					where: { id: Number(params.id) },
 					select: { rank: true },
@@ -91,13 +102,17 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 				const result = await roleService.update(Number(params.id), body)
 				if (!result) return { error: 'Not found' }
 				return result
-			})
+			}
+		)
 
-		.delete('/:id', {
+		.delete(
+			'/:id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ store, params, set }) => {
+			},
+			async ({ store, params, set }) => {
 				const role = await prisma.role.findUnique({
 					where: { id: Number(params.id) },
 					select: { rank: true },
@@ -121,9 +136,12 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 				const deleted = await roleService.remove(Number(params.id))
 				if (!deleted) return { error: 'Not found' }
 				return { success: true }
-			})
+			}
+		)
 
-		.post('/:id/permissions', {
+		.post(
+			'/:id/permissions',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
@@ -132,7 +150,8 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 					}),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ store, params, body, set }) => {
+			},
+			async ({ store, params, body, set }) => {
 				const role = await prisma.role.findUnique({
 					where: { id: Number(params.id) },
 					select: { rank: true },
@@ -159,9 +178,12 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 				)
 				if (!result) return { error: 'Role not found' }
 				return result
-			})
+			}
+		)
 
-		.delete('/:id/permissions', {
+		.delete(
+			'/:id/permissions',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
@@ -170,7 +192,8 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 					}),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ store, params, body, set }) => {
+			},
+			async ({ store, params, body, set }) => {
 				const role = await prisma.role.findUnique({
 					where: { id: Number(params.id) },
 					select: { rank: true },
@@ -197,5 +220,6 @@ export const rolesRoutes = createElysia().group('/roles', (app) =>
 				)
 				if (!result) return { error: 'Role not found' }
 				return result
-			})
+			}
+		)
 )

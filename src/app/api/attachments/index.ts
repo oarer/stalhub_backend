@@ -38,29 +38,39 @@ export const routeAttachments = createElysia()
 			)
 		}
 	})
-	.get('/attachments/:weaponId', async ({ params, status }: { params: Record<string, string>; status: (code: number, body?: unknown) => unknown }) => {
-		const { weaponId } = params
+	.get(
+		'/attachments/:weaponId',
+		async ({
+			params,
+			status,
+		}: {
+			params: Record<string, string>
+			status: (code: number, body?: unknown) => unknown
+		}) => {
+			const { weaponId } = params
 
-		await Promise.all([
-			loadAttachments(),
-			loadWeapons(),
-			loadCompatibleIndex(),
-		])
+			await Promise.all([
+				loadAttachments(),
+				loadWeapons(),
+				loadCompatibleIndex(),
+			])
 
-		const { weapon, attachments: result } = getWeaponAttachments(weaponId)
+			const { weapon, attachments: result } =
+				getWeaponAttachments(weaponId)
 
-		if (!weapon) {
-			return status(404, {
-				status: 404,
-				message: 'Weapon not found',
-			})
+			if (!weapon) {
+				return status(404, {
+					status: 404,
+					message: 'Weapon not found',
+				})
+			}
+
+			attachmentsRequestsTotal.inc()
+
+			return {
+				weapon,
+				total: result.length,
+				attachments: result,
+			}
 		}
-
-		attachmentsRequestsTotal.inc()
-
-		return {
-			weapon,
-			total: result.length,
-			attachments: result,
-		}
-	})
+	)

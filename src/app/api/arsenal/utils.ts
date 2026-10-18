@@ -56,7 +56,9 @@ export const updatePrices = async () => {
 				const fetched = item.id ? await fetchItemPrice(item.id) : null
 				return {
 					...item,
-					icon: item.id ? (icons.get(item.id) ?? item.icon) : item.icon,
+					icon: item.id
+						? (icons.get(item.id) ?? item.icon)
+						: item.icon,
 					currentPrice: (fetched ?? item.currentPrice) || 0,
 				} satisfies ItemResult
 			})

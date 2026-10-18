@@ -6,16 +6,12 @@
 		"baseUrl": ".",
 		"ignoreDeprecations": "6.0",
 		"paths": {
-			"@/*": [
-				"src/*"
-			]
+			"@/*": ["src/*"]
 		},
 		"resolveJsonModule": true,
 		"outDir": "./dist",
 		"rootDir": "./",
-		"types": [
-			"bun-types"
-		],
+		"types": ["bun-types"],
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
 		"strict": true,

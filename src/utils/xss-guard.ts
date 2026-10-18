@@ -6,7 +6,10 @@ const XSS_PATTERNS: { name: string; re: RegExp }[] = [
 	{ name: 'javascript-uri', re: /javascript\s*:/i },
 	{ name: 'data-uri', re: /data\s*:\s*text\/html/i },
 	{ name: 'vbscript-uri', re: /vbscript\s*:/i },
-	{ name: 'iframe-object-embed', re: /<\s*(iframe|object|embed|form|base|meta)\b/i },
+	{
+		name: 'iframe-object-embed',
+		re: /<\s*(iframe|object|embed|form|base|meta)\b/i,
+	},
 	{ name: 'svg-onload', re: /<\s*svg[^>]*\bon\w+\s*=/i },
 	{ name: 'expression-css', re: /expression\s*\(/i },
 ]
@@ -41,9 +44,7 @@ function isScannable(v: unknown): v is string {
 	return typeof v === 'string' && v.length > 0
 }
 
-export function scanXss(
-	fields: Record<string, unknown>
-): XssScanResult {
+export function scanXss(fields: Record<string, unknown>): XssScanResult {
 	for (const [field, raw] of Object.entries(fields)) {
 		if (!isScannable(raw)) continue
 		const pattern = findXssThreat(raw)
@@ -71,7 +72,11 @@ export async function rejectOnXss(opts: {
 		description: `Поле \`${hit.field}\` отклонено (паттерн \`${hit.pattern}\`).`,
 		color: DiscordEmbedColors.warn,
 		fields: [
-			{ name: 'User ID', value: String(opts.user_id ?? '?'), inline: true },
+			{
+				name: 'User ID',
+				value: String(opts.user_id ?? '?'),
+				inline: true,
+			},
 			{ name: 'IP', value: opts.ip ?? '?', inline: true },
 			{ name: 'Route', value: opts.route ?? '?', inline: true },
 			{ name: 'Field', value: hit.field, inline: true },

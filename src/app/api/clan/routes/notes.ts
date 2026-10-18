@@ -7,23 +7,33 @@ import { notesService } from '../services/notes'
 
 export const notesRoutes = clanContext.group('/notes', (app) =>
 	app
-		.get('', {
+		.get(
+			'',
+			{
 				beforeHandle: [requireAuth, requireClanOfficer],
 				detail: { tags: ['Clan Notes'] },
-			}, ({ store }) => notesService.listAll(store.clan_id!))
-		.post('', {
+			},
+			({ store }) => notesService.listAll(store.clan_id!)
+		)
+		.post(
+			'',
+			{
 				beforeHandle: [requireAuth, requireClanOfficer],
 				body: t.Object({
 					member_id: t.Numeric(),
 					content: t.String({ maxLength: 512 }),
 				}),
 				detail: { tags: ['Clan Notes'] },
-			}, async ({ store, body, set, request }) => {
+			},
+			async ({ store, body, set, request }) => {
 				const xss = await rejectOnXss({
 					fields: { content: body.content },
 					user_id: store.authUserId as number | undefined,
 					ip:
-						request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+						request.headers
+							.get('x-forwarded-for')
+							?.split(',')[0]
+							?.trim() ??
 						request.headers.get('x-real-ip') ??
 						'?',
 					route: 'POST /clan/notes',
@@ -32,19 +42,31 @@ export const notesRoutes = clanContext.group('/notes', (app) =>
 					set.status = 400
 					return { error: 'Invalid content' }
 				}
-				return notesService.upsert(store.clan_id!, store.authUserId!, body.member_id, body.content)
-			})
-		.patch('/:note_id', {
+				return notesService.upsert(
+					store.clan_id!,
+					store.authUserId!,
+					body.member_id,
+					body.content
+				)
+			}
+		)
+		.patch(
+			'/:note_id',
+			{
 				beforeHandle: [requireAuth, requireClanOfficer],
 				params: t.Object({ note_id: t.Numeric() }),
 				body: t.Object({ content: t.String({ maxLength: 512 }) }),
 				detail: { tags: ['Clan Notes'] },
-			}, async ({ params, body, store, set, request }) => {
+			},
+			async ({ params, body, store, set, request }) => {
 				const xss = await rejectOnXss({
 					fields: { content: body.content },
 					user_id: store.authUserId as number | undefined,
 					ip:
-						request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+						request.headers
+							.get('x-forwarded-for')
+							?.split(',')[0]
+							?.trim() ??
 						request.headers.get('x-real-ip') ??
 						'?',
 					route: 'PATCH /clan/notes/:note_id',
@@ -54,10 +76,15 @@ export const notesRoutes = clanContext.group('/notes', (app) =>
 					return { error: 'Invalid content' }
 				}
 				return notesService.update(params.note_id, body.content)
-			})
-		.delete('/:note_id', {
+			}
+		)
+		.delete(
+			'/:note_id',
+			{
 				beforeHandle: [requireAuth, requireClanOfficer],
 				params: t.Object({ note_id: t.Numeric() }),
 				detail: { tags: ['Clan Notes'] },
-			}, ({ params }) => notesService.delete(params.note_id))
+			},
+			({ params }) => notesService.delete(params.note_id)
+		)
 )

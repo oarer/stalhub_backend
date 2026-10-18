@@ -1,8 +1,12 @@
 {
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "noEmit": true,
-    "allowImportingTsExtensions": true
-  },
-  "include": ["src/app/api/map3d/**/*.ts", "src/utils/elysia.ts", "test/map3d-*.test.ts"]
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"allowImportingTsExtensions": true
+	},
+	"include": [
+		"src/app/api/map3d/**/*.ts",
+		"src/utils/elysia.ts",
+		"test/map3d-*.test.ts"
+	]
 }

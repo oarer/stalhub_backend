@@ -262,7 +262,11 @@ export class SquadService {
 		if (trimmed !== squad.name) {
 			const existing = await prisma.clanSquad.findUnique({
 				where: {
-					clan_id_map_name: { clan_id, map: squad.map, name: trimmed },
+					clan_id_map_name: {
+						clan_id,
+						map: squad.map,
+						name: trimmed,
+					},
 				},
 			})
 			if (existing)

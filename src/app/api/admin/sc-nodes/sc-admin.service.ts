@@ -174,7 +174,6 @@ export const scAdminService = {
 		}
 	},
 
-
 	async listTokens() {
 		return tokenUsageSnapshot()
 	},

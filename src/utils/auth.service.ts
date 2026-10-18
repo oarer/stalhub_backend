@@ -148,22 +148,21 @@ class AuthService {
 							id: u.exbo_auth.exbo_id,
 							login: u.exbo_auth.login,
 							username: u.exbo_auth.username,
-							region: u.exbo_auth.region
+							region: u.exbo_auth.region,
 						}
 					: null,
 			},
 
-			customization:
-				u.customization ?? {
-					layout: 'CLASSIC',
-					banner_mode: 'NONE',
-					banner_type: 'HEADER',
-					banner_color: '#171717',
-					banner_image: null,
-					card_background: 'NONE',
-					card_color: '#171717',
-					avatar: null,
-				},
+			customization: u.customization ?? {
+				layout: 'CLASSIC',
+				banner_mode: 'NONE',
+				banner_type: 'HEADER',
+				banner_color: '#171717',
+				banner_image: null,
+				card_background: 'NONE',
+				card_color: '#171717',
+				avatar: null,
+			},
 		}
 	}
 

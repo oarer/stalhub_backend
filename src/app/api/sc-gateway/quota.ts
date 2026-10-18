@@ -113,7 +113,6 @@ export const release = (
 	cost: number
 ): Promise<void> => releaseQuota('token', tokenId, cost)
 
-
 export const peekNodeUsage = (nodeId: number | string): Promise<QuotaState> =>
 	peekQuota('node', nodeId, QUOTA_PER_MINUTE_NODE)
 

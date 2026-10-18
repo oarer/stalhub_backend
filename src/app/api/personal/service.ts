@@ -60,7 +60,9 @@ async function getUserAccessToken(user_id: number): Promise<string> {
 						refresh_token: data.refresh_token ?? blob.refresh_token,
 					})
 				),
-				access_expires_at: new Date(Date.now() + data.expires_in * 1000),
+				access_expires_at: new Date(
+					Date.now() + data.expires_in * 1000
+				),
 				...(data.refresh_expires_in
 					? {
 							refresh_expires_at: new Date(
@@ -116,9 +118,11 @@ class PersonalService {
 		const token = await getUserAccessToken(user_id)
 		const owned = await fetchOwnedCharacters(region, token)
 		const match = owned.find(
-			(c) => c.information?.name?.toLowerCase() === character.toLowerCase()
+			(c) =>
+				c.information?.name?.toLowerCase() === character.toLowerCase()
 		)
-		if (!match) throw new Error('Character does not belong to this EXBO account')
+		if (!match)
+			throw new Error('Character does not belong to this EXBO account')
 
 		const prev = await prisma.personalProfile.findUnique({
 			where: { user_id },
@@ -250,7 +254,10 @@ class PersonalService {
 				await this.takeSnapshot(p.user_id)
 				ok++
 			} catch (err) {
-				console.warn(`[Personal] snapshot failed for user ${p.user_id}:`, err)
+				console.warn(
+					`[Personal] snapshot failed for user ${p.user_id}:`,
+					err
+				)
 			}
 		}
 		console.log(`[Personal] snapshots: ${ok}/${profiles.length}`)
@@ -268,7 +275,9 @@ class PersonalService {
 				...(opts.from || opts.to
 					? {
 							created_at: {
-								...(opts.from ? { gte: new Date(opts.from) } : {}),
+								...(opts.from
+									? { gte: new Date(opts.from) }
+									: {}),
 								...(opts.to ? { lte: new Date(opts.to) } : {}),
 							},
 						}
@@ -282,11 +291,20 @@ class PersonalService {
 	async getSummary(user_id: number) {
 		const snapshots = await this.getSnapshots(user_id, { limit: 500 })
 		if (snapshots.length === 0) {
-			return { snapshots: 0, series: {}, deltas: {}, first: null, last: null }
+			return {
+				snapshots: 0,
+				series: {},
+				deltas: {},
+				first: null,
+				last: null,
+			}
 		}
 		const series: Record<string, { t: string; v: number | string }[]> = {}
 		for (const s of snapshots) {
-			const stats = (s.stats ?? []) as { id: string; value: number | string }[]
+			const stats = (s.stats ?? []) as {
+				id: string
+				value: number | string
+			}[]
 			for (const st of stats) {
 				if (typeof st.value !== 'number') continue
 				;(series[st.id] ??= []).push({
@@ -413,7 +431,11 @@ class PersonalService {
 		const ext = path.extname(file.name) || '.png'
 		const filename = `${session_id}-personal-${randomUUID()}${ext}`
 		const relativePath = path.join('uploads', 'screenshots', filename)
-		await putUpload(`/${relativePath}`, file.buffer, file.type || 'image/png')
+		await putUpload(
+			`/${relativePath}`,
+			file.buffer,
+			file.type || 'image/png'
+		)
 		const row = await prisma.stageScreenshot.create({
 			data: {
 				session_id,
@@ -429,7 +451,9 @@ class PersonalService {
 	async retryAnalysis(user_id: number, screenshot_id: number) {
 		const shot = await prisma.stageScreenshot.findUnique({
 			where: { id: screenshot_id },
-			include: { session: { select: { clan_id: true, creator_id: true } } },
+			include: {
+				session: { select: { clan_id: true, creator_id: true } },
+			},
 		})
 		if (
 			!shot ||
@@ -523,7 +547,9 @@ class PersonalService {
 						await prisma.stageSession.findMany({
 							where: { id: { in: clanSessionIds } },
 							include: {
-								clan: { select: { id: true, tag: true, name: true } },
+								clan: {
+									select: { id: true, tag: true, name: true },
+								},
 								screenshots: {
 									where: { ai_status: 'done' },
 									select: { ai_result: true },
@@ -574,7 +600,9 @@ class PersonalService {
 			const aiTeam =
 				summary?.teams?.find((tm) => tm.is_player_clan)?.name?.trim() ||
 				null
-			const key = s.clan?.id ?? (aiTeam ? `team:${aiTeam.toLowerCase()}` : 'personal')
+			const key =
+				s.clan?.id ??
+				(aiTeam ? `team:${aiTeam.toLowerCase()}` : 'personal')
 			if (!byClan.has(key)) {
 				byClan.set(key, {
 					clan_id: s.clan?.id ?? null,
@@ -642,7 +670,8 @@ class PersonalService {
 			if (!team) continue
 			const match = realBuckets.find(
 				(r) =>
-					r.name?.toLowerCase() === team || r.tag?.toLowerCase() === team
+					r.name?.toLowerCase() === team ||
+					r.tag?.toLowerCase() === team
 			)
 			if (!match) continue
 			for (const sid of b.sessions) match.sessions.add(sid)
@@ -670,7 +699,13 @@ class PersonalService {
 		// разбивка по картам: победы сессии + мои K/D на карте
 		const byMap = new Map<
 			string,
-			{ sessions: number; wins: number; losses: number; kills: number; deaths: number }
+			{
+				sessions: number
+				wins: number
+				losses: number
+				kills: number
+				deaths: number
+			}
 		>()
 		for (const s of all) {
 			if (!played.has(s.id)) continue

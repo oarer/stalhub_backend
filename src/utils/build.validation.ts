@@ -37,9 +37,9 @@ export const BuildDataSchema = z.object({
 	container: ContainerSchema.nullable().default(null),
 })
 
-export function validateBuildData(input: unknown):
-	| { ok: true; data: BuildData }
-	| { ok: false; error: string } {
+export function validateBuildData(
+	input: unknown
+): { ok: true; data: BuildData } | { ok: false; error: string } {
 	const result = BuildDataSchema.safeParse(input)
 	if (result.success) {
 		return { ok: true, data: result.data as BuildData }

@@ -59,19 +59,14 @@ export function sanitizeHtml(htmlContent: string): string {
 
 export function processImagesAndLinks(htmlContent: string): string {
 	if (!htmlContent) return ''
-	return htmlContent.replace(
-		/<img\b[^>]*>/gi,
-		(full) => {
-			const srcMatch =
-				/src\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(full)
-			let src = srcMatch?.[2] ?? srcMatch?.[3] ?? srcMatch?.[4] ?? ''
-			if (!src) return ''
-			if (src.startsWith('//')) src = 'https:' + src
-			else if (src.startsWith('/'))
-				src = 'https://forum.exbo.net' + src
-			return `<a href="${escapeHtml(src)}">фото</a>`
-		}
-	)
+	return htmlContent.replace(/<img\b[^>]*>/gi, (full) => {
+		const srcMatch = /src\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(full)
+		let src = srcMatch?.[2] ?? srcMatch?.[3] ?? srcMatch?.[4] ?? ''
+		if (!src) return ''
+		if (src.startsWith('//')) src = 'https:' + src
+		else if (src.startsWith('/')) src = 'https://forum.exbo.net' + src
+		return `<a href="${escapeHtml(src)}">фото</a>`
+	})
 }
 
 const JUNK_TAGS = [
@@ -124,7 +119,8 @@ export function extractImageLinks(htmlContent: string): string[] {
 		push(m[2] ?? m[3] ?? m[4] ?? '')
 	}
 	// превью YouTube, зашитое в style (s9e-эмбеды форума)
-	const thumbRe = /https?:\/\/i\.ytimg\.com\/vi\/[\w-]+\/[\w.]+\.(?:jpg|webp)/gi
+	const thumbRe =
+		/https?:\/\/i\.ytimg\.com\/vi\/[\w-]+\/[\w.]+\.(?:jpg|webp)/gi
 	let t: RegExpExecArray | null
 	while ((t = thumbRe.exec(htmlContent)) !== null) {
 		push(t[0])
@@ -272,14 +268,22 @@ export function processMentions(htmlContent: string): string {
 }
 
 function extractQuoteAuthor(blockquoteInner: string): string | null {
-	const mention = /<a\b[^>]*\bclass\s*=\s*["'][^"']*(?:PostMention|UserMention)[^"']*["'][^>]*>([\s\S]*?)<\/a>/i.exec(
-		blockquoteInner
-	)
+	const mention =
+		/<a\b[^>]*\bclass\s*=\s*["'][^"']*(?:PostMention|UserMention)[^"']*["'][^>]*>([\s\S]*?)<\/a>/i.exec(
+			blockquoteInner
+		)
 	if (mention) {
-		return mention[1].replace(/<[^>]+>/g, '').trim().replace(/^@/, '') || null
+		return (
+			mention[1]
+				.replace(/<[^>]+>/g, '')
+				.trim()
+				.replace(/^@/, '') || null
+		)
 	}
 
-	const cited = /<(cite|strong)\b[^>]*>([\s\S]*?)<\/\1>/i.exec(blockquoteInner)
+	const cited = /<(cite|strong)\b[^>]*>([\s\S]*?)<\/\1>/i.exec(
+		blockquoteInner
+	)
 	if (cited) {
 		return cited[2].replace(/<[^>]+>/g, '').trim() || null
 	}
@@ -335,12 +339,12 @@ export function getOriginalPostIdFromMention(
 	contentHtml: string
 ): string | null {
 	if (!contentHtml) return null
-	const m = /<a\b[^>]*\bclass\s*=\s*["'][^"']*PostMention[^"']*["'][^>]*>/i.exec(
-		contentHtml
-	)
+	const m =
+		/<a\b[^>]*\bclass\s*=\s*["'][^"']*PostMention[^"']*["'][^>]*>/i.exec(
+			contentHtml
+		)
 	if (!m) return null
-	const idMatch =
-		/data-id\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(m[0])
+	const idMatch = /data-id\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(m[0])
 	return idMatch?.[2] ?? idMatch?.[3] ?? idMatch?.[4] ?? null
 }
 
@@ -446,7 +450,6 @@ export async function formatDevMessage(
 				`<b> ${authorLink} написал:</b>\n<blockquote expandable>${plain}</blockquote>`
 			)
 		} else {
-
 			const fb = buildEmbedFallback(contentHtml)
 			if (fb.html.trim()) {
 				responseHtml = fb.html
@@ -457,7 +460,9 @@ export async function formatDevMessage(
 		}
 	}
 
-	parts.push(`#${author}\n🔗 <a href="${messageLink}">Ссылка на сообщение</a>`)
+	parts.push(
+		`#${author}\n🔗 <a href="${messageLink}">Ссылка на сообщение</a>`
+	)
 
 	const filtered = parts
 		.filter((p) => p && p.trim())

@@ -49,7 +49,10 @@ export async function putUpload(
 ): Promise<void> {
 	if (!isS3Uploads()) {
 		const abs = resolve(process.cwd(), publicPath.replace(/^\/+/, ''))
-		if (abs !== LOCAL_UPLOADS_DIR && !abs.startsWith(LOCAL_UPLOADS_DIR + '/')) {
+		if (
+			abs !== LOCAL_UPLOADS_DIR &&
+			!abs.startsWith(LOCAL_UPLOADS_DIR + '/')
+		) {
 			throw new Error('Upload path escape blocked')
 		}
 		try {
@@ -73,7 +76,10 @@ export async function putUpload(
 export async function deleteUpload(publicPath: string): Promise<void> {
 	if (!isS3Uploads()) {
 		const abs = resolve(process.cwd(), publicPath.replace(/^\/+/, ''))
-		if (abs !== LOCAL_UPLOADS_DIR && !abs.startsWith(LOCAL_UPLOADS_DIR + '/')) {
+		if (
+			abs !== LOCAL_UPLOADS_DIR &&
+			!abs.startsWith(LOCAL_UPLOADS_DIR + '/')
+		) {
 			return
 		}
 		await rm(abs, { force: true }).catch(() => {})
@@ -81,14 +87,21 @@ export async function deleteUpload(publicPath: string): Promise<void> {
 	}
 	const key = toS3Key(publicPath)
 	if (!key) return
-	await s3client().delete(key).catch(() => {})
+	await s3client()
+		.delete(key)
+		.catch(() => {})
 }
 
-export async function readUploadBytes(publicPath: string): Promise<Buffer | null> {
+export async function readUploadBytes(
+	publicPath: string
+): Promise<Buffer | null> {
 	try {
 		if (!isS3Uploads()) {
 			const abs = resolve(process.cwd(), publicPath.replace(/^\/+/, ''))
-			if (abs !== LOCAL_UPLOADS_DIR && !abs.startsWith(LOCAL_UPLOADS_DIR + '/')) {
+			if (
+				abs !== LOCAL_UPLOADS_DIR &&
+				!abs.startsWith(LOCAL_UPLOADS_DIR + '/')
+			) {
 				return null
 			}
 			const file = Bun.file(abs)
@@ -108,10 +121,15 @@ export async function listUploadSizes(prefixKey: string): Promise<number[]> {
 	if (!isS3Uploads()) {
 		const { readdir, stat } = await import('node:fs/promises')
 		const dir = resolve(process.cwd(), prefixKey)
-		if (dir !== LOCAL_UPLOADS_DIR && !dir.startsWith(LOCAL_UPLOADS_DIR + '/')) {
+		if (
+			dir !== LOCAL_UPLOADS_DIR &&
+			!dir.startsWith(LOCAL_UPLOADS_DIR + '/')
+		) {
 			return []
 		}
-		const entries = await readdir(dir, { withFileTypes: true }).catch(() => [])
+		const entries = await readdir(dir, { withFileTypes: true }).catch(
+			() => []
+		)
 		const sizes: number[] = []
 		for (const entry of entries) {
 			if (!entry.isFile()) continue

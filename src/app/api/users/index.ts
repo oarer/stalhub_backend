@@ -36,14 +36,20 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 		.use(jwtPlugin)
 		.use(avatarRoutes)
 		.use(profileCommentsRoutes)
-		.get('/@me', {
+		.get(
+			'/@me',
+			{
 				beforeHandle: [requireAuth],
 				detail: { tags: ['Users'] },
-			}, async ({ store }) => {
+			},
+			async ({ store }) => {
 				return usersService.getMe(fromStore(store).session_id)
-			})
+			}
+		)
 
-		.patch('/@me', {
+		.patch(
+			'/@me',
+			{
 				beforeHandle: [requireAuth],
 				body: t.Object({
 					public_profile: t.Optional(t.Boolean()),
@@ -71,11 +77,15 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					),
 				}),
 				detail: { tags: ['Users'] },
-			}, async ({ body, store, set, request }) => {
+			},
+			async ({ body, store, set, request }) => {
 				const { name, username, social_links, ...settingsData } = body
 				const user_id = fromStore(store).user_id
 				const ip =
-					request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+					request.headers
+						.get('x-forwarded-for')
+						?.split(',')[0]
+						?.trim() ??
 					request.headers.get('x-real-ip') ??
 					'?'
 
@@ -146,9 +156,12 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 				}
 
 				return usersService.getMe(fromStore(store).session_id)
-			})
+			}
+		)
 
-		.post('/@me/onboarding', {
+		.post(
+			'/@me/onboarding',
+			{
 				beforeHandle: [requireAuth],
 				body: t.Object({
 					name: t.Optional(t.String({ minLength: 1 })),
@@ -172,7 +185,8 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					card_color: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Users'] },
-			}, async ({ body, store, set }) => {
+			},
+			async ({ body, store, set }) => {
 				const result = await usersService.completeOnboarding(
 					fromStore(store).user_id,
 					body
@@ -183,24 +197,32 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 				}
 
 				return usersService.getMe(fromStore(store).session_id)
-			})
+			}
+		)
 
 		// logout
-		.delete('/@me', {
+		.delete(
+			'/@me',
+			{
 				beforeHandle: [requireRefreshAuth],
 				cookie: cookieSchema,
 				detail: { tags: ['Users'] },
-			}, async ({ cookie: { refresh_token, access_token }, store }) => {
+			},
+			async ({ cookie: { refresh_token, access_token }, store }) => {
 				await usersService.revokeSession(fromStore(store).session_id)
 				refresh_token?.remove()
 				access_token?.remove()
 				return { success: true }
-			})
+			}
+		)
 
-		.post('/@me/sync-clans', {
+		.post(
+			'/@me/sync-clans',
+			{
 				beforeHandle: [requireAuth],
 				detail: { tags: ['Users'] },
-			}, async ({ store, set }) => {
+			},
+			async ({ store, set }) => {
 				const result = await usersService.syncClans(
 					fromStore(store).user_id
 				)
@@ -209,57 +231,77 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					return result
 				}
 				return result
-			})
+			}
+		)
 
-		.delete('/@me/delete', {
+		.delete(
+			'/@me/delete',
+			{
 				beforeHandle: [requireRefreshAuth],
 				cookie: cookieSchema,
 				detail: { tags: ['Users'] },
-			}, async ({ cookie: { refresh_token, access_token }, store }) => {
+			},
+			async ({ cookie: { refresh_token, access_token }, store }) => {
 				const { user_id, session_id } = fromStore(store)
 				await usersService.revokeSession(session_id)
 				await usersService.deleteAccount(user_id)
 				refresh_token?.remove()
 				access_token?.remove()
 				return { success: true }
-			})
+			}
+		)
 
-		.get('/@me/sessions', {
+		.get(
+			'/@me/sessions',
+			{
 				beforeHandle: [requireAuth],
 				detail: { tags: ['Users'] },
-			}, async ({ store }) => {
+			},
+			async ({ store }) => {
 				const { user_id, session_id } = fromStore(store)
 				return usersService.getSessions(user_id, session_id)
-			})
+			}
+		)
 
-		.delete('/@me/sessions/all', {
+		.delete(
+			'/@me/sessions/all',
+			{
 				beforeHandle: [requireRefreshAuth],
 				cookie: cookieSchema,
 				detail: { tags: ['Users'] },
-			}, async ({ cookie: { refresh_token, access_token }, store }) => {
+			},
+			async ({ cookie: { refresh_token, access_token }, store }) => {
 				const { user_id, session_id } = fromStore(store)
 				await usersService.revokeAllSessions(user_id, session_id)
 				refresh_token?.remove()
 				access_token?.remove()
 				return { success: true }
-			})
+			}
+		)
 
-		.delete('/@me/sessions/:id', {
+		.delete(
+			'/@me/sessions/:id',
+			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.Numeric() }),
 				detail: { tags: ['Users'] },
-			}, async ({ params, store }) => {
+			},
+			async ({ params, store }) => {
 				await usersService.revokeSessionById(
 					params.id,
 					fromStore(store).user_id
 				)
 				return { success: true }
-			})
+			}
+		)
 
-		.get('/@me/settings', {
+		.get(
+			'/@me/settings',
+			{
 				beforeHandle: [requireAuth],
 				detail: { tags: ['Users'] },
-			}, async ({ store, set }) => {
+			},
+			async ({ store, set }) => {
 				const data = await usersService.getSettings(
 					fromStore(store).user_id
 				)
@@ -268,31 +310,39 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					return { error: 'User not found' }
 				}
 				return data
-			})
+			}
+		)
 
-		.get('/@me/builds', {
+		.get(
+			'/@me/builds',
+			{
 				beforeHandle: [requireAuth],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Users'] },
-			}, async ({ store, query }) => {
+			},
+			async ({ store, query }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				return buildsService.list(take, page, {
 					author_id: fromStore(store).user_id,
 				})
-			})
+			}
+		)
 
-		.get('/@me/stars', {
+		.get(
+			'/@me/stars',
+			{
 				beforeHandle: [requireAuth],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Users'] },
-			}, async ({ store, query }) => {
+			},
+			async ({ store, query }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				return usersService.getStars(
@@ -300,16 +350,20 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					take,
 					page
 				)
-			})
+			}
+		)
 
-		.get('/@me/notifications', {
+		.get(
+			'/@me/notifications',
+			{
 				beforeHandle: [requireAuth],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Users'] },
-			}, async ({ store, query }) => {
+			},
+			async ({ store, query }) => {
 				const take = query.take ?? 5
 				const page = query.page ?? 0
 				return usersService.getNotifications(
@@ -317,20 +371,28 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					take,
 					page
 				)
-			})
+			}
+		)
 
-		.get('/@me/notifications/unread', {
+		.get(
+			'/@me/notifications/unread',
+			{
 				beforeHandle: [requireAuth],
 				detail: { tags: ['Users'] },
-			}, async ({ store }) => {
+			},
+			async ({ store }) => {
 				return usersService.getUnreadCount(fromStore(store).user_id)
-			})
+			}
+		)
 
-		.patch('/@me/notifications/:id/read', {
+		.patch(
+			'/@me/notifications/:id/read',
+			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Users'] },
-			}, async ({ params, store, set }) => {
+			},
+			async ({ params, store, set }) => {
 				const ok = await usersService.markRead(
 					fromStore(store).user_id,
 					Number(params.id)
@@ -340,21 +402,29 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					return { error: 'Notification not found' }
 				}
 				return { success: true }
-			})
+			}
+		)
 
-		.post('/@me/notifications/read-all', {
+		.post(
+			'/@me/notifications/read-all',
+			{
 				beforeHandle: [requireAuth],
 				detail: { tags: ['Users'] },
-			}, async ({ store }) => {
+			},
+			async ({ store }) => {
 				await usersService.markAllRead(fromStore(store).user_id)
 				return { success: true }
-			})
+			}
+		)
 
-		.delete('/@me/notifications/:id', {
+		.delete(
+			'/@me/notifications/:id',
+			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Users'] },
-			}, async ({ params, store, set }) => {
+			},
+			async ({ params, store, set }) => {
 				const ok = await usersService.deleteNotification(
 					fromStore(store).user_id,
 					Number(params.id)
@@ -364,13 +434,17 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					return { error: 'Notification not found' }
 				}
 				return { success: true }
-			})
+			}
+		)
 
-		.get('/id/:id', {
+		.get(
+			'/id/:id',
+			{
 				beforeHandle: [requireOptionalAuth],
 				params: t.Object({ id: t.Numeric() }),
 				detail: { tags: ['Users'] },
-			}, async ({ params, store, set }) => {
+			},
+			async ({ params, store, set }) => {
 				const data = await usersService.getPublicProfileById(
 					params.id,
 					fromStoreOpt(store).user_id
@@ -380,13 +454,17 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					return { error: 'User not found' }
 				}
 				return data
-			})
+			}
+		)
 
-		.get('/:username', {
+		.get(
+			'/:username',
+			{
 				beforeHandle: [requireOptionalAuth],
 				params: t.Object({ username: t.String() }),
 				detail: { tags: ['Users'] },
-			}, async ({ params, store, set }) => {
+			},
+			async ({ params, store, set }) => {
 				const data = await usersService.getPublicProfile(
 					params.username,
 					fromStoreOpt(store).user_id
@@ -396,9 +474,12 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					return { error: 'User not found' }
 				}
 				return data
-			})
+			}
+		)
 
-		.post('/@me/banner', {
+		.post(
+			'/@me/banner',
+			{
 				beforeHandle: [requireAuth],
 				body: t.Object({
 					file: t.File({
@@ -406,7 +487,8 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					}),
 				}),
 				detail: { tags: ['Users'] },
-			}, async ({ body, store, set }) => {
+			},
+			async ({ body, store, set }) => {
 				const file = body.file
 				const buf = Buffer.from(await file.arrayBuffer())
 
@@ -423,9 +505,12 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					set.status = 400
 					return { error: (err as Error).message }
 				}
-			})
+			}
+		)
 
-		.post('/@me/avatar', {
+		.post(
+			'/@me/avatar',
+			{
 				beforeHandle: [requireAuth],
 				body: t.Object({
 					file: t.File({
@@ -433,10 +518,11 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					}),
 				}),
 				detail: { tags: ['Users'] },
-			}, async ({ body, store, set }) => {
+			},
+			async ({ body, store, set }) => {
 				const file = body.file
 				const buf = Buffer.from(await file.arrayBuffer())
-				
+
 				try {
 					return await usersService.saveAvatar(
 						fromStore(store).user_id,
@@ -450,12 +536,16 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					set.status = 400
 					return { error: (err as Error).message }
 				}
-			})
+			}
+		)
 
-		.delete('/@me/avatar', {
+		.delete(
+			'/@me/avatar',
+			{
 				beforeHandle: [requireAuth],
 				detail: { tags: ['Users'] },
-			}, async ({ store, set }) => {
+			},
+			async ({ store, set }) => {
 				try {
 					return await usersService.clearAvatar(
 						fromStore(store).user_id
@@ -464,5 +554,6 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					set.status = 400
 					return { error: (err as Error).message }
 				}
-			})
+			}
+		)
 )
