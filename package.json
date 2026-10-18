@@ -13,20 +13,20 @@
 		"@elysiajs/cron": "^1.4.2",
 		"@elysiajs/jwt": "^1.4.2",
 		"@elysiajs/swagger": "^1.3.1",
-		"@prisma/adapter-pg": "^7.8.0",
-		"@prisma/client": "^7.8.0",
+		"@prisma/adapter-pg": "^7.10.0",
+		"@prisma/client": "^7.10.0",
 		"axios": "^1.20.0",
 		"dotenv": "^17.4.2",
-		"elysia": "^1.4.28",
-		"logixlysia": "^6.3.1",
-		"pg": "^8.20.0",
-		"prisma": "^7.8.0",
+		"elysia": "^1.4.30",
+		"logixlysia": "^6.10.0",
+		"pg": "^8.23.1",
+		"prisma": "^7.10.0",
 		"prom-client": "^15.1.3",
-		"zod": "^4.4.3"
+		"zod": "^4.6.7"
 	},
 	"devDependencies": {
-		"@types/pg": "^8.20.0",
-		"bun-types": "^1.3.13"
+		"@types/pg": "^8.23.1",
+		"bun-types": "^1.4.3"
 	},
 	"module": "src/index.js"
 }
