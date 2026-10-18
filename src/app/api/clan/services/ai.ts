@@ -22,9 +22,7 @@ export async function analyzeScreenshot(
 
 	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
 		try {
-			const { data } = await axios.post(
-				`${env.OPENAI_BASE_URL}/chat/completions`,
-				{
+			const { data } = await axios.post(`${env.OPENAI_BASE_URL}/chat/completions`, {
 					model: env.OPENAI_MODEL,
 					max_tokens: 2000,
 					response_format: { type: 'json_object' },
@@ -44,12 +42,10 @@ export async function analyzeScreenshot(
 							],
 						},
 					],
-				},
-				{
+				}, {
 					timeout: 120_000,
 					headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` },
-				}
-			)
+				})
 			const raw = data.choices?.[0]?.message?.content ?? '{}'
 			const parsed = JSON.parse(raw) as AIScreenshotResult
 			if (stage_number != null) parsed.stage_number = stage_number

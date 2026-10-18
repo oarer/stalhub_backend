@@ -5,22 +5,14 @@ import { requireClanMember } from '../guards'
 import { absenceService } from '../services/absence'
 
 export const absencesRoutes = clanContext
-	.get(
-		'/absences/:clan_id',
-		({ params, query }) =>
-			absenceService.listForDate(params.clan_id, query.date),
-		{
+	.get('/absences/:clan_id', {
 			beforeHandle: [requireAuth],
 			params: t.Object({ clan_id: t.String() }),
 			query: t.Object({ date: t.String({ format: 'date' }) }),
 			detail: { tags: ['Clan'] },
-		}
-	)
-	.get(
-		'/absences/:clan_id/range',
-		({ params, query }) =>
-			absenceService.listRange(params.clan_id, query.from, query.to),
-		{
+		}, ({ params, query }) =>
+			absenceService.listForDate(params.clan_id, query.date))
+	.get('/absences/:clan_id/range', {
 			beforeHandle: [requireAuth],
 			params: t.Object({ clan_id: t.String() }),
 			query: t.Object({
@@ -28,19 +20,9 @@ export const absencesRoutes = clanContext
 				to: t.String({ format: 'date' }),
 			}),
 			detail: { tags: ['Clan'] },
-		}
-	)
-	.put(
-		'/absences',
-		({ body, store }) =>
-			absenceService.upsert(
-				store.authUserId!,
-				store.clan_id!,
-				body.date,
-				body.events,
-				body.note
-			),
-		{
+		}, ({ params, query }) =>
+			absenceService.listRange(params.clan_id, query.from, query.to))
+	.put('/absences', {
 			beforeHandle: [requireAuth, requireClanMember],
 			body: t.Object({
 				date: t.String({ format: 'date' }),
@@ -61,19 +43,21 @@ export const absencesRoutes = clanContext
 				note: t.Optional(t.Nullable(t.String())),
 			}),
 			detail: { tags: ['Clan'] },
-		}
-	)
-	.delete(
-		'/absences/:date',
-		({ params, store }) =>
+		}, ({ body, store }) =>
+			absenceService.upsert(
+				store.authUserId!,
+				store.clan_id!,
+				body.date,
+				body.events,
+				body.note
+			))
+	.delete('/absences/:date', {
+			beforeHandle: [requireAuth, requireClanMember],
+			params: t.Object({ date: t.String({ format: 'date' }) }),
+			detail: { tags: ['Clan'] },
+		}, ({ params, store }) =>
 			absenceService.remove(
 				store.authUserId!,
 				store.clan_id!,
 				params.date
-			),
-		{
-			beforeHandle: [requireAuth, requireClanMember],
-			params: t.Object({ date: t.String({ format: 'date' }) }),
-			detail: { tags: ['Clan'] },
-		}
-	)
+			))

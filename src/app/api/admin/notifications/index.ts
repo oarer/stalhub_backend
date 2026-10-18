@@ -17,21 +17,20 @@ export const notificationsRoutes = createElysia().group(
 		app
 			.use(jwtPlugin)
 
-			.post(
-				'/broadcast',
-				async ({ body }) => {
-					return adminNotificationService.sendToAll(body)
-				},
-				{
+			.post('/broadcast', {
 					beforeHandle: [requireAuth, requireAdmin],
 					body: notificationBody,
 					detail: { tags: ['Admin'] },
-				}
-			)
+				}, async ({ body }) => {
+					return adminNotificationService.sendToAll(body)
+				})
 
-			.post(
-				'/user/:user_id',
-				async ({ params, body, set }) => {
+			.post('/user/:user_id', {
+					beforeHandle: [requireAuth, requireAdmin],
+					params: t.Object({ user_id: t.String() }),
+					body: notificationBody,
+					detail: { tags: ['Admin'] },
+				}, async ({ params, body, set }) => {
 					const result = await adminNotificationService.sendToUser(
 						Number(params.user_id),
 						body
@@ -41,26 +40,9 @@ export const notificationsRoutes = createElysia().group(
 						return { error: 'User not found' }
 					}
 					return result
-				},
-				{
-					beforeHandle: [requireAuth, requireAdmin],
-					params: t.Object({ user_id: t.String() }),
-					body: notificationBody,
-					detail: { tags: ['Admin'] },
-				}
-			)
+				})
 
-			.post(
-				'/batch',
-				async ({ body }) => {
-					return adminNotificationService.sendToUsers(body.user_ids, {
-						title: body.title,
-						content: body.content,
-						type: body.type,
-						link: body.link,
-					})
-				},
-				{
+			.post('/batch', {
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
 						user_ids: t.Array(t.Number()),
@@ -73,6 +55,12 @@ export const notificationsRoutes = createElysia().group(
 						link: t.Optional(t.String()),
 					}),
 					detail: { tags: ['Admin'] },
-				}
-			)
+				}, async ({ body }) => {
+					return adminNotificationService.sendToUsers(body.user_ids, {
+						title: body.title,
+						content: body.content,
+						type: body.type,
+						link: body.link,
+					})
+				})
 )

@@ -14,22 +14,7 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 	app
 		.use(jwtPlugin)
 
-		.get(
-			'',
-			async ({ query, store }) => {
-				return tierListsService.list({
-					take: query.take ?? 24,
-					page: (query.page ?? 1) - 1,
-					kind: query.kind as 'SYSTEM' | 'USER' | undefined,
-					item_kind: query.item_kind as
-						| 'ARMOR'
-						| 'WEAPON'
-						| undefined,
-					category: query.category as string | undefined,
-					user_id: fromStoreOpt(store).user_id,
-				})
-			},
-			{
+		.get('', {
 				beforeHandle: [requireOptionalAuth],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
@@ -43,31 +28,39 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 					category: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Tier Lists'] },
-			}
-		)
+			}, async ({ query, store }) => {
+				return tierListsService.list({
+					take: query.take ?? 24,
+					page: (query.page ?? 1) - 1,
+					kind: query.kind as 'SYSTEM' | 'USER' | undefined,
+					item_kind: query.item_kind as
+						| 'ARMOR'
+						| 'WEAPON'
+						| undefined,
+					category: query.category as string | undefined,
+					user_id: fromStoreOpt(store).user_id,
+				})
+			})
 
-		.get(
-			'mine',
-			async ({ query, store }) => {
-				return tierListsService.listMine(
-					fromStore(store).user_id,
-					query.take ?? 24,
-					(query.page ?? 1) - 1
-				)
-			},
-			{
+		.get('mine', {
 				beforeHandle: [requireAuth],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Tier Lists'] },
-			}
-		)
+			}, async ({ query, store }) => {
+				return tierListsService.listMine(
+					fromStore(store).user_id,
+					query.take ?? 24,
+					(query.page ?? 1) - 1
+				)
+			})
 
-		.get(
-			'/:id',
-			async ({ params, store, request }) => {
+		.get('/:id', {
+				params: t.Object({ id: t.String() }),
+				detail: { tags: ['Tier Lists'] },
+			}, async ({ params, store, request }) => {
 				return tierListsService.getById(
 					params.id,
 					fromStoreOpt(store).user_id,
@@ -83,19 +76,9 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 							request.headers.get('user-agent') ?? undefined,
 					}
 				)
-			},
-			{
-				params: t.Object({ id: t.String() }),
-				detail: { tags: ['Tier Lists'] },
-			}
-		)
+			})
 
-		.post(
-			'',
-			async ({ body, store }) => {
-				return tierListsService.create(fromStore(store).user_id, body)
-			},
-			{
+		.post('', {
 				beforeHandle: [requireAuth],
 				body: t.Object({
 					title: t.String({ maxLength: 200 }),
@@ -134,12 +117,47 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 					),
 				}),
 				detail: { tags: ['Tier Lists'] },
-			}
-		)
+			}, async ({ body, store }) => {
+				return tierListsService.create(fromStore(store).user_id, body)
+			})
 
-		.patch(
-			'/:id',
-			async ({ params, body, store, set }) => {
+		.patch('/:id', {
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+				body: t.Object({
+					title: t.Optional(t.String({ maxLength: 200 })),
+					description: t.Optional(t.String({ maxLength: 2000 })),
+					category: t.Optional(
+						t.Union([
+							t.Literal('general'),
+							t.Literal('assault_rifle'),
+							t.Literal('sniper_rifle'),
+							t.Literal('shotgun_rifle'),
+							t.Literal('submachine_gun'),
+							t.Literal('machine_gun'),
+							t.Literal('pistol'),
+						])
+					),
+					is_public: t.Optional(t.Boolean()),
+					entries: t.Optional(
+						t.Array(
+							t.Object({
+								item_id: t.String(),
+								rank: t.Union([
+									t.Literal('S'),
+									t.Literal('A'),
+									t.Literal('B'),
+									t.Literal('C'),
+									t.Literal('D'),
+									t.Literal('E'),
+								]),
+								position: t.Optional(t.Numeric()),
+							})
+						)
+					),
+				}),
+				detail: { tags: ['Tier Lists'] },
+			}, async ({ params, body, store, set }) => {
 				const { user_id } = fromStore(store)
 				const is_admin = await checkPermission(
 					user_id,
@@ -177,49 +195,13 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 				}
 
 				return result
-			},
-			{
+			})
+
+		.delete('/:id', {
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
-				body: t.Object({
-					title: t.Optional(t.String({ maxLength: 200 })),
-					description: t.Optional(t.String({ maxLength: 2000 })),
-					category: t.Optional(
-						t.Union([
-							t.Literal('general'),
-							t.Literal('assault_rifle'),
-							t.Literal('sniper_rifle'),
-							t.Literal('shotgun_rifle'),
-							t.Literal('submachine_gun'),
-							t.Literal('machine_gun'),
-							t.Literal('pistol'),
-						])
-					),
-					is_public: t.Optional(t.Boolean()),
-					entries: t.Optional(
-						t.Array(
-							t.Object({
-								item_id: t.String(),
-								rank: t.Union([
-									t.Literal('S'),
-									t.Literal('A'),
-									t.Literal('B'),
-									t.Literal('C'),
-									t.Literal('D'),
-									t.Literal('E'),
-								]),
-								position: t.Optional(t.Numeric()),
-							})
-						)
-					),
-				}),
 				detail: { tags: ['Tier Lists'] },
-			}
-		)
-
-		.delete(
-			'/:id',
-			async ({ params, store, set }) => {
+			}, async ({ params, store, set }) => {
 				const { user_id } = fromStore(store)
 				const is_admin = await checkPermission(
 					user_id,
@@ -237,11 +219,5 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 				}
 
 				return { success: true }
-			},
-			{
-				beforeHandle: [requireAuth],
-				params: t.Object({ id: t.String() }),
-				detail: { tags: ['Tier Lists'] },
-			}
-		)
+			})
 )

@@ -1,4 +1,4 @@
-import { cron } from '@elysiajs/cron'
+import { cron } from '@elysia/cron'
 import { barterRequestsTotal } from '@/app/api/metrics'
 import type { BarterEntry, BarterRecipe } from '@/types/barter.type'
 import { createElysia } from '@/utils/elysia'
@@ -22,14 +22,14 @@ export const routeBarter = createElysia()
 			run: resetCache,
 		})
 	)
-	.onStart(async () => {
+	.setup(async () => {
 		try {
 			await loadListing()
 			await loadBarter()
 		} catch (err) {
 			console.error('[Barter] Failed to load data on start, will retry:', err)
 			setTimeout(
-				() => loadListing().then(() => loadBarter()).catch(() => {}),
+				() => loadListing().then(() => loadBarter()).catch(() => undefined),
 				60_000
 			)
 		}
@@ -42,7 +42,7 @@ export const routeBarter = createElysia()
 		const items = listCraftable(barterData, listing)
 		return { total: items.length, items }
 	})
-	.get('/barter/:item_id', async ({ params, status }) => {
+	.get('/barter/:item_id', async ({ params, status }: { params: Record<string, string>; status: (code: number, body?: unknown) => unknown }) => {
 		const { item_id } = params
 
 		const [barterData, listing] = await Promise.all([

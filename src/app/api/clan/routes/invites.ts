@@ -7,34 +7,28 @@ import { clanInviteService } from '../services/invites'
 export const inviteRoutes = clanContext
 	.get(
 		'/invites',
-		({ store }) => clanInviteService.listByClan(store.clan_id!),
 		{
 			beforeHandle: [requireAuth, requireClanLeader],
 			detail: { tags: ['Clan'] },
-		}
+		},
+		({ store }) => clanInviteService.listByClan(store.clan_id!)
 	)
 	.post(
 		'/invites',
+		{
+			beforeHandle: [requireAuth, requireClanLeader],
+			body: t.Object({ nickname: t.String({ minLength: 1 }) }),
+			detail: { tags: ['Clan'] },
+		},
 		async ({ store, body }) =>
 			clanInviteService.createGuestAccount(
 				store.clan_id!,
 				`user:${store.authUserId}`,
 				body.nickname
-			),
-		{
-			beforeHandle: [requireAuth, requireClanLeader],
-			body: t.Object({ nickname: t.String({ minLength: 1 }) }),
-			detail: { tags: ['Clan'] },
-		}
+			)
 	)
 	.post(
 		'/invites/bulk',
-		async ({ store, body }) =>
-			clanInviteService.createGuestAccountsBulk(
-				store.clan_id!,
-				`user:${store.authUserId}`,
-				body.nicknames
-			),
 		{
 			beforeHandle: [requireAuth, requireClanLeader],
 			body: t.Object({
@@ -44,24 +38,30 @@ export const inviteRoutes = clanContext
 				}),
 			}),
 			detail: { tags: ['Clan'] },
-		}
+		},
+		async ({ store, body }) =>
+			clanInviteService.createGuestAccountsBulk(
+				store.clan_id!,
+				`user:${store.authUserId}`,
+				body.nicknames
+			)
 	)
 	.delete(
 		'/invites/:id',
-		({ params }) => clanInviteService.revoke(params.id),
 		{
 			beforeHandle: [requireAuth, requireClanLeader],
 			params: t.Object({ id: t.Numeric() }),
 			detail: { tags: ['Clan'] },
-		}
+		},
+		({ params }) => clanInviteService.revoke(params.id)
 	)
 	.delete(
 		'/invites/guest/:user_id',
-		({ store, params }) =>
-			clanInviteService.kickGuest(store.clan_id!, params.user_id),
 		{
 			beforeHandle: [requireAuth, requireClanLeader],
 			params: t.Object({ user_id: t.Numeric() }),
 			detail: { tags: ['Clan'] },
-		}
+		},
+		({ store, params }) =>
+			clanInviteService.kickGuest(store.clan_id!, params.user_id)
 	)

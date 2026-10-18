@@ -17,7 +17,7 @@ const priceRequestSchema = t.Array(
 )
 
 export const artifactsRoutes = new Elysia()
-	.onStart(async () => {
+	.setup(async () => {
 		const missing = SUPPORTED_REGIONS.filter(
 			(region) => !getRegionCache(region)
 		)
@@ -26,9 +26,10 @@ export const artifactsRoutes = new Elysia()
 		}
 	})
 	.group('/artifacts-prices', (group) =>
-		group.post(
-			'/:region',
-			async ({ params, body, set }): Promise<ArtifactPricesResponse> => {
+		group.post('/:region', {
+				params: t.Object({ region: t.String() }),
+				body: priceRequestSchema,
+			}, async ({ params, body, set }): Promise<ArtifactPricesResponse> => {
 				const region = params.region
 
 				if (
@@ -70,10 +71,5 @@ export const artifactsRoutes = new Elysia()
 					region,
 					prices,
 				}
-			},
-			{
-				params: t.Object({ region: t.String() }),
-				body: priceRequestSchema,
-			}
-		)
+			})
 	)

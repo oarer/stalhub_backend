@@ -1,4 +1,4 @@
-import jwt from '@elysiajs/jwt'
+import jwt from '@elysia/jwt'
 import { env } from '@/env'
 
 export const isSecure = env.NODE_ENV === 'production'

@@ -1,4 +1,4 @@
-import type { Cookie } from 'elysia'
+import type { Cookie, HTTPHeaders } from 'elysia'
 import { prisma } from '@/lib/prisma'
 
 interface JwtFacade {
@@ -12,7 +12,7 @@ interface AuthContext {
 		refresh_token?: Cookie<string | undefined>
 	}
 	jwt: JwtFacade
-	set: { status?: number | string; headers: Record<string, string | number> }
+	set: { status?: number | string; headers: HTTPHeaders }
 	store: Record<string, unknown>
 	request: Request
 }

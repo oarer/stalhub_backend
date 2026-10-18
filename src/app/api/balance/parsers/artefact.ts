@@ -113,7 +113,7 @@ export function parseArtefact(
 function formatArtefactValue(v: unknown): string | number {
 	if (v === undefined || v === null) return 'н/д'
 	if (typeof v === 'number') return Math.round(v * 10000) / 10000
-	return v
+	return v as string | number
 }
 
 function isRange(v: unknown): v is ArtefactRange {

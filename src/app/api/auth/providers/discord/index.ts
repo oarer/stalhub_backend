@@ -19,9 +19,12 @@ export const discordAuth = createElysia()
 	.use(jwtPlugin)
 	.group('/discord', (app) =>
 		app
-			.get(
-				'/login',
-				async ({ query, request }) => {
+			.get('/login', {
+					query: desktopLoginQuery,
+					detail: {
+						tags: ['Auth: Discord'],
+					},
+				}, async ({ query, request }) => {
 					const state = crypto.randomUUID()
 					const url = new URL(`${DISCORD_API}/oauth2/authorize`)
 					url.searchParams.set('client_id', env.DISCORD_CLIENT_ID)
@@ -42,18 +45,17 @@ export const discordAuth = createElysia()
 						url.searchParams.set('state', state)
 					}
 					return { url: url.toString() }
-				},
-				{
-					query: desktopLoginQuery,
+				})
+
+			.get('/callback', {
+					query: t.Object({
+						code: t.String(),
+						state: t.Optional(t.String()),
+					}),
 					detail: {
 						tags: ['Auth: Discord'],
 					},
-				}
-			)
-
-			.get(
-				'/callback',
-				async ({
+				}, async ({
 					query: { code, state },
 					headers,
 					cookie: { access_token, refresh_token },
@@ -207,21 +209,12 @@ export const discordAuth = createElysia()
 					})
 
 					return { success: true }
-				},
-				{
-					query: t.Object({
-						code: t.String(),
-						state: t.Optional(t.String()),
-					}),
-					detail: {
-						tags: ['Auth: Discord'],
-					},
-				}
-			)
+				})
 
-			.get(
-				'/link',
-				async ({ store }) => {
+			.get('/link', {
+					beforeHandle: [requireAuth],
+					detail: { tags: ['Auth: Discord'] },
+				}, async ({ store }) => {
 					const { user_id } = fromStore(store)
 					const existing = await prisma.discordAuth.findUnique({
 						where: { userid: user_id },
@@ -241,25 +234,16 @@ export const discordAuth = createElysia()
 					url.searchParams.set('scope', 'identify')
 					url.searchParams.set('state', state)
 					return { url: url.toString() }
-				},
-				{
+				})
+
+			.delete('/link', {
 					beforeHandle: [requireAuth],
 					detail: { tags: ['Auth: Discord'] },
-				}
-			)
-
-			.delete(
-				'/link',
-				async ({ store }) => {
+				}, async ({ store }) => {
 					const { user_id } = fromStore(store)
 					await prisma.discordAuth.deleteMany({
 						where: { userid: user_id },
 					})
 					return { success: true }
-				},
-				{
-					beforeHandle: [requireAuth],
-					detail: { tags: ['Auth: Discord'] },
-				}
-			)
+				})
 	)

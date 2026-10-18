@@ -1,4 +1,4 @@
-import { cron } from '@elysiajs/cron'
+import { cron } from '@elysia/cron'
 import { attachmentsRequestsTotal } from '@/app/api/metrics'
 import { createElysia } from '@/utils/elysia'
 import {
@@ -18,7 +18,7 @@ export const routeAttachments = createElysia()
 			run: resetCache,
 		})
 	)
-	.onStart(async () => {
+	.setup(async () => {
 		try {
 			await loadAttachments()
 			await loadWeapons()
@@ -33,12 +33,12 @@ export const routeAttachments = createElysia()
 					loadAttachments()
 						.then(loadWeapons)
 						.then(loadCompatibleIndex)
-						.catch(() => {}),
+						.catch(() => undefined),
 				60_000
 			)
 		}
 	})
-	.get('/attachments/:weaponId', async ({ params, status }) => {
+	.get('/attachments/:weaponId', async ({ params, status }: { params: Record<string, string>; status: (code: number, body?: unknown) => unknown }) => {
 		const { weaponId } = params
 
 		await Promise.all([

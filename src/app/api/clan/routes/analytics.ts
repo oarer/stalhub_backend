@@ -11,19 +11,7 @@ const idParams = t.Object({ id: t.Numeric() })
 
 export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 	app
-		.post(
-			'/sessions',
-			({ body, store }) =>
-				analyticsService.createSession({
-					creator_id: store.authUserId!,
-					region: body.region,
-					map_name: body.map_name,
-					type: body.type,
-					started_at: body.started_at,
-					stage_number: body.stage_number,
-					clan_id: store.clan_id,
-				}),
-			{
+		.post('/sessions', {
 				beforeHandle: [requireAuth, requireClanOfficer],
 				body: t.Object({
 					region: t.Enum(Regions),
@@ -35,11 +23,26 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 					),
 				}),
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.post(
-			'/sessions/:id/screenshots',
-			async ({ params, body, store, set }) => {
+			}, ({ body, store }) =>
+				analyticsService.createSession({
+					creator_id: store.authUserId!,
+					region: body.region,
+					map_name: body.map_name,
+					type: body.type,
+					started_at: body.started_at,
+					stage_number: body.stage_number,
+					clan_id: store.clan_id,
+				}))
+		.post('/sessions/:id/screenshots', {
+				beforeHandle: [requireAuth, requireClanOfficer],
+				params: idParams,
+				body: t.Object({
+					file: t.File({
+						type: ['image/png', 'image/jpeg', 'image/webp'],
+					}),
+				}),
+				detail: { tags: ['Clan Analytics'] },
+			}, async ({ params, body, store, set }) => {
 				const file = body.file
 				const buf = Buffer.from(await file.arrayBuffer())
 				try {
@@ -56,48 +59,20 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 					set.status = 400
 					return { error: (err as Error).message }
 				}
-			},
-			{
-				beforeHandle: [requireAuth, requireClanOfficer],
-				params: idParams,
-				body: t.Object({
-					file: t.File({
-						type: ['image/png', 'image/jpeg', 'image/webp'],
-					}),
-				}),
-				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.post(
-			'/screenshots/:id/retry',
-			({ params, store }) =>
-				analyticsService.retryAnalysis(params.id, store.clan_id!),
-			{
+			})
+		.post('/screenshots/:id/retry', {
 				beforeHandle: [requireAuth, requireClanOfficer],
 				params: idParams,
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.get(
-			'/screenshots/:id/mismatches',
-			({ params, store }) =>
-				analyticsService.findMismatches(params.id, store.clan_id!),
-			{
+			}, ({ params, store }) =>
+				analyticsService.retryAnalysis(params.id, store.clan_id!))
+		.get('/screenshots/:id/mismatches', {
 				beforeHandle: [requireAuth, requireClanOfficer],
 				params: idParams,
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.post(
-			'/screenshots/:id/mismatches/resolve',
-			({ params, body, store }) =>
-				analyticsService.resolveMismatch(
-					params.id,
-					store.clan_id!,
-					body.detected_name,
-					body.member_id
-				),
-			{
+			}, ({ params, store }) =>
+				analyticsService.findMismatches(params.id, store.clan_id!))
+		.post('/screenshots/:id/mismatches/resolve', {
 				beforeHandle: [requireAuth, requireClanOfficer],
 				params: idParams,
 				body: t.Object({
@@ -105,29 +80,22 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 					member_id: t.Numeric(),
 				}),
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.get(
-			'/stats',
-			({ store, query }) =>
-				analyticsService.getRawStats(
-					store.clan_id ?? query.clan_id ?? ''
-				),
-			{
+			}, ({ params, body, store }) =>
+				analyticsService.resolveMismatch(
+					params.id,
+					store.clan_id!,
+					body.detected_name,
+					body.member_id
+				))
+		.get('/stats', {
 				beforeHandle: [requireAuth],
 				query: t.Object({ clan_id: t.Optional(t.String()) }),
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.get(
-			'/attendance-summary/:clan_id',
-			({ params, query }) =>
-				analyticsService.attendanceSummary(
-					params.clan_id,
-					query.type,
-					query.from
-				),
-			{
+			}, ({ store, query }) =>
+				analyticsService.getRawStats(
+					store.clan_id ?? query.clan_id ?? ''
+				))
+		.get('/attendance-summary/:clan_id', {
 				beforeHandle: [requireAuth],
 				params: t.Object({ clan_id: t.String() }),
 				query: t.Object({
@@ -135,49 +103,32 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 					from: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.get(
-			'/attendance',
-			({ store, query }) =>
-				analyticsService.attendanceMonth(store.clan_id!, query.month),
-			{
+			}, ({ params, query }) =>
+				analyticsService.attendanceSummary(
+					params.clan_id,
+					query.type,
+					query.from
+				))
+		.get('/attendance', {
 				beforeHandle: [requireAuth, requireClanMember],
 				query: t.Object({
 					month: t.String({ pattern: '^\\d{4}-(0[1-9]|1[0-2])$' }),
 				}),
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.get(
-			'/sessions/:id',
-			({ params }) => analyticsService.getSession(params.id),
-			{
+			}, ({ store, query }) =>
+				analyticsService.attendanceMonth(store.clan_id!, query.month))
+		.get('/sessions/:id', {
 				beforeHandle: [requireAuth],
 				params: idParams,
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.get(
-			'/sessions',
-			({ store, query }) =>
-				analyticsService.listSessions(store.authUserId!, query.clan_id),
-			{
+			}, ({ params }) => analyticsService.getSession(params.id))
+		.get('/sessions', {
 				beforeHandle: [requireAuth],
 				query: t.Object({ clan_id: t.Optional(t.String()) }),
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.post(
-			'/sessions/:id/attendance',
-			({ params, body }) =>
-				analyticsService.setManualAttendance(
-					params.id,
-					body.user_id,
-					body.status,
-					body.note
-				),
-			{
+			}, ({ store, query }) =>
+				analyticsService.listSessions(store.authUserId!, query.clan_id))
+		.post('/sessions/:id/attendance', {
 				beforeHandle: [requireAuth, requireClanOfficer],
 				params: idParams,
 				body: t.Object({
@@ -186,74 +137,51 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 					note: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.delete(
-			'/sessions/:id',
-			({ params, store }) =>
+			}, ({ params, body }) =>
+				analyticsService.setManualAttendance(
+					params.id,
+					body.user_id,
+					body.status,
+					body.note
+				))
+		.delete('/sessions/:id', {
+				beforeHandle: [requireAuth, requireClanOfficer],
+				params: idParams,
+				detail: { tags: ['Clan Analytics'] },
+			}, ({ params, store }) =>
 				analyticsService.deleteSession(
 					params.id,
 					store.clan_id,
 					store.authUserId
-				),
-			{
-				beforeHandle: [requireAuth, requireClanOfficer],
-				params: idParams,
-				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.get(
-			'/grenades/:region/:character',
-			({ params }) =>
-				grenadesService.getForCharacter(
-					params.region,
-					params.character
-				),
-			{
+				))
+		.get('/grenades/:region/:character', {
 				beforeHandle: [requireAuth],
 				params: t.Object({
 					region: t.String(),
 					character: t.String(),
 				}),
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.get(
-			'/grenades/clan/:clan_id/stages',
-			({ params }) => grenadesService.getForClanStages(params.clan_id),
-			{
+			}, ({ params }) =>
+				grenadesService.getForCharacter(
+					params.region,
+					params.character
+				))
+		.get('/grenades/clan/:clan_id/stages', {
 				beforeHandle: [requireAuth],
 				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.get(
-			'/grenades/clan/:clan_id/all-time',
-			({ params }) => grenadesService.getAllTime(params.clan_id),
-			{
+			}, ({ params }) => grenadesService.getForClanStages(params.clan_id))
+		.get('/grenades/clan/:clan_id/all-time', {
 				beforeHandle: [requireAuth],
 				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.get(
-			'/grenades/clan/:clan_id/boxes',
-			({ params }) => grenadesService.getBoxes(params.clan_id),
-			{
+			}, ({ params }) => grenadesService.getAllTime(params.clan_id))
+		.get('/grenades/clan/:clan_id/boxes', {
 				beforeHandle: [requireAuth, requireClanMember],
 				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.post(
-			'/grenades/clan/:clan_id/boxes',
-			({ params, body }) =>
-				grenadesService.addBox(params.clan_id, {
-					name: body.name,
-					type: body.type,
-					count: body.count,
-				}),
-			{
+			}, ({ params }) => grenadesService.getBoxes(params.clan_id))
+		.post('/grenades/clan/:clan_id/boxes', {
 				beforeHandle: [requireAuth, requireClanMember],
 				params: t.Object({ clan_id: t.String() }),
 				body: t.Object({
@@ -262,19 +190,19 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 					count: t.Numeric({ minimum: 1 }),
 				}),
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
-		.delete(
-			'/grenades/clan/:clan_id/boxes',
-			({ params, query }) =>
-				grenadesService.removeBox(params.clan_id, Number(query.index)),
-			{
+			}, ({ params, body }) =>
+				grenadesService.addBox(params.clan_id, {
+					name: body.name,
+					type: body.type,
+					count: body.count,
+				}))
+		.delete('/grenades/clan/:clan_id/boxes', {
 				beforeHandle: [requireAuth, requireClanMember],
 				params: t.Object({ clan_id: t.String() }),
 				query: t.Object({
 					index: t.Numeric(),
 				}),
 				detail: { tags: ['Clan Analytics'] },
-			}
-		)
+			}, ({ params, query }) =>
+				grenadesService.removeBox(params.clan_id, Number(query.index)))
 )

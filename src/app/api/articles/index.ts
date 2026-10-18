@@ -58,9 +58,15 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 	app
 		.use(jwtPlugin)
 
-		.get(
-			'',
-			async ({ query, store }) => {
+		.get('', {
+				beforeHandle: [requireAuth],
+				query: t.Object({
+					take: t.Optional(t.Numeric()),
+					page: t.Optional(t.Numeric()),
+					type: t.Optional(t.Enum(ArticleType)),
+				}),
+				detail: { tags: ['Articles'] },
+			}, async ({ query, store }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				const { user_id } = fromStore(store)
@@ -73,8 +79,9 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					type: query.type as ArticleType | undefined,
 					...(!is_admin && { author_id: user_id }),
 				})
-			},
-			{
+			})
+
+		.get('/mine', {
 				beforeHandle: [requireAuth],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
@@ -82,52 +89,35 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					type: t.Optional(t.Enum(ArticleType)),
 				}),
 				detail: { tags: ['Articles'] },
-			}
-		)
-
-		.get(
-			'/mine',
-			({ query, store }) => {
+			}, ({ query, store }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				return articlesService.list(take, page, {
 					author_id: fromStore(store).user_id,
 					type: query.type as ArticleType | undefined,
 				})
-			},
-			{
-				beforeHandle: [requireAuth],
+			})
+
+		.get('/public', {
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
 					type: t.Optional(t.Enum(ArticleType)),
 				}),
 				detail: { tags: ['Articles'] },
-			}
-		)
-
-		.get(
-			'/public',
-			async ({ query }) => {
+			}, async ({ query }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				return articlesService.list(take, page, {
 					type: query.type as ArticleType | undefined,
 				})
-			},
-			{
-				query: t.Object({
-					take: t.Optional(t.Numeric()),
-					page: t.Optional(t.Numeric()),
-					type: t.Optional(t.Enum(ArticleType)),
-				}),
-				detail: { tags: ['Articles'] },
-			}
-		)
+			})
 
-		.get(
-			'/:id',
-			async ({ params, store, request }) => {
+		.get('/:id', {
+				beforeHandle: [requireOptionalAuth],
+				params: t.Object({ id: t.String() }),
+				detail: { tags: ['Articles'] },
+			}, async ({ params, store, request }) => {
 				return articlesService.getById(
 					params.id,
 					fromStoreOpt(store).user_id,
@@ -143,17 +133,24 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 							request.headers.get('user-agent') ?? undefined,
 					}
 				)
-			},
-			{
-				beforeHandle: [requireOptionalAuth],
-				params: t.Object({ id: t.String() }),
-				detail: { tags: ['Articles'] },
-			}
-		)
+			})
 
-		.post(
-			'/:id/image',
-			async ({ params, body, store, set }) => {
+		.post('/:id/image', {
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+				body: t.Object({
+					file: t.File({
+						type: [
+							'image/jpeg',
+							'image/png',
+							'image/webp',
+							'image/gif',
+						],
+						maxSize: ARTICLE_IMAGE_MAX_BYTES,
+					}),
+				}),
+				detail: { tags: ['Articles'] },
+			}, async ({ params, body, store, set }) => {
 				const userId = fromStore(store).user_id
 				const isAdmin = await checkPermission(userId, 'articles:manage')
 				const article = await articlesService.getOwned(
@@ -173,28 +170,38 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					set.status = 400
 					return { error: (error as Error).message }
 				}
-			},
-			{
+			})
+
+		.post('', {
 				beforeHandle: [requireAuth],
-				params: t.Object({ id: t.String() }),
 				body: t.Object({
-					file: t.File({
-						type: [
-							'image/jpeg',
-							'image/png',
-							'image/webp',
-							'image/gif',
-						],
-						maxSize: ARTICLE_IMAGE_MAX_BYTES,
+					title: t.String({
+						error: 'title is required',
+						maxLength: 200,
 					}),
+					content: t.String({
+						error: 'content is required',
+						maxLength: 50000,
+					}),
+					type: t.Optional(t.Enum(ArticleType)),
+					image_url: t.Optional(t.Nullable(t.String())),
+					cover_config: coverConfigSchema,
+					quest_name: t.Optional(
+						t.Nullable(t.String({ maxLength: 200 }))
+					),
+					quest_type: t.Optional(t.Nullable(t.Enum(QuestType))),
+					quest_map: t.Optional(t.Nullable(t.Unknown())),
+					reward_text: t.Optional(
+						t.Nullable(t.String({ maxLength: 5000 }))
+					),
+					reward_money: t.Optional(
+						t.Nullable(t.Integer({ minimum: 0 }))
+					),
+					flags: t.Optional(t.Numeric()),
+					tags: t.Optional(t.Array(t.String())),
 				}),
 				detail: { tags: ['Articles'] },
-			}
-		)
-
-		.post(
-			'',
-			async ({ body, store, set, request }) => {
+			}, async ({ body, store, set, request }) => {
 				let is_stalhub_admin = false
 				if (body.type === ArticleType.STALHUB) {
 					const is_admin = await checkPermission(
@@ -266,18 +273,14 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				}
 
 				return created
-			},
-			{
+			})
+
+		.patch('/:id', {
 				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
 				body: t.Object({
-					title: t.String({
-						error: 'title is required',
-						maxLength: 200,
-					}),
-					content: t.String({
-						error: 'content is required',
-						maxLength: 50000,
-					}),
+					title: t.Optional(t.String({ maxLength: 200 })),
+					content: t.Optional(t.String({ maxLength: 50000 })),
 					type: t.Optional(t.Enum(ArticleType)),
 					image_url: t.Optional(t.Nullable(t.String())),
 					cover_config: coverConfigSchema,
@@ -296,12 +299,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					tags: t.Optional(t.Array(t.String())),
 				}),
 				detail: { tags: ['Articles'] },
-			}
-		)
-
-		.patch(
-			'/:id',
-			async ({ params, body, store, set, request }) => {
+			}, async ({ params, body, store, set, request }) => {
 				const { user_id } = fromStore(store)
 				const xssPatch = await rejectOnXss({
 					fields: {
@@ -388,37 +386,13 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				}
 
 				return result
-			},
-			{
+			})
+
+		.delete('/:id', {
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
-				body: t.Object({
-					title: t.Optional(t.String({ maxLength: 200 })),
-					content: t.Optional(t.String({ maxLength: 50000 })),
-					type: t.Optional(t.Enum(ArticleType)),
-					image_url: t.Optional(t.Nullable(t.String())),
-					cover_config: coverConfigSchema,
-					quest_name: t.Optional(
-						t.Nullable(t.String({ maxLength: 200 }))
-					),
-					quest_type: t.Optional(t.Nullable(t.Enum(QuestType))),
-					quest_map: t.Optional(t.Nullable(t.Unknown())),
-					reward_text: t.Optional(
-						t.Nullable(t.String({ maxLength: 5000 }))
-					),
-					reward_money: t.Optional(
-						t.Nullable(t.Integer({ minimum: 0 }))
-					),
-					flags: t.Optional(t.Numeric()),
-					tags: t.Optional(t.Array(t.String())),
-				}),
 				detail: { tags: ['Articles'] },
-			}
-		)
-
-		.delete(
-			'/:id',
-			async ({ params, store, set }) => {
+			}, async ({ params, store, set }) => {
 				const { user_id } = fromStore(store)
 				const is_admin = await checkPermission(
 					user_id,
@@ -436,17 +410,17 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				}
 
 				return { success: true }
-			},
-			{
+			})
+
+		.patch('/:id/status', {
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
+				body: t.Object({
+					status: t.Enum(ArticleStatus),
+					reason: t.Optional(t.String()),
+				}),
 				detail: { tags: ['Articles'] },
-			}
-		)
-
-		.patch(
-			'/:id/status',
-			async ({ params, body, store, set }) => {
+			}, async ({ params, body, store, set }) => {
 				const { user_id } = fromStore(store)
 				const is_admin = await checkPermission(
 					user_id,
@@ -469,21 +443,13 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				}
 
 				return result
-			},
-			{
+			})
+
+		.post('/:id/submit', {
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
-				body: t.Object({
-					status: t.Enum(ArticleStatus),
-					reason: t.Optional(t.String()),
-				}),
 				detail: { tags: ['Articles'] },
-			}
-		)
-
-		.post(
-			'/:id/submit',
-			async ({ params, store, set }) => {
+			}, async ({ params, store, set }) => {
 				const { user_id } = fromStore(store)
 				const result = await articlesService.submitForReview(
 					Number(params.id),
@@ -500,17 +466,12 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				}
 
 				return result
-			},
-			{
-				beforeHandle: [requireAuth],
+			})
+
+		.get('/:id/versions', {
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Articles'] },
-			}
-		)
-
-		.get(
-			'/:id/versions',
-			async ({ params, set }) => {
+			}, async ({ params, set }) => {
 				const versions = await articlesService.getVersions(
 					Number(params.id)
 				)
@@ -519,16 +480,12 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					return { error: 'Article not found' }
 				}
 				return versions
-			},
-			{
-				params: t.Object({ id: t.String() }),
-				detail: { tags: ['Articles'] },
-			}
-		)
+			})
 
-		.get(
-			'/:id/versions/:version_id',
-			async ({ params, set }) => {
+		.get('/:id/versions/:version_id', {
+				params: t.Object({ id: t.String(), version_id: t.String() }),
+				detail: { tags: ['Articles'] },
+			}, async ({ params, set }) => {
 				const version = await articlesService.getVersion(
 					Number(params.version_id)
 				)
@@ -537,48 +494,37 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					return { error: 'Version not found' }
 				}
 				return version
-			},
-			{
-				params: t.Object({ id: t.String(), version_id: t.String() }),
-				detail: { tags: ['Articles'] },
-			}
-		)
+			})
 
-		.post(
-			'/:id/star',
-			async ({ params, store }) => {
+		.post('/:id/star', {
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+				detail: { tags: ['Articles'] },
+			}, async ({ params, store }) => {
 				await articlesService.addStar(
 					Number(params.id),
 					fromStore(store).user_id
 				)
 				return { success: true }
-			},
-			{
+			})
+
+		.delete('/:id/star', {
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Articles'] },
-			}
-		)
-
-		.delete(
-			'/:id/star',
-			async ({ params, store }) => {
+			}, async ({ params, store }) => {
 				await articlesService.removeStar(
 					Number(params.id),
 					fromStore(store).user_id
 				)
 				return { success: true }
-			},
-			{
+			})
+
+		.post('/:id/digest', {
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Articles'] },
-			}
-		)
-
-		.post(
-			'/:id/digest',
-			async ({ params, store, set }) => {
+			}, async ({ params, store, set }) => {
 				const { user_id } = fromStore(store)
 				const is_admin = await checkPermission(
 					user_id,
@@ -606,17 +552,22 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 						? article.tags.split(',').filter(Boolean)
 						: [],
 				})
-			},
-			{
+			})
+
+		.post('/:id/publish', {
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
+				body: t.Object({
+					digest: t.String({ minLength: 1, maxLength: 1500 }),
+					targets: t.Optional(
+						t.Array(t.Union([t.Literal('tg'), t.Literal('ds')]), {
+							maxItems: 2,
+						})
+					),
+					with_cover: t.Optional(t.Boolean()),
+				}),
 				detail: { tags: ['Articles'] },
-			}
-		)
-
-		.post(
-			'/:id/publish',
-			async ({ params, body, store, set }) => {
+			}, async ({ params, body, store, set }) => {
 				const { user_id } = fromStore(store)
 				const is_admin = await checkPermission(
 					user_id,
@@ -639,22 +590,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 					set.status = 404
 					return { error: (err as Error).message }
 				}
-			},
-			{
-				beforeHandle: [requireAuth],
-				params: t.Object({ id: t.String() }),
-				body: t.Object({
-					digest: t.String({ minLength: 1, maxLength: 1500 }),
-					targets: t.Optional(
-						t.Array(t.Union([t.Literal('tg'), t.Literal('ds')]), {
-							maxItems: 2,
-						})
-					),
-					with_cover: t.Optional(t.Boolean()),
-				}),
-				detail: { tags: ['Articles'] },
-			}
-		)
+			})
 
 		.use(commentsRoutes)
 )

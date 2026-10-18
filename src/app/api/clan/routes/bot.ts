@@ -24,9 +24,10 @@ const guildSelect = {
 } as const
 
 export const clanBotRoutes = clanContext
-	.post(
-		'/bot/link-token',
-		async ({ store }) => {
+	.post('/bot/link-token', {
+			beforeHandle: [requireAuth, requireClanOfficer],
+			detail: { tags: ['Clan'] },
+		}, async ({ store }) => {
 			const clan_id = store.clan_id!
 			const token = generateToken()
 			await prisma.botLinkState.create({
@@ -42,30 +43,23 @@ export const clanBotRoutes = clanContext
 				expires_in: TOKEN_TTL_MS / 1000,
 				command: `/setup ${token}`,
 			}
-		},
-		{
-			beforeHandle: [requireAuth, requireClanOfficer],
+		})
+	.get('/bot/guilds', {
+			beforeHandle: [requireAuth, requireClanMember],
 			detail: { tags: ['Clan'] },
-		}
-	)
-	.get(
-		'/bot/guilds',
-		async ({ store }) => {
+		}, async ({ store }) => {
 			const guilds = await prisma.botGuild.findMany({
 				where: { clan_id: store.clan_id },
 				select: guildSelect,
 				orderBy: { created_at: 'asc' },
 			})
 			return { guilds }
-		},
-		{
-			beforeHandle: [requireAuth, requireClanMember],
+		})
+	.delete('/bot/guilds/:guild_id', {
+			beforeHandle: [requireAuth, requireClanOfficer],
+			params: t.Object({ guild_id: t.String() }),
 			detail: { tags: ['Clan'] },
-		}
-	)
-	.delete(
-		'/bot/guilds/:guild_id',
-		async ({ store, params, set }) => {
+		}, async ({ store, params, set }) => {
 			const guild = await prisma.botGuild.findFirst({
 				where: { guild_id: params.guild_id, clan_id: store.clan_id },
 			})
@@ -75,10 +69,4 @@ export const clanBotRoutes = clanContext
 			}
 			await prisma.botGuild.delete({ where: { guild_id: params.guild_id } })
 			return { success: true }
-		},
-		{
-			beforeHandle: [requireAuth, requireClanOfficer],
-			params: t.Object({ guild_id: t.String() }),
-			detail: { tags: ['Clan'] },
-		}
-	)
+		})

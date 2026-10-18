@@ -84,7 +84,7 @@ function loadFromEncrypted(): boolean {
 }
 
 export const routeLoot = createElysia()
-	.onStart(() => {
+	.setup(() => {
 		if (!buildFromSources()) {
 			loadFromEncrypted()
 		}

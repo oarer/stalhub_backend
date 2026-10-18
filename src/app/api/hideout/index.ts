@@ -1,4 +1,4 @@
-import { cron } from '@elysiajs/cron'
+import { cron } from '@elysia/cron'
 import { createElysia } from '@/utils/elysia'
 import { attachPrices, loadHideoutData, updatePrices } from './hideout.service'
 
@@ -11,7 +11,7 @@ export const routeHideout = createElysia()
 			run: updatePrices,
 		})
 	)
-	.onStart(async () => {
+	.setup(async () => {
 		try {
 			await loadHideoutData()
 		} catch (err) {

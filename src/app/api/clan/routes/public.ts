@@ -5,20 +5,19 @@ import { clanService } from '../services/clan'
 
 export const clansPublicRoutes = createElysia().group('/clans', (app) =>
 	app
-		.get('', () => clanService.listPublicClans(), {
+		.get('', {
 			detail: { tags: ['Clan'] },
-		})
+		}, () => clanService.listPublicClans())
 		// статичный роут до параметризованного, иначе "stats" съестся как clan_id
-		.get('/stats/summary', () => analyticsService.getPublicClansStats(), {
+		.get('/stats/summary', {
 			detail: { tags: ['Clan'] },
-		})
-		.get('/:clan_id', ({ params, set }) =>
+		}, () => analyticsService.getPublicClansStats())
+		.get('/:clan_id', {
+			params: t.Object({ clan_id: t.String() }),
+			detail: { tags: ['Clan'] },
+		}, ({ params, set }) =>
 			clanService.getPublicPayload(params.clan_id).then((clan) => {
 				if (!clan) set.status = 404
 				return clan
-			}),
-		{
-			params: t.Object({ clan_id: t.String() }),
-			detail: { tags: ['Clan'] },
-		})
+			}))
 )

@@ -29,9 +29,14 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 	app
 		.use(jwtPlugin)
 
-		.get(
-			'',
-			async ({ query, store }) => {
+		.get('', {
+				beforeHandle: [requireAuth, requireArtAuthor],
+				query: t.Object({
+					take: t.Optional(t.Numeric()),
+					page: t.Optional(t.Numeric()),
+				}),
+				detail: { tags: ['Arts'] },
+			}, async ({ query, store }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				const { user_id } = fromStore(store)
@@ -39,54 +44,24 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 				return artsService.list(take, page, {
 					...(!is_admin && { author_id: user_id }),
 				})
-			},
-			{
+			})
+
+		.get('/mine', {
 				beforeHandle: [requireAuth, requireArtAuthor],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Arts'] },
-			}
-		)
-
-		.get(
-			'/mine',
-			({ query, store }) => {
+			}, ({ query, store }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				return artsService.list(take, page, {
 					author_id: fromStore(store).user_id,
 				})
-			},
-			{
-				beforeHandle: [requireAuth, requireArtAuthor],
-				query: t.Object({
-					take: t.Optional(t.Numeric()),
-					page: t.Optional(t.Numeric()),
-				}),
-				detail: { tags: ['Arts'] },
-			}
-		)
+			})
 
-		.get(
-			'/public',
-			async ({ query }) => {
-				const take = query.take ?? 24
-				const page = (query.page ?? 1) - 1
-				const tags = query.tags
-					? query.tags
-							.split(',')
-							.map((t) => t.trim())
-							.filter(Boolean)
-					: undefined
-				return artsService.list(take, page, {
-					tags,
-					type: query.type,
-					sort: query.sort,
-				})
-			},
-			{
+		.get('/public', {
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
@@ -102,12 +77,27 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					),
 				}),
 				detail: { tags: ['Arts'] },
-			}
-		)
+			}, async ({ query }) => {
+				const take = query.take ?? 24
+				const page = (query.page ?? 1) - 1
+				const tags = query.tags
+					? query.tags
+							.split(',')
+							.map((t) => t.trim())
+							.filter(Boolean)
+					: undefined
+				return artsService.list(take, page, {
+					tags,
+					type: query.type,
+					sort: query.sort,
+				})
+			})
 
-		.get(
-			'/:id',
-			async ({ params, store, request }) => {
+		.get('/:id', {
+				beforeHandle: [requireOptionalAuth],
+				params: t.Object({ id: t.String() }),
+				detail: { tags: ['Arts'] },
+			}, async ({ params, store, request }) => {
 				return artsService.getById(
 					params.id,
 					fromStoreOpt(store).user_id,
@@ -123,32 +113,9 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 							request.headers.get('user-agent') ?? undefined,
 					}
 				)
-			},
-			{
-				beforeHandle: [requireOptionalAuth],
-				params: t.Object({ id: t.String() }),
-				detail: { tags: ['Arts'] },
-			}
-		)
+			})
 
-		.post(
-			'/upload',
-			async ({ body, set }) => {
-				const file = body.file
-				const buf = Buffer.from(await file.arrayBuffer())
-
-				try {
-					return await artsService.saveArtMedia({
-						name: file.name,
-						type: file.type,
-						buffer: buf,
-					})
-				} catch (err) {
-					set.status = 400
-					return { error: (err as Error).message }
-				}
-			},
-			{
+		.post('/upload', {
 				beforeHandle: [requireAuth, requireArtAuthor],
 				body: t.Object({
 					file: t.File({
@@ -163,12 +130,36 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					}),
 				}),
 				detail: { tags: ['Arts'] },
-			}
-		)
+			}, async ({ body, set }) => {
+				const file = body.file
+				const buf = Buffer.from(await file.arrayBuffer())
 
-		.post(
-			'',
-			async ({ body, store, set, request }) => {
+				try {
+					return await artsService.saveArtMedia({
+						name: file.name,
+						type: file.type,
+						buffer: buf,
+					})
+				} catch (err) {
+					set.status = 400
+					return { error: (err as Error).message }
+				}
+			})
+
+		.post('', {
+				beforeHandle: [requireAuth, requireArtAuthor],
+				body: t.Object({
+					title: t.Optional(t.String({ maxLength: 200 })),
+					description: t.Optional(t.String({ maxLength: 2000 })),
+					type: t.Optional(t.Enum(ArtType)),
+					image_url: t.Optional(t.String()),
+					image_urls: t.Optional(
+						t.Array(t.String(), { maxItems: 10 })
+					),
+					tags: t.Optional(t.Array(t.String())),
+				}),
+				detail: { tags: ['Arts'] },
+			}, async ({ body, store, set, request }) => {
 				const user_id = fromStore(store).user_id
 				const xss = await rejectOnXss({
 					fields: {
@@ -213,26 +204,25 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					image_urls: body.image_urls,
 					tags: body.tags?.join(','),
 				})
-			},
-			{
-				beforeHandle: [requireAuth, requireArtAuthor],
+			})
+
+		.patch('/:id', {
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
 				body: t.Object({
-					title: t.Optional(t.String({ maxLength: 200 })),
-					description: t.Optional(t.String({ maxLength: 2000 })),
+					title: t.Optional(t.Nullable(t.String({ maxLength: 200 }))),
+					description: t.Optional(
+						t.Nullable(t.String({ maxLength: 2000 }))
+					),
 					type: t.Optional(t.Enum(ArtType)),
-					image_url: t.Optional(t.String()),
+					image_url: t.Optional(t.Nullable(t.String())),
 					image_urls: t.Optional(
-						t.Array(t.String(), { maxItems: 10 })
+						t.Nullable(t.Array(t.String(), { maxItems: 10 }))
 					),
 					tags: t.Optional(t.Array(t.String())),
 				}),
 				detail: { tags: ['Arts'] },
-			}
-		)
-
-		.patch(
-			'/:id',
-			async ({ params, body, store, set, request }) => {
+			}, async ({ params, body, store, set, request }) => {
 				const { user_id } = fromStore(store)
 				const xssPatch = await rejectOnXss({
 					fields: {
@@ -299,29 +289,13 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 				}
 
 				return result
-			},
-			{
+			})
+
+		.delete('/:id', {
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
-				body: t.Object({
-					title: t.Optional(t.Nullable(t.String({ maxLength: 200 }))),
-					description: t.Optional(
-						t.Nullable(t.String({ maxLength: 2000 }))
-					),
-					type: t.Optional(t.Enum(ArtType)),
-					image_url: t.Optional(t.Nullable(t.String())),
-					image_urls: t.Optional(
-						t.Nullable(t.Array(t.String(), { maxItems: 10 }))
-					),
-					tags: t.Optional(t.Array(t.String())),
-				}),
 				detail: { tags: ['Arts'] },
-			}
-		)
-
-		.delete(
-			'/:id',
-			async ({ params, store, set }) => {
+			}, async ({ params, store, set }) => {
 				const { user_id } = fromStore(store)
 				const is_admin = await checkPermission(user_id, 'art:manage')
 				const ok = await artsService.delete(
@@ -336,45 +310,31 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 				}
 
 				return { success: true }
-			},
-			{
+			})
+
+		.post('/:id/star', {
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Arts'] },
-			}
-		)
-
-		.post(
-			'/:id/star',
-			async ({ params, store }) => {
+			}, async ({ params, store }) => {
 				await artsService.addStar(
 					Number(params.id),
 					fromStore(store).user_id
 				)
 				return { success: true }
-			},
-			{
+			})
+
+		.delete('/:id/star', {
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Arts'] },
-			}
-		)
-
-		.delete(
-			'/:id/star',
-			async ({ params, store }) => {
+			}, async ({ params, store }) => {
 				await artsService.removeStar(
 					Number(params.id),
 					fromStore(store).user_id
 				)
 				return { success: true }
-			},
-			{
-				beforeHandle: [requireAuth],
-				params: t.Object({ id: t.String() }),
-				detail: { tags: ['Arts'] },
-			}
-		)
+			})
 
 		.use(artCommentsRoutes)
 )
