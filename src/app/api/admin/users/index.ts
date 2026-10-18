@@ -417,9 +417,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ user_id: t.Numeric() }),
 				body: t.Object({
-					file: t.File({
-						type: ['image/png', 'image/jpeg', 'image/webp'],
-					}),
+					file: t.File(),
 				}),
 				detail: { tags: ['Admin'] },
 			},

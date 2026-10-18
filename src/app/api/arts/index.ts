@@ -136,16 +136,7 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 			{
 				beforeHandle: [requireAuth, requireArtAuthor],
 				body: t.Object({
-					file: t.File({
-						type: [
-							'image/png',
-							'image/jpeg',
-							'image/webp',
-							'image/gif',
-							'video/mp4',
-							'video/webm',
-						],
-					}),
+					file: t.File(),
 				}),
 				detail: { tags: ['Arts'] },
 			},

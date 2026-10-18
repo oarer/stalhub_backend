@@ -157,15 +157,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
-					file: t.File({
-						type: [
-							'image/jpeg',
-							'image/png',
-							'image/webp',
-							'image/gif',
-						],
-						maxSize: ARTICLE_IMAGE_MAX_BYTES,
-					}),
+					file: t.File(),
 				}),
 				detail: { tags: ['Articles'] },
 			},

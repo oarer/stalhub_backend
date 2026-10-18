@@ -482,9 +482,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			{
 				beforeHandle: [requireAuth],
 				body: t.Object({
-					file: t.File({
-						type: ['image/png', 'image/jpeg', 'image/webp'],
-					}),
+					file: t.File(),
 				}),
 				detail: { tags: ['Users'] },
 			},
@@ -513,9 +511,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			{
 				beforeHandle: [requireAuth],
 				body: t.Object({
-					file: t.File({
-						type: ['image/png', 'image/jpeg', 'image/webp'],
-					}),
+					file: t.File(),
 				}),
 				detail: { tags: ['Users'] },
 			},

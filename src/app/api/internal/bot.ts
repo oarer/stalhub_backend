@@ -243,9 +243,7 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					type: t.Optional(t.Enum(StageType)),
 					stage: t.Optional(t.Numeric({ minimum: 1 })),
 					date: t.Optional(t.String()),
-					file: t.File({
-						type: ['image/png', 'image/jpeg', 'image/webp'],
-					}),
+					file: t.File(),
 				}),
 				detail: { tags: ['Internal'] },
 			},
