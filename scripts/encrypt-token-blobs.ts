@@ -20,10 +20,14 @@ async function main() {
 			data: { token_blob: encryptSecret(row.token_blob) },
 		})
 		encrypted++
-		console.log(`[migrate] encrypted token_blob for EXBO account ${row.exbo_id}`)
+		console.log(
+			`[migrate] encrypted token_blob for EXBO account ${row.exbo_id}`
+		)
 	}
 
-	console.log(`[migrate] done: ${encrypted} encrypted, ${skipped} already encrypted`)
+	console.log(
+		`[migrate] done: ${encrypted} encrypted, ${skipped} already encrypted`
+	)
 }
 
 main()

@@ -10,7 +10,8 @@ export function normalizeRecruitmentSettings(
 ): RecruitmentSettingsInput {
 	const leaderDiscord = data.leader_discord.trim()
 	if (!leaderDiscord) throw new Error('Leader Discord is required')
-	if (leaderDiscord.length > 100) throw new Error('Leader Discord is too long')
+	if (leaderDiscord.length > 100)
+		throw new Error('Leader Discord is too long')
 
 	const clanDiscord = data.clan_discord?.trim() || null
 	if (clanDiscord && clanDiscord.length > 255)

@@ -20,7 +20,9 @@ async function requireArtManage({ store, set }: AuthContext) {
 export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 	app
 		.use(jwtPlugin)
-		.get('', {
+		.get(
+			'',
+			{
 				beforeHandle: [requireAuth, requireArtManage],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
@@ -30,7 +32,8 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 					tags: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ query }) => {
+			},
+			async ({ query }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				const tags = query.tags
@@ -46,9 +49,12 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 					query.type,
 					tags
 				)
-			})
+			}
+		)
 
-		.post('', {
+		.post(
+			'',
+			{
 				beforeHandle: [requireAuth, requireArtManage],
 				body: t.Object({
 					title: t.Optional(t.String({ maxLength: 200 })),
@@ -66,7 +72,8 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 					),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ body, set }) => {
+			},
+			async ({ body, set }) => {
 				try {
 					if (body.image_urls && body.image_urls.length > 10) {
 						set.status = 400
@@ -87,22 +94,29 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 					set.status = 400
 					return { error: (err as Error).message }
 				}
-			})
+			}
+		)
 
-		.get('/:id', {
+		.get(
+			'/:id',
+			{
 				beforeHandle: [requireAuth, requireArtManage],
 				params: t.Object({ id: t.Numeric() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				const result = await adminArtsService.get(Number(params.id))
 				if (!result) {
 					set.status = 404
 					return { error: 'Art not found' }
 				}
 				return result
-			})
+			}
+		)
 
-		.patch('/:id', {
+		.patch(
+			'/:id',
+			{
 				beforeHandle: [requireAuth, requireArtManage],
 				params: t.Object({ id: t.Numeric() }),
 				body: t.Object({
@@ -123,7 +137,8 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 					),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, body, set }) => {
+			},
+			async ({ params, body, set }) => {
 				if (body.image_urls && body.image_urls.length > 10) {
 					set.status = 400
 					return { error: 'Too many images (max 10)' }
@@ -161,18 +176,23 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 					return { error: 'Art not found' }
 				}
 				return result
-			})
+			}
+		)
 
-		.delete('/:id', {
+		.delete(
+			'/:id',
+			{
 				beforeHandle: [requireAuth, requireArtManage],
 				params: t.Object({ id: t.Numeric() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				const ok = await adminArtsService.remove(Number(params.id))
 				if (!ok) {
 					set.status = 404
 					return { error: 'Art not found' }
 				}
 				return { success: true }
-			})
+			}
+		)
 )

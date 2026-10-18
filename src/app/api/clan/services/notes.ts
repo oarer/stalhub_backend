@@ -13,7 +13,12 @@ export class NotesService {
 		})
 	}
 
-	async upsert(clan_id: string, author_id: number, member_id: number, content: string) {
+	async upsert(
+		clan_id: string,
+		author_id: number,
+		member_id: number,
+		content: string
+	) {
 		const member = await prisma.clanMember.findFirst({
 			where: { id: member_id, clan_id },
 		})
@@ -34,7 +39,12 @@ export class NotesService {
 		}
 
 		return prisma.clanMemberNote.create({
-			data: { clan_id, author_id, member_id, content: content.slice(0, 512) },
+			data: {
+				clan_id,
+				author_id,
+				member_id,
+				content: content.slice(0, 512),
+			},
 			include: {
 				author: { select: USER_WITH_BADGES_SELECT },
 			},
@@ -42,7 +52,9 @@ export class NotesService {
 	}
 
 	async update(note_id: number, content: string) {
-		const note = await prisma.clanMemberNote.findUnique({ where: { id: note_id } })
+		const note = await prisma.clanMemberNote.findUnique({
+			where: { id: note_id },
+		})
 		if (!note) throw new Error('Заметка не найдена')
 
 		return prisma.clanMemberNote.update({
@@ -55,7 +67,9 @@ export class NotesService {
 	}
 
 	async delete(note_id: number) {
-		const note = await prisma.clanMemberNote.findUnique({ where: { id: note_id } })
+		const note = await prisma.clanMemberNote.findUnique({
+			where: { id: note_id },
+		})
 		if (!note) throw new Error('Заметка не найдена')
 
 		await prisma.clanMemberNote.delete({ where: { id: note_id } })

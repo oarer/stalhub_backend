@@ -69,13 +69,16 @@ function filterPlayerResponse(raw: PlayerResponse): PlayerResponse {
 }
 
 export const exboRoutes = createElysia().group('/exbo', (app) =>
-	app.use(jwtPlugin).get('/:region/characters', {
+	app.use(jwtPlugin).get(
+		'/:region/characters',
+		{
 			beforeHandle: [requireAuth],
 			params: t.Object({
 				region: t.String({ error: 'region is required' }),
 			}),
 			detail: { tags: ['EXBO'] },
-		}, async ({ params, store, set }) => {
+		},
+		async ({ params, store, set }) => {
 			const { user_id } = fromStore(store)
 
 			const auth = await prisma.eXBOAuth.findUnique({
@@ -144,5 +147,6 @@ export const exboRoutes = createElysia().group('/exbo', (app) =>
 			}
 
 			return profiles
-		})
+		}
+	)
 )

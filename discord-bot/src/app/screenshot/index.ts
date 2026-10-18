@@ -3,10 +3,7 @@ import { backendUpload } from '../../lib/api'
 import { errMsg } from '../../lib/errors'
 import { error } from '../../lib/logger'
 import { mskDateStr } from '../../lib/msk'
-import {
-	needsParams,
-	startScreenshotPrompt,
-} from './prompt'
+import { needsParams, startScreenshotPrompt } from './prompt'
 
 function blobPart(buf: Buffer): BlobPart {
 	return new Uint8Array(buf)
@@ -39,7 +36,9 @@ export async function handleScreenshot(
 	form.append('date', date)
 	form.append(
 		'file',
-		new Blob([blobPart(buf)], { type: attachment.contentType ?? 'image/png' }),
+		new Blob([blobPart(buf)], {
+			type: attachment.contentType ?? 'image/png',
+		}),
 		attachment.name
 	)
 	try {

@@ -1,3 +1,7 @@
 import { createElysia } from '@/utils/elysia'
 import { handleMapAsset } from './bundle'
-export const map3dRoutes = createElysia({ prefix: '/map3d' }).all('/*', { parse: 'none' }, ({ request, params }) => handleMapAsset(request, params['*']))
+export const map3dRoutes = createElysia({ prefix: '/map3d' }).all(
+	'/*',
+	{ parse: 'none' },
+	({ request, params }) => handleMapAsset(request, params['*'])
+)

@@ -18,7 +18,9 @@ if (!input) {
 }
 
 if (!isEncrypted(input)) {
-	console.error('Value is not encrypted (missing enc:v1: prefix), printing as-is:')
+	console.error(
+		'Value is not encrypted (missing enc:v1: prefix), printing as-is:'
+	)
 	console.log(input)
 	process.exit(0)
 }

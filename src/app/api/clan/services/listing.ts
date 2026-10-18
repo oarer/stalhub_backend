@@ -13,10 +13,8 @@ interface ListingItem {
 type GrenadeBoxMap = Record<string, ListingItem>
 type ConsumableItem = ListingItem
 
-const GRENADES_BOX_URL =
-	'https://cdn.stalhub.dev/db/listing/grenadesBox.json'
-const CONSUMABLES_URL =
-	'https://cdn.stalhub.dev/db/listing/consumables.json'
+const GRENADES_BOX_URL = 'https://cdn.stalhub.dev/db/listing/grenadesBox.json'
+const CONSUMABLES_URL = 'https://cdn.stalhub.dev/db/listing/consumables.json'
 
 const CACHE_TTL = 60 * 60 * 1000 // 1 hour
 
@@ -31,10 +29,7 @@ export class ListingService {
 	}
 
 	async getGrenadeBoxes() {
-		if (
-			grenadesBoxCache &&
-			Date.now() - grenadesBoxCache.ts < CACHE_TTL
-		) {
+		if (grenadesBoxCache && Date.now() - grenadesBoxCache.ts < CACHE_TTL) {
 			return grenadesBoxCache.data
 		}
 		const data = await this.fetchJson<GrenadeBoxMap>(GRENADES_BOX_URL)
@@ -43,10 +38,7 @@ export class ListingService {
 	}
 
 	async getConsumables() {
-		if (
-			consumablesCache &&
-			Date.now() - consumablesCache.ts < CACHE_TTL
-		) {
+		if (consumablesCache && Date.now() - consumablesCache.ts < CACHE_TTL) {
 			return consumablesCache.data
 		}
 		const data = await this.fetchJson<ConsumableItem[]>(CONSUMABLES_URL)

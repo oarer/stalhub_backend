@@ -55,11 +55,17 @@ export async function applySessionRating(
 			where: { id: session.clan_id },
 			select: { rating: true },
 		})
-		const desiredDelta = ratingDeltaForResult(session.type, victory, season != null)
+		const desiredDelta = ratingDeltaForResult(
+			session.type,
+			victory,
+			season != null
+		)
 		let rating = clan.rating
 		if (session.rating_event) {
 			rating = applyRatingDelta(rating, -session.rating_event.delta)
-			await tx.clanRatingEvent.delete({ where: { id: session.rating_event.id } })
+			await tx.clanRatingEvent.delete({
+				where: { id: session.rating_event.id },
+			})
 		}
 		let event = null
 		if (desiredDelta != null && season) {
@@ -113,7 +119,9 @@ export async function reverseSessionRating(session_id: number) {
 export async function deleteSessionWithRating(session_id: number) {
 	return prisma.$transaction(async (tx) => {
 		await tx.$queryRaw`SELECT id FROM "stage_sessions" WHERE id = ${session_id} FOR UPDATE`
-		const event = await tx.clanRatingEvent.findUnique({ where: { session_id } })
+		const event = await tx.clanRatingEvent.findUnique({
+			where: { session_id },
+		})
 		if (event) {
 			await tx.$queryRaw`SELECT id FROM "clans" WHERE id = ${event.clan_id} FOR UPDATE`
 			const clan = await tx.clan.findUniqueOrThrow({

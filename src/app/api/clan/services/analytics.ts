@@ -101,7 +101,11 @@ class AnalyticsService {
 		const ext = path.extname(file.name) || '.png'
 		const filename = `${session_id}-${randomUUID()}${ext}`
 		const relativePath = path.join('uploads', 'screenshots', filename)
-		await putUpload(`/${relativePath}`, file.buffer, file.type || 'image/png')
+		await putUpload(
+			`/${relativePath}`,
+			file.buffer,
+			file.type || 'image/png'
+		)
 
 		const row = await prisma.stageScreenshot.create({
 			data: {
@@ -128,7 +132,10 @@ class AnalyticsService {
 		if (!bytes) {
 			await prisma.stageScreenshot.update({
 				where: { id: screenshot_id },
-				data: { ai_status: 'error', ai_error: 'screenshot file not readable' },
+				data: {
+					ai_status: 'error',
+					ai_error: 'screenshot file not readable',
+				},
 			})
 			return
 		}
@@ -185,7 +192,10 @@ class AnalyticsService {
 			try {
 				await prisma.stageScreenshot.update({
 					where: { id: screenshot_id },
-					data: { ai_status: 'error', ai_error: (err as Error).message },
+					data: {
+						ai_status: 'error',
+						ai_error: (err as Error).message,
+					},
 				})
 			} catch {}
 		}
@@ -262,7 +272,9 @@ class AnalyticsService {
 		let wins = 0
 		let losses = 0
 		const mapped = screenshots.map((s) => {
-			const v = screenshotVictory(s.ai_result as AIScreenshotResult | null)
+			const v = screenshotVictory(
+				s.ai_result as AIScreenshotResult | null
+			)
 			if (v === true) wins++
 			else if (v === false) losses++
 			return {
@@ -282,7 +294,9 @@ class AnalyticsService {
 			wins > losses ? true : losses > wins ? false : null
 		return {
 			...rest,
-			ai_summary: summary ? { ...summary, victory: sessionVictory } : null,
+			ai_summary: summary
+				? { ...summary, victory: sessionVictory }
+				: null,
 			screenshots: mapped,
 		}
 	}
@@ -649,7 +663,14 @@ class AnalyticsService {
 		})
 		const byClan = new Map<
 			string,
-			{ sessions: number; battles: number; wins: number; losses: number; kills: number; deaths: number }
+			{
+				sessions: number
+				battles: number
+				wins: number
+				losses: number
+				kills: number
+				deaths: number
+			}
 		>()
 		for (const c of clans) {
 			byClan.set(c.id, {
@@ -708,7 +729,15 @@ class AnalyticsService {
 				kills: acc.kills + r.kills,
 				deaths: acc.deaths + r.deaths,
 			}),
-			{ clans: 0, sessions: 0, battles: 0, wins: 0, losses: 0, kills: 0, deaths: 0 }
+			{
+				clans: 0,
+				sessions: 0,
+				battles: 0,
+				wins: 0,
+				losses: 0,
+				kills: 0,
+				deaths: 0,
+			}
 		)
 		const decided = t.wins + t.losses
 		return {
@@ -805,7 +834,9 @@ class AnalyticsService {
 		let wins = 0
 		let losses = 0
 		for (const s of done) {
-			const v = screenshotVictory(s.ai_result as AIScreenshotResult | null)
+			const v = screenshotVictory(
+				s.ai_result as AIScreenshotResult | null
+			)
 			if (v === true) wins++
 			else if (v === false) losses++
 		}

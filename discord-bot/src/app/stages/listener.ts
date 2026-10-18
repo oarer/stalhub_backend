@@ -86,9 +86,7 @@ export async function handleStageMessage(message: Message) {
 					)
 				} catch (promptErr) {
 					error('Stage channel screenshot prompt failed:', promptErr)
-					errors.push(
-						`${attachment.name}: ${errMsg(promptErr)}`
-					)
+					errors.push(`${attachment.name}: ${errMsg(promptErr)}`)
 				}
 				continue
 			}
@@ -99,9 +97,9 @@ export async function handleStageMessage(message: Message) {
 	if (prompted) return
 
 	const reply =
-			ok > 0
-				? `Скриншоты загружены (${ok}).`
-				: `Не удалось загрузить скриншоты.`
+		ok > 0
+			? `Скриншоты загружены (${ok}).`
+			: `Не удалось загрузить скриншоты.`
 	const detail = errors.length ? `\n${errors.slice(0, 3).join('\n')}` : ''
 	await message
 		.reply(reply + detail)

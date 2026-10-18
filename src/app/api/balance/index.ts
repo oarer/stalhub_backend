@@ -15,12 +15,15 @@ const toResponse = (changes: Changes | null) => ({
 
 export const balanceRoutes = createElysia().group('/balance', (app) =>
 	app
-		.get('/diffs', {
+		.get(
+			'/diffs',
+			{
 				query: t.Object({
 					refresh: t.Optional(t.BooleanString()),
 				}),
 				detail: { tags: ['Balance'] },
-			}, async ({ query }) => {
+			},
+			async ({ query }) => {
 				if (query.refresh) {
 					await refreshBalanceDiffs(true)
 				}
@@ -30,10 +33,14 @@ export const balanceRoutes = createElysia().group('/balance', (app) =>
 					...toResponse(changes),
 					status: getBalanceStatus(),
 				}
-			})
-		.get('/diffs/archive', {
+			}
+		)
+		.get(
+			'/diffs/archive',
+			{
 				detail: { tags: ['Balance'] },
-			}, async () => {
+			},
+			async () => {
 				const files = listArchivedDiffs()
 				return {
 					total: files.length,
@@ -42,11 +49,15 @@ export const balanceRoutes = createElysia().group('/balance', (app) =>
 						return name.replace(/^diff_/, '').replace(/\.json$/, '')
 					}),
 				}
-			})
-		.get('/diffs/archive/:timestamp', {
+			}
+		)
+		.get(
+			'/diffs/archive/:timestamp',
+			{
 				params: t.Object({ timestamp: t.String() }),
 				detail: { tags: ['Balance'] },
-			}, async ({ params }) => {
+			},
+			async ({ params }) => {
 				const changes = readArchivedDiff(params.timestamp)
 				if (!changes) {
 					return {
@@ -55,5 +66,6 @@ export const balanceRoutes = createElysia().group('/balance', (app) =>
 					}
 				}
 				return toResponse(changes)
-			})
+			}
+		)
 )

@@ -6,29 +6,43 @@ export const serverOnlineRoutes = createElysia().group(
 	'/server-online',
 	(app) =>
 		app
-			.get('', {
-				detail: { tags: ['Server Online'] },
-			}, async () => serverOnlineService.latest())
-			.get('/history', {
+			.get(
+				'',
+				{
+					detail: { tags: ['Server Online'] },
+				},
+				async () => serverOnlineService.latest()
+			)
+			.get(
+				'/history',
+				{
 					query: t.Object({
 						hours: t.Optional(t.Numeric()),
 					}),
 					detail: { tags: ['Server Online'] },
-				}, async ({ query }) =>
-					serverOnlineService.history(query.hours ?? 24))
-			.get('/peaks', {
+				},
+				async ({ query }) =>
+					serverOnlineService.history(query.hours ?? 24)
+			)
+			.get(
+				'/peaks',
+				{
 					query: t.Object({
 						days: t.Optional(t.Numeric()),
 					}),
 					detail: { tags: ['Server Online'] },
-				}, async ({ query }) =>
-					serverOnlineService.peaks(query.days ?? 30))
-			.get('/emissions', {
+				},
+				async ({ query }) => serverOnlineService.peaks(query.days ?? 30)
+			)
+			.get(
+				'/emissions',
+				{
 					query: t.Object({
 						region: t.Optional(t.String()),
 					}),
 					detail: { tags: ['Server Online'] },
-				}, async ({ query, status }) => {
+				},
+				async ({ query, status }) => {
 					try {
 						if (query.region) {
 							return await serverOnlineService.emission(
@@ -39,5 +53,6 @@ export const serverOnlineRoutes = createElysia().group(
 					} catch {
 						return status(502, { error: 'Upstream unavailable' })
 					}
-				})
+				}
+			)
 )

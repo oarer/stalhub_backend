@@ -100,7 +100,11 @@ async function createTestClan() {
 			members: {
 				createMany: {
 					data: [
-						{ name: 'TestLeader', rank: 'LEADER', user_id: USER_ID },
+						{
+							name: 'TestLeader',
+							rank: 'LEADER',
+							user_id: USER_ID,
+						},
 						{ name: 'TestOfficer', rank: 'OFFICER' },
 						{ name: 'TestSoldier', rank: 'SOLDIER' },
 						{ name: 'TestCommoner', rank: 'COMMONER' },

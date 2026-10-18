@@ -53,11 +53,7 @@ function save(): void {
 	data.updatedAt = new Date().toISOString()
 	try {
 		mkdirSync(dirname(HISTORY_PATH), { recursive: true })
-		writeFileSync(
-			HISTORY_PATH,
-			JSON.stringify(data, null, 2),
-			'utf-8'
-		)
+		writeFileSync(HISTORY_PATH, JSON.stringify(data, null, 2), 'utf-8')
 	} catch (err) {
 		console.error('[EForum] failed to save history:', err)
 	}
@@ -76,9 +72,10 @@ export function hasSeen(author: string, postId: string): boolean {
 	return load().lastIds[author] === postId
 }
 
-export function appendRecord(
+export function appendRecord(record: DevCommentRecord): {
 	record: DevCommentRecord
-): { record: DevCommentRecord; isNew: boolean } {
+	isNew: boolean
+} {
 	const store = load()
 	const exists = store.items.some((i) => i.postId === record.postId)
 	if (!exists) {
@@ -100,9 +97,11 @@ export interface HistoryQuery {
 	since?: string
 }
 
-export function readHistory(
-	opts: HistoryQuery = {}
-): { total: number; items: DevCommentRecord[]; updatedAt: string } {
+export function readHistory(opts: HistoryQuery = {}): {
+	total: number
+	items: DevCommentRecord[]
+	updatedAt: string
+} {
 	const { author, authors, limit = 20, offset = 0, since } = opts
 	const safeLimit = Math.min(Math.max(limit, 1), 100)
 	const safeOffset = Math.max(offset, 0)

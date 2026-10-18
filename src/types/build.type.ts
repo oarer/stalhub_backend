@@ -8,7 +8,6 @@ export enum ArtQuality {
 	ART_QUALITY_UNIQUE = 'ART_QUALITY_UNIQUE',
 }
 
-
 export type Art = {
 	instance_id: string
 	item_id: string

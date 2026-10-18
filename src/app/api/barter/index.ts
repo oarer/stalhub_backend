@@ -27,9 +27,15 @@ export const routeBarter = createElysia()
 			await loadListing()
 			await loadBarter()
 		} catch (err) {
-			console.error('[Barter] Failed to load data on start, will retry:', err)
+			console.error(
+				'[Barter] Failed to load data on start, will retry:',
+				err
+			)
 			setTimeout(
-				() => loadListing().then(() => loadBarter()).catch(() => undefined),
+				() =>
+					loadListing()
+						.then(() => loadBarter())
+						.catch(() => undefined),
 				60_000
 			)
 		}
@@ -42,44 +48,55 @@ export const routeBarter = createElysia()
 		const items = listCraftable(barterData, listing)
 		return { total: items.length, items }
 	})
-	.get('/barter/:item_id', async ({ params, status }: { params: Record<string, string>; status: (code: number, body?: unknown) => unknown }) => {
-		const { item_id } = params
+	.get(
+		'/barter/:item_id',
+		async ({
+			params,
+			status,
+		}: {
+			params: Record<string, string>
+			status: (code: number, body?: unknown) => unknown
+		}) => {
+			const { item_id } = params
 
-		const [barterData, listing] = await Promise.all([
-			loadBarter(),
-			loadListing(),
-		])
+			const [barterData, listing] = await Promise.all([
+				loadBarter(),
+				loadListing(),
+			])
 
-		const matched = barterData
-			.map((settlement) => ({
-				settlement,
-				recipe: settlement.recipes.find((r) => r.item === item_id),
-			}))
-			.filter(
-				(x): x is { settlement: BarterEntry; recipe: BarterRecipe } =>
-					x.recipe !== undefined
-			)
+			const matched = barterData
+				.map((settlement) => ({
+					settlement,
+					recipe: settlement.recipes.find((r) => r.item === item_id),
+				}))
+				.filter(
+					(
+						x
+					): x is { settlement: BarterEntry; recipe: BarterRecipe } =>
+						x.recipe !== undefined
+				)
 
-		const usedIn = collectUsedIn(barterData, item_id, listing)
+			const usedIn = collectUsedIn(barterData, item_id, listing)
 
-		if (!matched.length) {
-			return status(404, {
-				status: 404,
-				message: 'Item not found',
-			})
+			if (!matched.length) {
+				return status(404, {
+					status: 404,
+					message: 'Item not found',
+				})
+			}
+
+			barterRequestsTotal.inc()
+			const best = pickBestMatch(matched)
+
+			return {
+				settlement_required_level: String(
+					best.recipe.settlementRequiredLevel
+				),
+				settlement_titles: matched.map(({ settlement }) =>
+					normalizeTitles(settlement.settlementTitle.lines)
+				),
+				used_in: usedIn,
+				recipes: transformRecipe(best.recipe, listing),
+			}
 		}
-
-		barterRequestsTotal.inc()
-		const best = pickBestMatch(matched)
-
-		return {
-			settlement_required_level: String(
-				best.recipe.settlementRequiredLevel
-			),
-			settlement_titles: matched.map(({ settlement }) =>
-				normalizeTitles(settlement.settlementTitle.lines)
-			),
-			used_in: usedIn,
-			recipes: transformRecipe(best.recipe, listing),
-		}
-	})
+	)

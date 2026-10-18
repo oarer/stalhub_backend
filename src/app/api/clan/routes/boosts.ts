@@ -6,12 +6,17 @@ import { boostOrderService } from '../services/boost-order'
 
 export const boostOrderRoutes = clanContext.group('/boosts', (app) =>
 	app
-		.get('', {
+		.get(
+			'',
+			{
 				beforeHandle: [requireAuth, requireClanMember],
 				detail: { tags: ['Clan Boosts'] },
-			}, ({ store }) =>
-				boostOrderService.getOrders(store.clan_id!))
-		.post('', {
+			},
+			({ store }) => boostOrderService.getOrders(store.clan_id!)
+		)
+		.post(
+			'',
+			{
 				beforeHandle: [requireAuth, requireClanMember],
 				body: t.Object({
 					player_id: t.Numeric(),
@@ -20,23 +25,26 @@ export const boostOrderRoutes = clanContext.group('/boosts', (app) =>
 					count: t.Numeric({ minimum: 1 }),
 				}),
 				detail: { tags: ['Clan Boosts'] },
-			}, ({ store, body }) =>
+			},
+			({ store, body }) =>
 				boostOrderService.addOrder(
 					store.clan_id!,
 					body.player_id,
 					body.item_id,
 					body.item_name,
 					body.count
-				))
-		.delete('/:index', {
+				)
+		)
+		.delete(
+			'/:index',
+			{
 				beforeHandle: [requireAuth, requireClanOfficer],
 				params: t.Object({
 					index: t.Numeric(),
 				}),
 				detail: { tags: ['Clan Boosts'] },
-			}, ({ params, store }) =>
-				boostOrderService.removeOrder(
-					store.clan_id!,
-					params.index
-				))
+			},
+			({ params, store }) =>
+				boostOrderService.removeOrder(store.clan_id!, params.index)
+		)
 )

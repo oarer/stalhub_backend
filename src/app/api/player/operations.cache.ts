@@ -3,7 +3,10 @@ import type { OperationSessionListing } from '@/types/operations.type'
 
 const TTL = 60 * 5
 
-function key(region: string, params: { username?: string; limit?: number; offset?: number }) {
+function key(
+	region: string,
+	params: { username?: string; limit?: number; offset?: number }
+) {
 	const username = params.username?.toLowerCase() ?? '*'
 	return `player:operations:${region}:${username}:${params.limit ?? 100}:${params.offset ?? 0}`
 }

@@ -75,14 +75,17 @@ export class GoldService {
 	}
 
 	async setAttendees(drop_id: number, clan_id: string, member_ids: number[]) {
-		const drop = await prisma.goldDrop.findUnique({ where: { id: drop_id } })
+		const drop = await prisma.goldDrop.findUnique({
+			where: { id: drop_id },
+		})
 		if (!drop) throw new Error('Дроп не найден')
 		if (drop.clan_id !== clan_id) throw new Error('Дроп не из вашего клана')
 
 		const valid = await prisma.clanMember.count({
 			where: { id: { in: member_ids }, clan_id },
 		})
-		if (valid !== member_ids.length) throw new Error('Некорректный участник')
+		if (valid !== member_ids.length)
+			throw new Error('Некорректный участник')
 
 		await prisma.$transaction([
 			prisma.goldDropAttendee.deleteMany({ where: { drop_id } }),
@@ -97,7 +100,9 @@ export class GoldService {
 	}
 
 	async setStatus(drop_id: number, clan_id: string, status: GoldDropStatus) {
-		const drop = await prisma.goldDrop.findUnique({ where: { id: drop_id } })
+		const drop = await prisma.goldDrop.findUnique({
+			where: { id: drop_id },
+		})
 		if (!drop) throw new Error('Дроп не найден')
 		if (drop.clan_id !== clan_id) throw new Error('Дроп не из вашего клана')
 

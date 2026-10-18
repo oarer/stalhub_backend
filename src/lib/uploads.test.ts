@@ -15,7 +15,9 @@ describe('toS3Key', () => {
 	})
 
 	it('accepts stored form without leading slash', () => {
-		expect(toS3Key('uploads/screenshots/a.png')).toBe('uploads/screenshots/a.png')
+		expect(toS3Key('uploads/screenshots/a.png')).toBe(
+			'uploads/screenshots/a.png'
+		)
 	})
 
 	it('rejects traversal and foreign paths', () => {
@@ -50,37 +52,25 @@ integration('s3 integration (real bucket)', () => {
 		expect(isS3Uploads()).toBe(true)
 	})
 
-	it(
-		'put -> read roundtrip',
-		async () => {
-			await putUpload(publicPath, payload, 'text/plain')
-			const back = await readUploadBytes(publicPath)
-			expect(back).not.toBeNull()
-			expect(Buffer.from(back!).equals(payload)).toBe(true)
-		},
-		30_000
-	)
+	it('put -> read roundtrip', async () => {
+		await putUpload(publicPath, payload, 'text/plain')
+		const back = await readUploadBytes(publicPath)
+		expect(back).not.toBeNull()
+		expect(Buffer.from(back!).equals(payload)).toBe(true)
+	}, 30_000)
 
-	it(
-		'list sizes sees the object',
-		async () => {
-			const sizes = await listUploadSizes(prefix)
-			expect(sizes).toContain(payload.length)
-		},
-		30_000
-	)
+	it('list sizes sees the object', async () => {
+		const sizes = await listUploadSizes(prefix)
+		expect(sizes).toContain(payload.length)
+	}, 30_000)
 
-	it(
-		'delete removes, redelete is idempotent',
-		async () => {
-			await deleteUpload(publicPath)
-			expect(await readUploadBytes(publicPath)).toBeNull()
-			await deleteUpload(publicPath)
-			const sizes = await listUploadSizes(prefix)
-			expect(sizes).toHaveLength(0)
-		},
-		30_000
-	)
+	it('delete removes, redelete is idempotent', async () => {
+		await deleteUpload(publicPath)
+		expect(await readUploadBytes(publicPath)).toBeNull()
+		await deleteUpload(publicPath)
+		const sizes = await listUploadSizes(prefix)
+		expect(sizes).toHaveLength(0)
+	}, 30_000)
 
 	afterAll(async () => {
 		await deleteUpload(publicPath)

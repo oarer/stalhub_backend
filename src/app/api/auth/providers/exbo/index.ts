@@ -22,12 +22,15 @@ export const exboAuth = createElysia()
 	.use(jwtPlugin)
 	.group('/exbo', (app) =>
 		app
-			.get('/login', {
+			.get(
+				'/login',
+				{
 					query: desktopLoginQuery,
 					detail: {
 						tags: ['Auth: Exbo'],
 					},
-				}, async ({ query, request }) => {
+				},
+				async ({ query, request }) => {
 					const state = crypto.randomUUID()
 
 					await prisma.eXBOAuthState.create({
@@ -55,9 +58,12 @@ export const exboAuth = createElysia()
 					if (desktopRedirect)
 						url.searchParams.set('redirect_uri', desktopRedirect)
 					return { url: url.toString() }
-				})
+				}
+			)
 
-			.get('/callback', {
+			.get(
+				'/callback',
+				{
 					query: t.Object({
 						code: t.String(),
 						state: t.String(),
@@ -66,7 +72,8 @@ export const exboAuth = createElysia()
 					detail: {
 						tags: ['Auth: Exbo'],
 					},
-				}, async ({
+				},
+				async ({
 					query: { code, state, region },
 					headers,
 					cookie: { refresh_token, access_token },
@@ -333,12 +340,16 @@ export const exboAuth = createElysia()
 					})
 
 					return { success: true }
-				})
+				}
+			)
 
-			.get('/link', {
+			.get(
+				'/link',
+				{
 					beforeHandle: [requireAuth],
 					detail: { tags: ['Auth: Exbo'] },
-				}, async ({ store }) => {
+				},
+				async ({ store }) => {
 					const { user_id } = fromStore(store)
 					const existing = await prisma.eXBOAuth.findUnique({
 						where: { userid: user_id },
@@ -363,23 +374,31 @@ export const exboAuth = createElysia()
 					url.searchParams.set('scope', '')
 					url.searchParams.set('state', state)
 					return { url: url.toString() }
-				})
+				}
+			)
 
-			.delete('/link', {
+			.delete(
+				'/link',
+				{
 					beforeHandle: [requireAuth],
 					detail: { tags: ['Auth: Exbo'] },
-				}, async ({ store }) => {
+				},
+				async ({ store }) => {
 					const { user_id } = fromStore(store)
 					await prisma.eXBOAuth.deleteMany({
 						where: { userid: user_id },
 					})
 					return { success: true }
-				})
+				}
+			)
 
-			.get('/region', {
+			.get(
+				'/region',
+				{
 					beforeHandle: [requireAuth],
 					detail: { tags: ['Auth: Exbo'] },
-				}, async ({ store, set }) => {
+				},
+				async ({ store, set }) => {
 					const { user_id } = fromStore(store)
 					const auth = await prisma.eXBOAuth.findUnique({
 						where: { userid: user_id },
@@ -408,13 +427,17 @@ export const exboAuth = createElysia()
 								)
 							: 0,
 					}
-				})
+				}
+			)
 
-			.patch('/region', {
+			.patch(
+				'/region',
+				{
 					beforeHandle: [requireAuth],
 					body: t.Object({ region: t.Enum(Regions) }),
 					detail: { tags: ['Auth: Exbo'] },
-				}, async ({ body, store, set }) => {
+				},
+				async ({ body, store, set }) => {
 					const { user_id } = fromStore(store)
 					const auth = await prisma.eXBOAuth.findUnique({
 						where: { userid: user_id },
@@ -476,5 +499,6 @@ export const exboAuth = createElysia()
 						region: updated.region,
 						region_changed_at: updated.region_changed_at,
 					}
-				})
+				}
+			)
 	)

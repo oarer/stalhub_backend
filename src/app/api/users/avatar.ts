@@ -170,7 +170,9 @@ function getAvatarUrl(
 	return null
 }
 
-export const avatarRoutes = createElysia().get('/avatar/:id', {
+export const avatarRoutes = createElysia().get(
+	'/avatar/:id',
+	{
 		params: t.Object({
 			id: t.String(),
 		}),
@@ -184,7 +186,8 @@ export const avatarRoutes = createElysia().get('/avatar/:id', {
 		detail: {
 			tags: ['Users'],
 		},
-	}, async ({ params, query }) => {
+	},
+	async ({ params, query }) => {
 		const user = await prisma.user.findUnique({
 			where: {
 				id: Number(params.id),
@@ -241,4 +244,5 @@ export const avatarRoutes = createElysia().get('/avatar/:id', {
 		}
 
 		return proxyImage(avatarUrl)
-	})
+	}
+)

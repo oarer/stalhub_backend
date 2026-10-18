@@ -19,8 +19,7 @@ function fieldText(v: string | number | null, placeholder: string): string {
 }
 
 export function promptEmbed(draft: ScreenshotDraft) {
-	const step =
-		draft.date == null ? 0 : draft.stage == null ? 1 : 2
+	const step = draft.date == null ? 0 : draft.stage == null ? 1 : 2
 	const prompts = [
 		'Выберите **день** события',
 		'Выберите **этап**',
@@ -50,8 +49,7 @@ export function promptComponents(draft: ScreenshotDraft) {
 		const dayButtons: ButtonBuilder[] = []
 		for (let i = 0; i < SS_DAY_OPTIONS; i++) {
 			const d = addDays(today, -i)
-			const label =
-				i === 0 ? 'Сегодня' : i === 1 ? 'Вчера' : fmtDate(d)
+			const label = i === 0 ? 'Сегодня' : i === 1 ? 'Вчера' : fmtDate(d)
 			dayButtons.push(
 				new ButtonBuilder()
 					.setCustomId(SS_ID.day(d))
@@ -76,7 +74,9 @@ export function promptComponents(draft: ScreenshotDraft) {
 			)
 		}
 		return [
-			new ActionRowBuilder<ButtonBuilder>().addComponents(...stageButtons),
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				...stageButtons
+			),
 			new ActionRowBuilder<ButtonBuilder>().addComponents(
 				new ButtonBuilder()
 					.setCustomId(SS_ID.back)
@@ -105,10 +105,13 @@ export function promptComponents(draft: ScreenshotDraft) {
 	]
 }
 
-export function successEmbed(draft: ScreenshotDraft, data: {
-	session: { id: number; map_name: string }
-	screenshot: { id: number }
-}) {
+export function successEmbed(
+	draft: ScreenshotDraft,
+	data: {
+		session: { id: number; map_name: string }
+		screenshot: { id: number }
+	}
+) {
 	const typeLabel =
 		SS_TYPES.find((t) => t.value === draft.type)?.label ?? draft.type ?? '—'
 	return new EmbedBuilder()

@@ -61,7 +61,8 @@ async function readLocalUpload(imageUrl: string): Promise<CoverImage | null> {
 			return null
 		}
 		const buffer = await readUploadBytes(imageUrl)
-		if (!buffer || !buffer.length || buffer.length > MAX_IMAGE_BYTES) return null
+		if (!buffer || !buffer.length || buffer.length > MAX_IMAGE_BYTES)
+			return null
 		const ext = relative.split('.').pop() ?? 'jpg'
 		return {
 			buffer,
@@ -146,12 +147,17 @@ async function renderOgCoverPng(
 			const svgRes = await fetch(`${base}/api/og/${articleId}`, {
 				signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 			})
-			if (!svgRes.ok) throw new Error(`OG route responded ${svgRes.status}`)
+			if (!svgRes.ok)
+				throw new Error(`OG route responded ${svgRes.status}`)
 			const svg = await svgRes.text()
 			if (!svg.includes('<svg'))
 				throw new Error('OG route returned no SVG')
 			const buffer = await rasterSvgToPng(svg)
-			return { buffer, filename: `og-${articleId}.png`, mime: 'image/png' }
+			return {
+				buffer,
+				filename: `og-${articleId}.png`,
+				mime: 'image/png',
+			}
 		} catch (err) {
 			errors.push(`${base}: ${(err as Error).message}`)
 		}
@@ -188,7 +194,9 @@ export async function resolveBlogCoverImage(article: {
 		return { cover: null, coverError: 'unsupported image_url' }
 	}
 	try {
-		return { cover: await renderOgCoverPng(article.external_id || article.id) }
+		return {
+			cover: await renderOgCoverPng(article.external_id || article.id),
+		}
 	} catch (err) {
 		console.warn(
 			`[BlogCover] Failed to render OG cover: ${(err as Error).message}`

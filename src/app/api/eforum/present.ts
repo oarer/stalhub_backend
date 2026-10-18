@@ -103,8 +103,7 @@ export function toFrontendItem(record: DevCommentRecord): FrontendDevComment {
 		},
 		text: buildCleanText(record.quotes ?? [], responseHtml),
 		images: extractImageLinks(record.contentHtml),
-		videos:
-			fallback?.videos ?? extractVideoLinks(record.contentHtml),
+		videos: fallback?.videos ?? extractVideoLinks(record.contentHtml),
 	}
 }
 

@@ -53,11 +53,14 @@ async function guildWithClan(guild_id: string) {
 
 const botRoutes = createElysia().group('/internal/bot', (app) =>
 	app
-		.get('/clans', {
+		.get(
+			'/clans',
+			{
 				beforeHandle: [botAuth],
 				query: t.Object({ q: t.Optional(t.String()) }),
 				detail: { tags: ['Internal'] },
-			}, async ({ query }) => {
+			},
+			async ({ query }) => {
 				const q = query.q ?? ''
 				const clans = await prisma.clan.findMany({
 					where: {
@@ -79,12 +82,16 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					take: 20,
 				})
 				return { clans }
-			})
-		.get('/users/:discord_id/clan', {
+			}
+		)
+		.get(
+			'/users/:discord_id/clan',
+			{
 				beforeHandle: [botAuth],
 				params: t.Object({ discord_id: t.String() }),
 				detail: { tags: ['Internal'] },
-			}, async ({ params }) => {
+			},
+			async ({ params }) => {
 				const auth = await prisma.discordAuth.findUnique({
 					where: { discord_id: params.discord_id },
 					select: { userid: true },
@@ -105,25 +112,33 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					},
 				})
 				return { clan: profile?.clan ?? null }
-			})
-		.get('/clans/:clan_id/squads', {
+			}
+		)
+		.get(
+			'/clans/:clan_id/squads',
+			{
 				beforeHandle: [botAuth],
 				params: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Internal'] },
-			}, async ({ params }) => {
+			},
+			async ({ params }) => {
 				const clan = await prisma.clan.findUnique({
 					where: { id: params.clan_id },
 					select: { id: true, name: true, tag: true, region: true },
 				})
 				if (!clan) return { error: 'Clan not found' }
 				return { clan, squads: await squadService.list(params.clan_id) }
-			})
-		.get('/clans/:clan_id/absences', {
+			}
+		)
+		.get(
+			'/clans/:clan_id/absences',
+			{
 				beforeHandle: [botAuth],
 				params: t.Object({ clan_id: t.String() }),
 				query: t.Object({ date: t.Optional(t.String()) }),
 				detail: { tags: ['Internal'] },
-			}, async ({ params, query }) => {
+			},
+			async ({ params, query }) => {
 				const date = query.date ?? mskDate()
 				return {
 					clan_id: params.clan_id,
@@ -133,8 +148,11 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 						date
 					),
 				}
-			})
-		.post('/absences', {
+			}
+		)
+		.post(
+			'/absences',
+			{
 				beforeHandle: [botAuth],
 				body: t.Object({
 					discord_id: t.String(),
@@ -149,7 +167,8 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					note: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Internal'] },
-			}, async ({ body, set }) => {
+			},
+			async ({ body, set }) => {
 				const auth = await prisma.discordAuth.findUnique({
 					where: { discord_id: body.discord_id },
 					select: { userid: true },
@@ -181,8 +200,11 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					set.status = 400
 					return { error: (err as Error).message }
 				}
-			})
-		.delete('/absences', {
+			}
+		)
+		.delete(
+			'/absences',
+			{
 				beforeHandle: [botAuth],
 				body: t.Object({
 					discord_id: t.String(),
@@ -190,7 +212,8 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					date: t.String(),
 				}),
 				detail: { tags: ['Internal'] },
-			}, async ({ body, set }) => {
+			},
+			async ({ body, set }) => {
 				const auth = await prisma.discordAuth.findUnique({
 					where: { discord_id: body.discord_id },
 					select: { userid: true },
@@ -209,8 +232,11 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					set.status = 400
 					return { error: (err as Error).message }
 				}
-			})
-		.post('/screenshots', {
+			}
+		)
+		.post(
+			'/screenshots',
+			{
 				beforeHandle: [botAuth],
 				body: t.Object({
 					clan_id: t.String(),
@@ -222,7 +248,8 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					}),
 				}),
 				detail: { tags: ['Internal'] },
-			}, async ({ body, set }) => {
+			},
+			async ({ body, set }) => {
 				const clan = await prisma.clan.findUnique({
 					where: { id: body.clan_id },
 					select: { id: true, region: true, name: true },
@@ -240,8 +267,7 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 				if (!type || !stage) {
 					set.status = 400
 					return {
-						error:
-							'Не удалось определить этап по времени. Укажите день (date: ГГГГ-ММ-ДД), этап (stage) и тип (type).',
+						error: 'Не удалось определить этап по времени. Укажите день (date: ГГГГ-ММ-ДД), этап (stage) и тип (type).',
 						required: ['date', 'stage', 'type'],
 						detected,
 					}
@@ -276,26 +302,34 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					set.status = 400
 					return { error: (err as Error).message }
 				}
-			})
-		.get('/stage', {
+			}
+		)
+		.get(
+			'/stage',
+			{
 				beforeHandle: [botAuth],
 				query: t.Object({ at: t.Optional(t.String()) }),
 				detail: { tags: ['Internal'] },
-			}, async ({ query }) => {
+			},
+			async ({ query }) => {
 				const now = query.at ? new Date(query.at) : new Date()
 				return {
 					detected: detectStageSlot(now),
 					next: nextStageSlot(now),
 				}
-			})
-		.post('/invites/claim', {
+			}
+		)
+		.post(
+			'/invites/claim',
+			{
 				beforeHandle: [botAuth],
 				body: t.Object({
 					discord_id: t.String(),
 					code: t.String({ minLength: 1 }),
 				}),
 				detail: { tags: ['Internal'] },
-			}, async ({ body, set }) => {
+			},
+			async ({ body, set }) => {
 				const auth = await prisma.discordAuth.findUnique({
 					where: { discord_id: body.discord_id },
 					select: { userid: true },
@@ -315,8 +349,11 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					set.status = 400
 					return { error: (err as Error).message }
 				}
-			})
-		.post('/invites', {
+			}
+		)
+		.post(
+			'/invites',
+			{
 				beforeHandle: [botAuth],
 				body: t.Object({
 					clan_id: t.String(),
@@ -324,7 +361,8 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					nickname: t.String({ minLength: 1 }),
 				}),
 				detail: { tags: ['Internal'] },
-			}, async ({ body, set }) => {
+			},
+			async ({ body, set }) => {
 				try {
 					return await clanInviteService.createGuestAccount(
 						body.clan_id,
@@ -335,24 +373,32 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					set.status = 400
 					return { error: (err as Error).message }
 				}
-			})
-		.delete('/invites/:id', {
+			}
+		)
+		.delete(
+			'/invites/:id',
+			{
 				beforeHandle: [botAuth],
 				params: t.Object({ id: t.Numeric() }),
 				detail: { tags: ['Internal'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				try {
 					return await clanInviteService.revoke(params.id)
 				} catch (err) {
 					set.status = 400
 					return { error: (err as Error).message }
 				}
-			})
-		.delete('/invites/guest/discord/:discord_id', {
+			}
+		)
+		.delete(
+			'/invites/guest/discord/:discord_id',
+			{
 				beforeHandle: [botAuth],
 				params: t.Object({ discord_id: t.String() }),
 				detail: { tags: ['Internal'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				const auth = await prisma.discordAuth.findUnique({
 					where: { discord_id: params.discord_id },
 					select: { userid: true },
@@ -383,8 +429,11 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					prisma.user.delete({ where: { id: auth.userid } }),
 				])
 				return { ok: true }
-			})
-		.post('/link', {
+			}
+		)
+		.post(
+			'/link',
+			{
 				beforeHandle: [botAuth],
 				body: t.Object({
 					guild_id: t.String(),
@@ -392,7 +441,8 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					discord_id: t.String(),
 				}),
 				detail: { tags: ['Internal'] },
-			}, async ({ body, set }) => {
+			},
+			async ({ body, set }) => {
 				const state = await prisma.botLinkState.findUnique({
 					where: { token: body.token },
 				})
@@ -435,11 +485,15 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 						clan,
 					},
 				}
-			})
-		.get('/guilds', {
+			}
+		)
+		.get(
+			'/guilds',
+			{
 				beforeHandle: [botAuth],
 				detail: { tags: ['Internal'] },
-			}, async () => {
+			},
+			async () => {
 				const guilds = await prisma.botGuild.findMany({
 					select: guildSelect,
 					orderBy: { created_at: 'asc' },
@@ -455,20 +509,27 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 						clan: clanMap.get(g.clan_id) ?? null,
 					})),
 				}
-			})
-		.get('/guilds/:guild_id', {
+			}
+		)
+		.get(
+			'/guilds/:guild_id',
+			{
 				beforeHandle: [botAuth],
 				params: t.Object({ guild_id: t.String() }),
 				detail: { tags: ['Internal'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				const guild = await guildWithClan(params.guild_id)
 				if (!guild) {
 					set.status = 404
 					return { error: 'Guild not linked' }
 				}
 				return { guild }
-			})
-		.patch('/guilds/:guild_id', {
+			}
+		)
+		.patch(
+			'/guilds/:guild_id',
+			{
 				beforeHandle: [botAuth],
 				params: t.Object({ guild_id: t.String() }),
 				body: t.Object({
@@ -484,7 +545,8 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 					),
 				}),
 				detail: { tags: ['Internal'] },
-			}, async ({ params, body, set }) => {
+			},
+			async ({ params, body, set }) => {
 				const exists = await prisma.botGuild.findUnique({
 					where: { guild_id: params.guild_id },
 					select: { guild_id: true },
@@ -499,17 +561,22 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 				})
 				const guild = await guildWithClan(params.guild_id)
 				return { guild }
-			})
-		.delete('/guilds/:guild_id', {
+			}
+		)
+		.delete(
+			'/guilds/:guild_id',
+			{
 				beforeHandle: [botAuth],
 				params: t.Object({ guild_id: t.String() }),
 				detail: { tags: ['Internal'] },
-			}, async ({ params }) => {
+			},
+			async ({ params }) => {
 				await prisma.botGuild.deleteMany({
 					where: { guild_id: params.guild_id },
 				})
 				return { success: true }
-			})
+			}
+		)
 )
 
 export { botRoutes }

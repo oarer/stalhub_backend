@@ -8,16 +8,26 @@ export const scAdminRoutes = createElysia().group('/sc', (app) =>
 	app
 		.use(jwtPlugin)
 
-		.get('/overview', {
-			beforeHandle: [requireAuth, requireAdmin],
-			detail: { tags: ['Admin'] },
-		}, () => scAdminService.overview())
+		.get(
+			'/overview',
+			{
+				beforeHandle: [requireAuth, requireAdmin],
+				detail: { tags: ['Admin'] },
+			},
+			() => scAdminService.overview()
+		)
 
-		.get('/nodes', {
-			beforeHandle: [requireAuth, requireAdmin],
-			detail: { tags: ['Admin'] },
-		}, () => scAdminService.listNodes())
-		.post('/nodes', {
+		.get(
+			'/nodes',
+			{
+				beforeHandle: [requireAuth, requireAdmin],
+				detail: { tags: ['Admin'] },
+			},
+			() => scAdminService.listNodes()
+		)
+		.post(
+			'/nodes',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				body: t.Object({
 					name: t.String({ minLength: 1 }),
@@ -28,7 +38,8 @@ export const scAdminRoutes = createElysia().group('/sc', (app) =>
 					enabled: t.Optional(t.Boolean()),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ body, set }) => {
+			},
+			async ({ body, set }) => {
 				try {
 					return await scAdminService.createNode(body)
 				} catch (err) {
@@ -39,8 +50,11 @@ export const scAdminRoutes = createElysia().group('/sc', (app) =>
 					set.status = 409
 					return { error: 'Node with this name already exists' }
 				}
-			})
-		.patch('/nodes/:id', {
+			}
+		)
+		.patch(
+			'/nodes/:id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.Numeric() }),
 				body: t.Object({
@@ -52,7 +66,8 @@ export const scAdminRoutes = createElysia().group('/sc', (app) =>
 					enabled: t.Optional(t.Boolean()),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, body, set }) => {
+			},
+			async ({ params, body, set }) => {
 				try {
 					return await scAdminService.updateNode(
 						Number(params.id),
@@ -66,59 +81,82 @@ export const scAdminRoutes = createElysia().group('/sc', (app) =>
 					set.status = 404
 					return { error: 'Node not found' }
 				}
-			})
-		.delete('/nodes/:id', {
+			}
+		)
+		.delete(
+			'/nodes/:id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.Numeric() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				try {
 					return await scAdminService.deleteNode(Number(params.id))
 				} catch {
 					set.status = 404
 					return { error: 'Node not found' }
 				}
-			})
-		.post('/nodes/:id/ping', {
+			}
+		)
+		.post(
+			'/nodes/:id/ping',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.Numeric() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				const result = await scAdminService.pingNode(Number(params.id))
 				if (!result) {
 					set.status = 404
 					return { error: 'Node not found' }
 				}
 				return result
-			})
+			}
+		)
 
-		.get('/tokens', {
-			beforeHandle: [requireAuth, requireAdmin],
-			detail: { tags: ['Admin'] },
-		}, () => scAdminService.listTokens())
-		.post('/tokens', {
+		.get(
+			'/tokens',
+			{
+				beforeHandle: [requireAuth, requireAdmin],
+				detail: { tags: ['Admin'] },
+			},
+			() => scAdminService.listTokens()
+		)
+		.post(
+			'/tokens',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				body: t.Object({
 					label: t.Optional(t.String()),
 					token: t.String({ minLength: 1 }),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ body, set }) => {
+			},
+			async ({ body, set }) => {
 				const result = await scAdminService.createToken(body)
 				if ('error' in result) {
 					set.status = 409
 				}
 				return result
-			})
-		.post('/tokens/bulk', {
+			}
+		)
+		.post(
+			'/tokens/bulk',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				body: t.Object({
 					tokens: t.Union([t.String(), t.Array(t.String())]),
 					label: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ body }) => scAdminService.bulkTokens(body))
-		.patch('/tokens/:id', {
+			},
+			async ({ body }) => scAdminService.bulkTokens(body)
+		)
+		.patch(
+			'/tokens/:id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.Numeric() }),
 				body: t.Object({
@@ -126,7 +164,8 @@ export const scAdminRoutes = createElysia().group('/sc', (app) =>
 					enabled: t.Optional(t.Boolean()),
 				}),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, body, set }) => {
+			},
+			async ({ params, body, set }) => {
 				try {
 					return await scAdminService.updateToken(
 						Number(params.id),
@@ -136,17 +175,22 @@ export const scAdminRoutes = createElysia().group('/sc', (app) =>
 					set.status = 404
 					return { error: 'Token not found' }
 				}
-			})
-		.delete('/tokens/:id', {
+			}
+		)
+		.delete(
+			'/tokens/:id',
+			{
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.Numeric() }),
 				detail: { tags: ['Admin'] },
-			}, async ({ params, set }) => {
+			},
+			async ({ params, set }) => {
 				try {
 					return await scAdminService.deleteToken(Number(params.id))
 				} catch {
 					set.status = 404
 					return { error: 'Token not found' }
 				}
-			})
+			}
+		)
 )

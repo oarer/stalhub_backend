@@ -14,7 +14,6 @@ const DIGEST_SYSTEM_PROMPT = `Ты — редактор игрового пор�
 - Без URL, хештегов и эмодзи.
 - Верни ТОЛЬКО текст выжимки, без кавычек и пояснений.`
 
-
 export function stripMarkdownToPlain(markdown: string): string {
 	const plain = markdown
 		.replace(/```(\w*)\n?/g, ' ')
@@ -61,7 +60,9 @@ export async function generateBlogDigest(article: {
 	}
 
 	try {
-		const { data } = await axios.post(`${env.OPENAI_BASE_URL}/chat/completions`, {
+		const { data } = await axios.post(
+			`${env.OPENAI_BASE_URL}/chat/completions`,
+			{
 				model: env.OPENAI_MODEL,
 				temperature: 0.3,
 				max_tokens: 500,
@@ -72,10 +73,12 @@ export async function generateBlogDigest(article: {
 						content: `Заголовок: ${article.title}\nТеги: ${(article.tags ?? []).join(', ')}\nТекст:\n${plain}`,
 					},
 				],
-			}, {
+			},
+			{
 				timeout: 60_000,
 				headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` },
-			})
+			}
+		)
 		const digest = (data.choices?.[0]?.message?.content ?? '')
 			.trim()
 			.slice(0, MAX_DIGEST_CHARS)

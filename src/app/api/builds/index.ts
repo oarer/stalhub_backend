@@ -18,7 +18,9 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 	app
 		.use(jwtPlugin)
 
-		.get('', {
+		.get(
+			'',
+			{
 				beforeHandle: [requireOptionalAuth],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
@@ -35,7 +37,8 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 					price_max: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Builds'] },
-			}, async ({ query, store }) => {
+			},
+			async ({ query, store }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				const tags = query.tags
@@ -51,20 +54,27 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 					price_max: query.price_max,
 					user_id: fromStoreOpt(store).user_id,
 				})
-			})
+			}
+		)
 
-		.get('/:id', {
+		.get(
+			'/:id',
+			{
 				beforeHandle: [requireOptionalAuth],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Builds'] },
-			}, async ({ params, store }) => {
+			},
+			async ({ params, store }) => {
 				return buildsService.getById(
 					params.id,
 					fromStoreOpt(store).user_id
 				)
-			})
+			}
+		)
 
-		.post('', {
+		.post(
+			'',
+			{
 				beforeHandle: [requireAuth],
 				body: t.Object({
 					title: t.String({
@@ -76,7 +86,8 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 					tags: t.Optional(t.Array(t.String())),
 				}),
 				detail: { tags: ['Builds'] },
-			}, async ({ body, store, set, request }) => {
+			},
+			async ({ body, store, set, request }) => {
 				const validation = validateBuildData(body.data)
 				if (!validation.ok) {
 					set.status = 422
@@ -111,9 +122,12 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 					flags: body.flags,
 					tags: body.tags?.join(','),
 				})
-			})
+			}
+		)
 
-		.patch('/:id', {
+		.patch(
+			'/:id',
+			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
@@ -123,7 +137,8 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 					tags: t.Optional(t.Array(t.String())),
 				}),
 				detail: { tags: ['Builds'] },
-			}, async ({ params, body, store, set, request }) => {
+			},
+			async ({ params, body, store, set, request }) => {
 				const { user_id } = fromStore(store)
 				if (body.title !== undefined || body.tags !== undefined) {
 					const xssPatch = await rejectOnXss({
@@ -186,13 +201,17 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 				}
 
 				return result
-			})
+			}
+		)
 
-		.delete('/:id', {
+		.delete(
+			'/:id',
+			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Builds'] },
-			}, async ({ params, store, set }) => {
+			},
+			async ({ params, store, set }) => {
 				const { user_id } = fromStore(store)
 				const is_admin = await checkPermission(user_id, 'builds:manage')
 				const ok = await buildsService.delete(
@@ -207,29 +226,38 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 				}
 
 				return { success: true }
-			})
+			}
+		)
 
-		.post('/:id/star', {
+		.post(
+			'/:id/star',
+			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Builds'] },
-			}, async ({ params, store }) => {
+			},
+			async ({ params, store }) => {
 				await buildsService.addStar(
 					Number(params.id),
 					fromStore(store).user_id
 				)
 				return { success: true }
-			})
+			}
+		)
 
-		.delete('/:id/star', {
+		.delete(
+			'/:id/star',
+			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Builds'] },
-			}, async ({ params, store }) => {
+			},
+			async ({ params, store }) => {
 				await buildsService.removeStar(
 					Number(params.id),
 					fromStore(store).user_id
 				)
 				return { success: true }
-			})
+			}
+		)
 )

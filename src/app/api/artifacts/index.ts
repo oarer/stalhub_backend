@@ -26,10 +26,13 @@ export const artifactsRoutes = new Elysia()
 		}
 	})
 	.group('/artifacts-prices', (group) =>
-		group.post('/:region', {
+		group.post(
+			'/:region',
+			{
 				params: t.Object({ region: t.String() }),
 				body: priceRequestSchema,
-			}, async ({ params, body, set }): Promise<ArtifactPricesResponse> => {
+			},
+			async ({ params, body, set }): Promise<ArtifactPricesResponse> => {
 				const region = params.region
 
 				if (
@@ -71,5 +74,6 @@ export const artifactsRoutes = new Elysia()
 					region,
 					prices,
 				}
-			})
+			}
+		)
 	)

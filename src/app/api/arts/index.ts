@@ -29,14 +29,17 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 	app
 		.use(jwtPlugin)
 
-		.get('', {
+		.get(
+			'',
+			{
 				beforeHandle: [requireAuth, requireArtAuthor],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Arts'] },
-			}, async ({ query, store }) => {
+			},
+			async ({ query, store }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				const { user_id } = fromStore(store)
@@ -44,24 +47,31 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 				return artsService.list(take, page, {
 					...(!is_admin && { author_id: user_id }),
 				})
-			})
+			}
+		)
 
-		.get('/mine', {
+		.get(
+			'/mine',
+			{
 				beforeHandle: [requireAuth, requireArtAuthor],
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Arts'] },
-			}, ({ query, store }) => {
+			},
+			({ query, store }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				return artsService.list(take, page, {
 					author_id: fromStore(store).user_id,
 				})
-			})
+			}
+		)
 
-		.get('/public', {
+		.get(
+			'/public',
+			{
 				query: t.Object({
 					take: t.Optional(t.Numeric()),
 					page: t.Optional(t.Numeric()),
@@ -77,7 +87,8 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					),
 				}),
 				detail: { tags: ['Arts'] },
-			}, async ({ query }) => {
+			},
+			async ({ query }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				const tags = query.tags
@@ -91,13 +102,17 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					type: query.type,
 					sort: query.sort,
 				})
-			})
+			}
+		)
 
-		.get('/:id', {
+		.get(
+			'/:id',
+			{
 				beforeHandle: [requireOptionalAuth],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Arts'] },
-			}, async ({ params, store, request }) => {
+			},
+			async ({ params, store, request }) => {
 				return artsService.getById(
 					params.id,
 					fromStoreOpt(store).user_id,
@@ -113,9 +128,12 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 							request.headers.get('user-agent') ?? undefined,
 					}
 				)
-			})
+			}
+		)
 
-		.post('/upload', {
+		.post(
+			'/upload',
+			{
 				beforeHandle: [requireAuth, requireArtAuthor],
 				body: t.Object({
 					file: t.File({
@@ -130,7 +148,8 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					}),
 				}),
 				detail: { tags: ['Arts'] },
-			}, async ({ body, set }) => {
+			},
+			async ({ body, set }) => {
 				const file = body.file
 				const buf = Buffer.from(await file.arrayBuffer())
 
@@ -144,9 +163,12 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					set.status = 400
 					return { error: (err as Error).message }
 				}
-			})
+			}
+		)
 
-		.post('', {
+		.post(
+			'',
+			{
 				beforeHandle: [requireAuth, requireArtAuthor],
 				body: t.Object({
 					title: t.Optional(t.String({ maxLength: 200 })),
@@ -159,7 +181,8 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					tags: t.Optional(t.Array(t.String())),
 				}),
 				detail: { tags: ['Arts'] },
-			}, async ({ body, store, set, request }) => {
+			},
+			async ({ body, store, set, request }) => {
 				const user_id = fromStore(store).user_id
 				const xss = await rejectOnXss({
 					fields: {
@@ -171,7 +194,10 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					},
 					user_id,
 					ip:
-						request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+						request.headers
+							.get('x-forwarded-for')
+							?.split(',')[0]
+							?.trim() ??
 						request.headers.get('x-real-ip') ??
 						'?',
 					route: 'POST /arts',
@@ -204,9 +230,12 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					image_urls: body.image_urls,
 					tags: body.tags?.join(','),
 				})
-			})
+			}
+		)
 
-		.patch('/:id', {
+		.patch(
+			'/:id',
+			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
@@ -222,7 +251,8 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					tags: t.Optional(t.Array(t.String())),
 				}),
 				detail: { tags: ['Arts'] },
-			}, async ({ params, body, store, set, request }) => {
+			},
+			async ({ params, body, store, set, request }) => {
 				const { user_id } = fromStore(store)
 				const xssPatch = await rejectOnXss({
 					fields: {
@@ -234,14 +264,19 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 					},
 					user_id,
 					ip:
-						request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+						request.headers
+							.get('x-forwarded-for')
+							?.split(',')[0]
+							?.trim() ??
 						request.headers.get('x-real-ip') ??
 						'?',
 					route: 'PATCH /arts/:id',
 				})
 				if (xssPatch) {
 					set.status = 400
-					return { error: `Invalid content in field: ${xssPatch.field}` }
+					return {
+						error: `Invalid content in field: ${xssPatch.field}`,
+					}
 				}
 				for (const u of [
 					body.image_url,
@@ -289,13 +324,17 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 				}
 
 				return result
-			})
+			}
+		)
 
-		.delete('/:id', {
+		.delete(
+			'/:id',
+			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Arts'] },
-			}, async ({ params, store, set }) => {
+			},
+			async ({ params, store, set }) => {
 				const { user_id } = fromStore(store)
 				const is_admin = await checkPermission(user_id, 'art:manage')
 				const ok = await artsService.delete(
@@ -310,31 +349,40 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 				}
 
 				return { success: true }
-			})
+			}
+		)
 
-		.post('/:id/star', {
+		.post(
+			'/:id/star',
+			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Arts'] },
-			}, async ({ params, store }) => {
+			},
+			async ({ params, store }) => {
 				await artsService.addStar(
 					Number(params.id),
 					fromStore(store).user_id
 				)
 				return { success: true }
-			})
+			}
+		)
 
-		.delete('/:id/star', {
+		.delete(
+			'/:id/star',
+			{
 				beforeHandle: [requireAuth],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Arts'] },
-			}, async ({ params, store }) => {
+			},
+			async ({ params, store }) => {
 				await artsService.removeStar(
 					Number(params.id),
 					fromStore(store).user_id
 				)
 				return { success: true }
-			})
+			}
+		)
 
 		.use(artCommentsRoutes)
 )

@@ -243,16 +243,21 @@ export class GrenadesService {
 					.then((r) => ({ name: r.character, total: r.total }))
 					.catch((err) => {
 						const status =
-							typeof err === 'object' && err !== null && 'status' in err
+							typeof err === 'object' &&
+							err !== null &&
+							'status' in err
 								? (err as { status: unknown }).status
 								: 'unknown'
 						const message =
 							err instanceof Error
 								? err.message
 								: typeof err === 'object' &&
-									  err !== null &&
-									  'message' in err
-									? String((err as { message: unknown }).message)
+										err !== null &&
+										'message' in err
+									? String(
+											(err as { message: unknown })
+												.message
+										)
 									: String(err)
 						console.warn(
 							`[Grenades] ${clan_id}: failed to fetch stats for ${m.name}: ${status} ${message}`

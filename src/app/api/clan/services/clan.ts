@@ -382,7 +382,9 @@ export class ClanService {
 		})
 	}
 
-	private static getProfileAccessToken(p: ClanProfileWithAuth): string | null {
+	private static getProfileAccessToken(
+		p: ClanProfileWithAuth
+	): string | null {
 		const auth = p.user.exbo_auth
 		if (!auth) return null
 		if (auth.access_expires_at <= new Date()) return null
@@ -417,9 +419,10 @@ export class ClanService {
 					return chars
 						.filter((c) => c.clan?.info?.id === clan_id)
 						.flatMap((c) => {
-							const name = c.clan?.member?.name ?? c.information?.name
+							const name =
+								c.clan?.member?.name ?? c.information?.name
 							return name
-								? [([name.toLowerCase(), auth.userid] as const)]
+								? [[name.toLowerCase(), auth.userid] as const]
 								: []
 						})
 				} catch {

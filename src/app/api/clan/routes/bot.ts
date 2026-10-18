@@ -10,7 +10,10 @@ const TOKEN_TTL_MS = 10 * 60 * 1000
 
 function generateToken(): string {
 	const bytes = crypto.getRandomValues(new Uint8Array(TOKEN_LENGTH))
-	return Array.from(bytes, (b) => TOKEN_ALPHABET[b % TOKEN_ALPHABET.length]).join('')
+	return Array.from(
+		bytes,
+		(b) => TOKEN_ALPHABET[b % TOKEN_ALPHABET.length]
+	).join('')
 }
 
 const guildSelect = {
@@ -24,10 +27,13 @@ const guildSelect = {
 } as const
 
 export const clanBotRoutes = clanContext
-	.post('/bot/link-token', {
+	.post(
+		'/bot/link-token',
+		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			detail: { tags: ['Clan'] },
-		}, async ({ store }) => {
+		},
+		async ({ store }) => {
 			const clan_id = store.clan_id!
 			const token = generateToken()
 			await prisma.botLinkState.create({
@@ -43,23 +49,31 @@ export const clanBotRoutes = clanContext
 				expires_in: TOKEN_TTL_MS / 1000,
 				command: `/setup ${token}`,
 			}
-		})
-	.get('/bot/guilds', {
+		}
+	)
+	.get(
+		'/bot/guilds',
+		{
 			beforeHandle: [requireAuth, requireClanMember],
 			detail: { tags: ['Clan'] },
-		}, async ({ store }) => {
+		},
+		async ({ store }) => {
 			const guilds = await prisma.botGuild.findMany({
 				where: { clan_id: store.clan_id },
 				select: guildSelect,
 				orderBy: { created_at: 'asc' },
 			})
 			return { guilds }
-		})
-	.delete('/bot/guilds/:guild_id', {
+		}
+	)
+	.delete(
+		'/bot/guilds/:guild_id',
+		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: t.Object({ guild_id: t.String() }),
 			detail: { tags: ['Clan'] },
-		}, async ({ store, params, set }) => {
+		},
+		async ({ store, params, set }) => {
 			const guild = await prisma.botGuild.findFirst({
 				where: { guild_id: params.guild_id, clan_id: store.clan_id },
 			})
@@ -67,6 +81,9 @@ export const clanBotRoutes = clanContext
 				set.status = 404
 				return { error: 'Guild not linked to this clan' }
 			}
-			await prisma.botGuild.delete({ where: { guild_id: params.guild_id } })
+			await prisma.botGuild.delete({
+				where: { guild_id: params.guild_id },
+			})
 			return { success: true }
-		})
+		}
+	)
