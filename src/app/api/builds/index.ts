@@ -78,7 +78,7 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 				beforeHandle: [requireAuth],
 				body: t.Object({
 					title: t.String({
-						error: 'title is required',
+						
 						maxLength: 200,
 					}),
 					data: t.Any(),

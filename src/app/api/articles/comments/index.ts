@@ -34,7 +34,7 @@ export const commentsRoutes = createElysia().group('/:id/comments', (app) =>
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
 					content: t.String({
-						error: 'content is required',
+						
 						maxLength: 5000,
 					}),
 					parent_id: t.Optional(t.Number()),

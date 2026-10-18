@@ -134,7 +134,7 @@ class AnalyticsService {
 				where: { id: screenshot_id },
 				data: {
 					ai_status: 'error',
-					ai_error: 'screenshot file not readable',
+					ai_error: 'Failed to read file',
 				},
 			})
 			return

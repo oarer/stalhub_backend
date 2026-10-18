@@ -58,7 +58,7 @@ export const playersRoute = createElysia()
 				{
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
-						uuid: t.String({ error: 'Property uuid is missing' }),
+						uuid: t.String({ }),
 					}),
 					detail: {
 						tags: ['Player'],
@@ -74,7 +74,7 @@ export const playersRoute = createElysia()
 				{
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
-						uuid: t.String({ error: 'Property uuid is missing' }),
+						uuid: t.String({ }),
 					}),
 					detail: {
 						tags: ['Player'],
@@ -90,12 +90,12 @@ export const playersRoute = createElysia()
 				{
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
-						uuid: t.String({ error: 'Property uuid is missing' }),
+						uuid: t.String({ }),
 						description: t.String({
-							error: 'Property description is missing',
+							
 						}),
 						role: t.Enum(PlayerRole, {
-							error: 'Property role is missing',
+							
 						}),
 					}),
 					detail: {
@@ -116,7 +116,7 @@ export const playersRoute = createElysia()
 				{
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
-						uuid: t.String({ error: 'Property uuid is missing' }),
+						uuid: t.String({ }),
 						description: t.Optional(t.String()),
 						role: t.Optional(t.Enum(PlayerRole)),
 					}),
@@ -184,7 +184,7 @@ export const playersRoute = createElysia()
 				{
 					query: t.Object({
 						role: t.Enum(PlayerRole, {
-							error: 'Property role is missing',
+							
 						}),
 					}),
 					detail: {

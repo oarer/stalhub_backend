@@ -39,7 +39,7 @@ export const badgesRoutes = createElysia().group('/badges', (app) =>
 			{
 				beforeHandle: [requireAuth, requireAdmin],
 				body: t.Object({
-					name: t.String({ error: 'name is required' }),
+					name: t.String({ }),
 					icon: t.Optional(t.String()),
 					color: t.Optional(t.String()),
 					image: t.Optional(t.String()),
