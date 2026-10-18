@@ -6,6 +6,7 @@ import {
 	Registry,
 } from 'prom-client'
 import { createElysia } from '@/utils/elysia'
+import { mapMetricRoute } from '../map3d/request-policy'
 
 export const register = new Registry()
 
@@ -13,6 +14,8 @@ collectDefaultMetrics({ register })
 
 export function normalizeRoute(route: string): string {
 	if (!route) return 'unknown'
+	const mapRoute = mapMetricRoute(route)
+	if (mapRoute) return mapRoute
 
 	return route
 		.replace(/^(\/player\/[^/]+)\/[^/]+/, '$1/:character')

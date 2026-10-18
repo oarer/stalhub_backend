@@ -17,10 +17,11 @@ COPY ./src ./src
 ENV NODE_ENV=production
 
 RUN bun build \
+ --root . \
  --compile \
  --minify-whitespace \
  --minify-syntax \
  --outfile server \
- src/index.ts
+ src/index.ts src/app/api/map3d/search.worker.ts
 
 RUN mkdir -p /app/uploads

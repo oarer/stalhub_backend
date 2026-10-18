@@ -1,0 +1,11 @@
+.git
+node_modules
+generated
+runtime
+uploads
+.env
+.env.*
+*.log
+*.zip
+*.exe
+asset-preparation

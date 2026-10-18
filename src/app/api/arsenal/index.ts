@@ -18,7 +18,8 @@ export const routeArsenal = createElysia()
 			await updatePrices()
 		}
 	})
-	.get('/arsenal', async () => {
+	.get('/arsenal', async ({ set }) => {
+		set.headers['Cache-Control'] = 'public, max-age=300, stale-while-revalidate=600'
 		const cached = await getCache()
 
 		if (!cached) {

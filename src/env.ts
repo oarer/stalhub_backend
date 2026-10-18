@@ -64,7 +64,7 @@ const envVariables = z.object({
 	AUCTION_BACKFILL_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(1),
 	AUCTION_BACKFILL_DELAY_MS: z.coerce.number().int().min(0).max(60000).default(500),
 
-	AUCTION_DEEPEN_CAP: z.coerce.number().int().min(1000).max(25000000).default(100000),
+	AUCTION_DEEPEN_CAP: z.coerce.number().int().min(1000).max(25000000).default(500000),
 	AUCTION_DEEPEN_MAX_AGE_DAYS: z.coerce.number().int().min(7).max(3650).default(90),
 	AUCTION_DEEPEN_TOP: z.coerce.number().int().min(1).max(500).default(50),
 	AUCTION_DEEPEN_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
