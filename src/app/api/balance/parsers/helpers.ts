@@ -127,7 +127,7 @@ export function formatValue(value: unknown): string | number {
 		if (value === Math.trunc(value)) return value
 		return Math.round(value * 100) / 100
 	}
-	return value ?? 'н/д'
+	return (value ?? 'н/д') as string | number
 }
 
 export function formatValueStr(value: unknown): string {

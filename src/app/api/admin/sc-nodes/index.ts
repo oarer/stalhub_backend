@@ -8,30 +8,16 @@ export const scAdminRoutes = createElysia().group('/sc', (app) =>
 	app
 		.use(jwtPlugin)
 
-		.get('/overview', () => scAdminService.overview(), {
+		.get('/overview', {
 			beforeHandle: [requireAuth, requireAdmin],
 			detail: { tags: ['Admin'] },
-		})
+		}, () => scAdminService.overview())
 
-		.get('/nodes', () => scAdminService.listNodes(), {
+		.get('/nodes', {
 			beforeHandle: [requireAuth, requireAdmin],
 			detail: { tags: ['Admin'] },
-		})
-		.post(
-			'/nodes',
-			async ({ body, set }) => {
-				try {
-					return await scAdminService.createNode(body)
-				} catch (err) {
-					if ((err as Error).message.startsWith('Invalid base_url')) {
-						set.status = 400
-						return { error: 'Invalid base_url' }
-					}
-					set.status = 409
-					return { error: 'Node with this name already exists' }
-				}
-			},
-			{
+		}, () => scAdminService.listNodes())
+		.post('/nodes', {
 				beforeHandle: [requireAuth, requireAdmin],
 				body: t.Object({
 					name: t.String({ minLength: 1 }),
@@ -42,11 +28,31 @@ export const scAdminRoutes = createElysia().group('/sc', (app) =>
 					enabled: t.Optional(t.Boolean()),
 				}),
 				detail: { tags: ['Admin'] },
-			}
-		)
-		.patch(
-			'/nodes/:id',
-			async ({ params, body, set }) => {
+			}, async ({ body, set }) => {
+				try {
+					return await scAdminService.createNode(body)
+				} catch (err) {
+					if ((err as Error).message.startsWith('Invalid base_url')) {
+						set.status = 400
+						return { error: 'Invalid base_url' }
+					}
+					set.status = 409
+					return { error: 'Node with this name already exists' }
+				}
+			})
+		.patch('/nodes/:id', {
+				beforeHandle: [requireAuth, requireAdmin],
+				params: t.Object({ id: t.Numeric() }),
+				body: t.Object({
+					name: t.Optional(t.String({ minLength: 1 })),
+					base_url: t.Optional(t.String({ minLength: 1 })),
+					api_key: t.Optional(t.String()),
+					priority: t.Optional(t.Numeric()),
+					timeout_ms: t.Optional(t.Numeric()),
+					enabled: t.Optional(t.Boolean()),
+				}),
+				detail: { tags: ['Admin'] },
+			}, async ({ params, body, set }) => {
 				try {
 					return await scAdminService.updateNode(
 						Number(params.id),
@@ -60,91 +66,67 @@ export const scAdminRoutes = createElysia().group('/sc', (app) =>
 					set.status = 404
 					return { error: 'Node not found' }
 				}
-			},
-			{
+			})
+		.delete('/nodes/:id', {
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.Numeric() }),
-				body: t.Object({
-					name: t.Optional(t.String({ minLength: 1 })),
-					base_url: t.Optional(t.String({ minLength: 1 })),
-					api_key: t.Optional(t.String()),
-					priority: t.Optional(t.Numeric()),
-					timeout_ms: t.Optional(t.Numeric()),
-					enabled: t.Optional(t.Boolean()),
-				}),
 				detail: { tags: ['Admin'] },
-			}
-		)
-		.delete(
-			'/nodes/:id',
-			async ({ params, set }) => {
+			}, async ({ params, set }) => {
 				try {
 					return await scAdminService.deleteNode(Number(params.id))
 				} catch {
 					set.status = 404
 					return { error: 'Node not found' }
 				}
-			},
-			{
+			})
+		.post('/nodes/:id/ping', {
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.Numeric() }),
 				detail: { tags: ['Admin'] },
-			}
-		)
-		.post(
-			'/nodes/:id/ping',
-			async ({ params, set }) => {
+			}, async ({ params, set }) => {
 				const result = await scAdminService.pingNode(Number(params.id))
 				if (!result) {
 					set.status = 404
 					return { error: 'Node not found' }
 				}
 				return result
-			},
-			{
-				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ id: t.Numeric() }),
-				detail: { tags: ['Admin'] },
-			}
-		)
+			})
 
-		.get('/tokens', () => scAdminService.listTokens(), {
+		.get('/tokens', {
 			beforeHandle: [requireAuth, requireAdmin],
 			detail: { tags: ['Admin'] },
-		})
-		.post(
-			'/tokens',
-			async ({ body, set }) => {
-				const result = await scAdminService.createToken(body)
-				if ('error' in result) {
-					set.status = 409
-				}
-				return result
-			},
-			{
+		}, () => scAdminService.listTokens())
+		.post('/tokens', {
 				beforeHandle: [requireAuth, requireAdmin],
 				body: t.Object({
 					label: t.Optional(t.String()),
 					token: t.String({ minLength: 1 }),
 				}),
 				detail: { tags: ['Admin'] },
-			}
-		)
-		.post(
-			'/tokens/bulk',
-			async ({ body }) => scAdminService.bulkTokens(body),
-			{
+			}, async ({ body, set }) => {
+				const result = await scAdminService.createToken(body)
+				if ('error' in result) {
+					set.status = 409
+				}
+				return result
+			})
+		.post('/tokens/bulk', {
 				beforeHandle: [requireAuth, requireAdmin],
 				body: t.Object({
 					tokens: t.Union([t.String(), t.Array(t.String())]),
 					label: t.Optional(t.String()),
 				}),
 				detail: { tags: ['Admin'] },
-			}
-		)
-		.patch(
-			'/tokens/:id',
-			async ({ params, body, set }) => {
+			}, async ({ body }) => scAdminService.bulkTokens(body))
+		.patch('/tokens/:id', {
+				beforeHandle: [requireAuth, requireAdmin],
+				params: t.Object({ id: t.Numeric() }),
+				body: t.Object({
+					label: t.Optional(t.String()),
+					enabled: t.Optional(t.Boolean()),
+				}),
+				detail: { tags: ['Admin'] },
+			}, async ({ params, body, set }) => {
 				try {
 					return await scAdminService.updateToken(
 						Number(params.id),
@@ -154,31 +136,17 @@ export const scAdminRoutes = createElysia().group('/sc', (app) =>
 					set.status = 404
 					return { error: 'Token not found' }
 				}
-			},
-			{
+			})
+		.delete('/tokens/:id', {
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.Numeric() }),
-				body: t.Object({
-					label: t.Optional(t.String()),
-					enabled: t.Optional(t.Boolean()),
-				}),
 				detail: { tags: ['Admin'] },
-			}
-		)
-		.delete(
-			'/tokens/:id',
-			async ({ params, set }) => {
+			}, async ({ params, set }) => {
 				try {
 					return await scAdminService.deleteToken(Number(params.id))
 				} catch {
 					set.status = 404
 					return { error: 'Token not found' }
 				}
-			},
-			{
-				beforeHandle: [requireAuth, requireAdmin],
-				params: t.Object({ id: t.Numeric() }),
-				detail: { tags: ['Admin'] },
-			}
-		)
+			})
 )

@@ -8,20 +8,17 @@ import { squadService } from '../services/squad'
 const idParams = t.Object({ id: t.Numeric() })
 
 export const squadsRoutes = clanContext
-	.get('/squads/:clan_id', ({ params }) => squadService.list(params.clan_id), {
-		beforeHandle: [requireAuth],
-		params: t.Object({ clan_id: t.String() }),
-		detail: { tags: ['Clan'] },
-	})
+	.get(
+		'/squads/:clan_id',
+		{
+			beforeHandle: [requireAuth],
+			params: t.Object({ clan_id: t.String() }),
+			detail: { tags: ['Clan'] },
+		},
+		({ params }) => squadService.list(params.clan_id)
+	)
 	.post(
 		'/squads',
-		({ body, store }) =>
-			squadService.create(
-				store.clan_id!,
-				store.authUserId!,
-				body.name,
-				body.map
-			),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			body: t.Object({
@@ -29,12 +26,17 @@ export const squadsRoutes = clanContext
 				map: t.Enum(SquadMap),
 			}),
 			detail: { tags: ['Clan'] },
-		}
+		},
+		({ body, store }) =>
+			squadService.create(
+				store.clan_id!,
+				store.authUserId!,
+				body.name,
+				body.map
+			)
 	)
 	.post(
 		'/squads/:id/slots',
-		({ params, body, store }) =>
-			squadService.assignMember(params.id, body.member_id, body.slot, store.authUserId!),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: idParams,
@@ -43,21 +45,27 @@ export const squadsRoutes = clanContext
 				slot: t.Numeric({ minimum: 0, maximum: 4 }),
 			}),
 			detail: { tags: ['Clan'] },
-		}
+		},
+		({ params, body, store }) =>
+			squadService.assignMember(
+				params.id,
+				body.member_id,
+				body.slot,
+				store.authUserId!
+			)
 	)
 	.put(
 		'/squads/:id/leader',
-		({ params, body }) => squadService.setLeader(params.id, body.member_id),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: idParams,
 			body: t.Object({ member_id: t.Nullable(t.Numeric()) }),
 			detail: { tags: ['Clan'] },
-		}
+		},
+		({ params, body }) => squadService.setLeader(params.id, body.member_id)
 	)
 	.delete(
 		'/squads/:id/slots/:slot',
-		({ params }) => squadService.removeMember(params.id, params.slot),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: t.Object({
@@ -65,74 +73,76 @@ export const squadsRoutes = clanContext
 				slot: t.Numeric({ minimum: 0, maximum: 4 }),
 			}),
 			detail: { tags: ['Clan'] },
-		}
+		},
+		({ params }) => squadService.removeMember(params.id, params.slot)
 	)
 	.post(
 		'/squads/:id/requests',
-		({ params, store }) =>
-			squadService.requestJoin(params.id, store.authUserId!),
 		{
 			beforeHandle: [requireAuth],
 			params: idParams,
 			detail: { tags: ['Clan'] },
-		}
+		},
+		({ params, store }) =>
+			squadService.requestJoin(params.id, store.authUserId!)
 	)
 	.post(
 		'/squads/requests/:id/approve',
-		({ params, store }) =>
-			squadService.approveRequest(params.id, store.clan_id!, store.authUserId!),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: idParams,
 			detail: { tags: ['Clan'] },
-		}
+		},
+		({ params, store }) =>
+			squadService.approveRequest(
+				params.id,
+				store.clan_id!,
+				store.authUserId!
+			)
 	)
 	.post(
 		'/squads/requests/:id/reject',
-		({ params, store }) =>
-			squadService.rejectRequest(params.id, store.clan_id!),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: idParams,
 			detail: { tags: ['Clan'] },
-		}
+		},
+		({ params, store }) =>
+			squadService.rejectRequest(params.id, store.clan_id!)
 	)
 	.delete(
 		'/squads/:id',
-		({ params, store }) =>
-			squadService.delete(params.id, store.authUserId!),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: idParams,
 			detail: { tags: ['Clan'] },
-		}
+		},
+		({ params, store }) => squadService.delete(params.id, store.authUserId!)
 	)
 	.patch(
 		'/squads/:id/name',
-		({ params, body, store }) =>
-			squadService.updateName(params.id, store.clan_id!, body.name),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: idParams,
 			body: t.Object({ name: t.String({ minLength: 1, maxLength: 60 }) }),
 			detail: { tags: ['Clan'] },
-		}
+		},
+		({ params, body, store }) =>
+			squadService.updateName(params.id, store.clan_id!, body.name)
 	)
 	.patch(
 		'/squads/:id/map',
-		({ params, body, store }) =>
-			squadService.updateMap(params.id, store.clan_id!, body.map),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: idParams,
 			body: t.Object({ map: t.Enum(SquadMap) }),
 			detail: { tags: ['Clan'] },
-		}
+		},
+		({ params, body, store }) =>
+			squadService.updateMap(params.id, store.clan_id!, body.map)
 	)
 	.put(
 		'/squads/:id/slots/:slot/gear',
-		({ params, body, store }) =>
-			squadService.setGearOverride(params.id, params.slot, body.gear_override, store.authUserId!),
 		{
 			beforeHandle: [requireAuth, requireClanOfficer],
 			params: t.Object({
@@ -153,5 +163,12 @@ export const squadsRoutes = clanContext
 				),
 			}),
 			detail: { tags: ['Clan'] },
-		}
+		},
+		({ params, body, store }) =>
+			squadService.setGearOverride(
+				params.id,
+				params.slot,
+				body.gear_override,
+				store.authUserId!
+			)
 	)

@@ -8,20 +8,12 @@ import { permissionService } from './permissions.service'
 export const permissionsRoutes = createElysia().group('/permissions', (app) =>
 	app
 		.use(jwtPlugin)
-		.get('', async () => permissionService.list(), {
+		.get('', {
 			beforeHandle: [requireAuth, requireAdmin],
 			detail: { tags: ['Admin'] },
-		})
+		}, async () => permissionService.list())
 
-		.post(
-			'',
-			async ({ body }) =>
-				permissionService.create(
-					body.name,
-					body.description,
-					body.role_id
-				),
-			{
+		.post('', {
 				beforeHandle: [requireAuth, requireAdmin],
 				body: t.Object({
 					name: t.String({ error: 'name is required' }),
@@ -29,20 +21,14 @@ export const permissionsRoutes = createElysia().group('/permissions', (app) =>
 					role_id: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Admin'] },
-			}
-		)
+			}, async ({ body }) =>
+				permissionService.create(
+					body.name,
+					body.description,
+					body.role_id
+				))
 
-		.patch(
-			'/:id',
-			async ({ params, body }) => {
-				const result = await permissionService.update(
-					Number(params.id),
-					body
-				)
-				if (!result) return { error: 'Not found' }
-				return result
-			},
-			{
+		.patch('/:id', {
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.String() }),
 				body: t.Object({
@@ -51,20 +37,22 @@ export const permissionsRoutes = createElysia().group('/permissions', (app) =>
 					role_id: t.Optional(t.Nullable(t.Numeric())),
 				}),
 				detail: { tags: ['Admin'] },
-			}
-		)
+			}, async ({ params, body }) => {
+				const result = await permissionService.update(
+					Number(params.id),
+					body
+				)
+				if (!result) return { error: 'Not found' }
+				return result
+			})
 
-		.delete(
-			'/:id',
-			async ({ params }) => {
-				const ok = await permissionService.remove(Number(params.id))
-				if (!ok) return { error: 'Not found' }
-				return { success: true }
-			},
-			{
+		.delete('/:id', {
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ id: t.String() }),
 				detail: { tags: ['Admin'] },
-			}
-		)
+			}, async ({ params }) => {
+				const ok = await permissionService.remove(Number(params.id))
+				if (!ok) return { error: 'Not found' }
+				return { success: true }
+			})
 )

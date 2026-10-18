@@ -170,9 +170,21 @@ function getAvatarUrl(
 	return null
 }
 
-export const avatarRoutes = createElysia().get(
-	'/avatar/:id',
-	async ({ params, query }) => {
+export const avatarRoutes = createElysia().get('/avatar/:id', {
+		params: t.Object({
+			id: t.String(),
+		}),
+
+		query: t.Object({
+			provider: t.Optional(
+				t.Union([t.Literal('discord'), t.Literal('telegram')])
+			),
+		}),
+
+		detail: {
+			tags: ['Users'],
+		},
+	}, async ({ params, query }) => {
 		const user = await prisma.user.findUnique({
 			where: {
 				id: Number(params.id),
@@ -229,20 +241,4 @@ export const avatarRoutes = createElysia().get(
 		}
 
 		return proxyImage(avatarUrl)
-	},
-	{
-		params: t.Object({
-			id: t.String(),
-		}),
-
-		query: t.Object({
-			provider: t.Optional(
-				t.Union([t.Literal('discord'), t.Literal('telegram')])
-			),
-		}),
-
-		detail: {
-			tags: ['Users'],
-		},
-	}
-)
+	})

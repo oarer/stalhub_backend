@@ -58,9 +58,10 @@ export const exboCredentials = createElysia()
 	.group('/exbo/credentials', (app) =>
 	app
 		// Статус локальных реквизитов: какой логин и задан ли пароль.
-		.get(
-			'/',
-			async ({ store, set }) => {
+		.get('/', {
+				beforeHandle: [requireAuth],
+				detail: { tags: ['Auth: Exbo'] },
+			}, async ({ store, set }) => {
 				const { user_id } = fromStore(store)
 				const user = await requireExboUser(user_id)
 				if (!user) {
@@ -71,18 +72,21 @@ export const exboCredentials = createElysia()
 					login: user.username,
 					has_password: !!user.password_hash,
 				}
-			},
-			{
-				beforeHandle: [requireAuth],
-				detail: { tags: ['Auth: Exbo'] },
-			}
-		)
+			})
 
 		// Первичная установка: юзер сам задаёт логин (опционально) + пароль.
 		// Только для аккаунтов с привязанным EXBO. Повторный вызов -> 409.
-		.post(
-			'/',
-			async ({ body, store, set }) => {
+		.post('/', {
+				beforeHandle: [requireAuth],
+				body: t.Object({
+					login: t.Optional(loginSchema),
+					password: t.String({
+						minLength: PASSWORD_MIN,
+						maxLength: PASSWORD_MAX,
+					}),
+				}),
+				detail: { tags: ['Auth: Exbo'] },
+			}, async ({ body, store, set }) => {
 				const { user_id } = fromStore(store)
 				const user = await requireExboUser(user_id)
 				if (!user) {
@@ -120,24 +124,23 @@ export const exboCredentials = createElysia()
 				})
 
 				return { success: true, login: updated.username }
-			},
-			{
-				beforeHandle: [requireAuth],
-				body: t.Object({
-					login: t.Optional(loginSchema),
-					password: t.String({
-						minLength: PASSWORD_MIN,
-						maxLength: PASSWORD_MAX,
-					}),
-				}),
-				detail: { tags: ['Auth: Exbo'] },
-			}
-		)
+			})
 
 		// Смена логина и/или пароля. Хотя бы одно поле обязательно.
-		.patch(
-			'/',
-			async ({ body, store, set }) => {
+		.patch('/', {
+				beforeHandle: [requireAuth],
+				body: t.Object({
+					current_password: t.Optional(t.String({ minLength: 1 })),
+					login: t.Optional(loginSchema),
+					new_password: t.Optional(
+						t.String({
+							minLength: PASSWORD_MIN,
+							maxLength: PASSWORD_MAX,
+						})
+					),
+				}),
+				detail: { tags: ['Auth: Exbo'] },
+			}, async ({ body, store, set }) => {
 				const { user_id, session_id } = fromStore(store)
 				const user = await requireExboUser(user_id)
 				if (!user) {
@@ -213,27 +216,20 @@ export const exboCredentials = createElysia()
 				}
 
 				return { success: true, login: updated.username }
-			},
-			{
-				beforeHandle: [requireAuth],
-				body: t.Object({
-					current_password: t.Optional(t.String({ minLength: 1 })),
-					login: t.Optional(loginSchema),
-					new_password: t.Optional(
-						t.String({
-							minLength: PASSWORD_MIN,
-							maxLength: PASSWORD_MAX,
-						})
-					),
-				}),
-				detail: { tags: ['Auth: Exbo'] },
-			}
-		)
+			})
 
 		// Отключение входа по паролю (удаление password_hash).
-		.delete(
-			'/',
-			async ({ body, store, set }) => {
+		.delete('/', {
+				beforeHandle: [requireAuth],
+				body: t.Optional(
+					t.Object({
+						current_password: t.Optional(
+							t.String({ minLength: 1 })
+						),
+					})
+				),
+				detail: { tags: ['Auth: Exbo'] },
+			}, async ({ body, store, set }) => {
 				const { user_id, session_id } = fromStore(store)
 				const user = await requireExboUser(user_id)
 				if (!user) {
@@ -266,17 +262,5 @@ export const exboCredentials = createElysia()
 				})
 
 				return { success: true }
-			},
-			{
-				beforeHandle: [requireAuth],
-				body: t.Optional(
-					t.Object({
-						current_password: t.Optional(
-							t.String({ minLength: 1 })
-						),
-					})
-				),
-				detail: { tags: ['Auth: Exbo'] },
-			}
-		)
+			})
 )

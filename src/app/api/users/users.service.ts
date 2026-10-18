@@ -14,8 +14,8 @@ import { clanService, normalizeSchedule } from '@/app/api/clan/services/clan'
 import { prisma } from '@/lib/prisma'
 import { deleteUpload, putUpload } from '@/lib/uploads'
 import { authService } from '@/utils/auth.service'
-import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
 import { decryptSecretJson } from '@/utils/crypto'
+import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
 
 const USERNAME_COOLDOWN_DAYS = 30
 
@@ -26,7 +26,11 @@ function parseUserAgent(ua: string) {
 
 	const desktopMarker = ua.match(/StalHubApp_([A-Za-z]+)/)
 	if (desktopMarker) {
-		return { isMobile, browser: 'StalHubApp', browserVersion: desktopMarker[1] }
+		return {
+			isMobile,
+			browser: 'StalHubApp',
+			browserVersion: desktopMarker[1],
+		}
 	}
 
 	const patterns = [
@@ -142,7 +146,6 @@ class UsersService {
 			where: { user_id },
 			data: { avatar_image: null },
 		})
-		
 
 		return { ok: true }
 	}
@@ -600,7 +603,7 @@ class UsersService {
 				map: (item) => ({
 					id: item.id,
 					external_id: item.external_id,
-					title: item.title,
+					title: item.title ?? "",
 					author: item.author,
 					created_at: item.created_at,
 				}),
@@ -616,7 +619,7 @@ class UsersService {
 				map: (item) => ({
 					id: item.id,
 					external_id: item.external_id,
-					title: item.title,
+					title: item.title ?? '',
 					author: item.author,
 					created_at: item.created_at,
 				}),
@@ -628,11 +631,11 @@ class UsersService {
 					prisma.art.findMany({
 						where: { id: { in: ids } },
 						include: { author: { select: authorSelect } },
-					}),
+					}) as never,
 				map: (item) => ({
 					id: item.id,
 					external_id: item.external_id,
-					title: item.title,
+					title: item.title ?? "",
 					author: item.author,
 					created_at: item.created_at,
 				}),
@@ -691,7 +694,11 @@ class UsersService {
 			return { error: 'EXBO token is invalid' }
 		}
 
-		await clanService.detectFromExboCharacters(user_id, region, access_token)
+		await clanService.detectFromExboCharacters(
+			user_id,
+			region,
+			access_token
+		)
 
 		const profiles = await prisma.userClanProfile.findMany({
 			where: { user_id },

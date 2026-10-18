@@ -1,4 +1,4 @@
-import { cron } from '@elysiajs/cron'
+import { cron } from '@elysia/cron'
 import { updateAllRegions as updateArtifacts } from '@/app/api/artifacts/aggregate'
 import { refreshBalanceDiffs } from '@/app/api/balance/service'
 import { clanService } from '@/app/api/clan/services/clan'
@@ -301,7 +301,7 @@ export const crons = createElysia()
 			},
 		})
 	)
-	.onStart(async () => {
+	.setup(async () => {
 		console.log('[TierLists] Generating system tier lists...')
 		try {
 			const count = await generateSystemTierLists()

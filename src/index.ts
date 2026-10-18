@@ -1,14 +1,16 @@
 import { relative, resolve } from 'node:path'
-import cors from '@elysiajs/cors'
-import { swagger } from '@elysiajs/swagger'
+import cors from '@elysia/cors'
+import { openapi } from '@elysia/openapi'
+import { setFileTypeDetector } from 'elysia'
+import { fileTypeFromBlob } from 'file-type'
 import { goldService } from '@/app/api/clan/services/gold'
 import {
 	normalizeAndRecordHttpRequest,
 	normalizeRoute,
 } from '@/app/api/metrics'
+import { isS3Uploads, s3PublicUrl } from '@/lib/uploads'
 import { clientIp, enforceRateLimit, shouldSkipRps } from '@/utils/auto-ban'
 import { createElysia } from '@/utils/elysia'
-import { isS3Uploads, s3PublicUrl } from '@/lib/uploads'
 import { logger } from '@/utils/logger'
 import { routes } from './app'
 import { crons } from './crons'
@@ -40,10 +42,15 @@ const allowedOrigins: string[] = [
 
 const STALHUB_ORIGIN_RE = /^https:\/\/([a-z0-9-]+\.)*stalhub\.dev$/
 
+setFileTypeDetector(async (file) => {
+	const result = await fileTypeFromBlob(file)
+	return result?.mime
+})
+
 export const app = createElysia()
 	.use(crons)
 	.use(
-		swagger({
+		openapi({
 			documentation: {
 				info: {
 					title: 'StalHub Documentation',
@@ -61,7 +68,7 @@ export const app = createElysia()
 	.use(logger)
 
 	// static
-	.get('/uploads/*', async ({ params, set }) => {
+	.get('/uploads/*', async ({ params, set }: { params: Record<string, string>; set: { status?: number | string; headers: Record<string, string | number | string[]> } }) => {
 		const decodedPath = decodeURIComponent(params['*'])
 
 		if (
@@ -72,7 +79,7 @@ export const app = createElysia()
 			set.status = 403
 			return 'Forbidden'
 		}
-		
+
 		if (isS3Uploads()) {
 			const url = s3PublicUrl(`/uploads/${decodedPath}`)
 			if (!url) {
@@ -112,7 +119,7 @@ export const app = createElysia()
 		}
 	})
 
-	.onRequest(async ({ request, set, store, server }) => {
+	.request(async ({ request, set, store, server }) => {
 		;(store as Record<string, unknown>)._reqStart = Date.now()
 
 		const pathname = new URL(request.url).pathname
@@ -130,7 +137,7 @@ export const app = createElysia()
 			return { error: 'Too many requests, try again later' }
 		}
 	})
-	.onAfterHandle(({ request, set, store }) => {
+	.afterHandle(({ request, set, store }) => {
 		const start = (store as Record<string, unknown>)._reqStart as
 			| number
 			| undefined

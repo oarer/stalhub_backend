@@ -5,5 +5,4 @@ export const createElysia = (
 ) =>
 	new Elysia({
 		...config,
-		aot: true,
 	})

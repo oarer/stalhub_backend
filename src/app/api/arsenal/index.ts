@@ -1,4 +1,4 @@
-import { cron } from '@elysiajs/cron'
+import { cron } from '@elysia/cron'
 import { createElysia } from '@/utils/elysia'
 import { getCache, shouldRevalidate } from './cache'
 import { updatePrices } from './utils'
@@ -12,13 +12,13 @@ export const routeArsenal = createElysia()
 			run: updatePrices,
 		})
 	)
-	.onStart(async () => {
+	.setup(async () => {
 		const cached = await getCache()
 		if (!cached || shouldRevalidate(cached.updated_at)) {
 			await updatePrices()
 		}
 	})
-	.get('/arsenal', async ({ set }) => {
+	.get('/arsenal', async ({ set }: { set: { headers: Record<string, string> } }) => {
 		set.headers['Cache-Control'] = 'public, max-age=300, stale-while-revalidate=600'
 		const cached = await getCache()
 

@@ -100,8 +100,8 @@ export function getAttachmentComparisonList(
 	for (const key of allKeys) {
 		const vOld = oldStats[key]
 		const vNew = newStats[key]
-		if (formatValueStr(vOld) !== formatValueStr(vNew)) {
-			lines.push(buildStatChange(key, vOld, vNew))
+		if (formatValueStr(vOld as any) !== formatValueStr(vNew as any)) {
+			lines.push(buildStatChange(key, vOld as any, vNew as any))
 		}
 	}
 

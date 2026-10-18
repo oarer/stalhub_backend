@@ -6,20 +6,24 @@ export const listingRoutes = clanContext.group('/listing', (app) =>
 	app
 		.get(
 			'/grenade-boxes',
+			{
+				beforeHandle: [requireAuth],
+				detail: { tags: ['Clan'] },
+			},
 			async () => {
 				const data = await listingService.getGrenadeBoxes()
 				return Object.values(data).map((item) => ({
 					id: item.id,
 					name: listingService.extractName(item),
 				}))
-			},
-			{
-				beforeHandle: [requireAuth],
-				detail: { tags: ['Clan'] },
 			}
 		)
 		.get(
 			'/consumables',
+			{
+				beforeHandle: [requireAuth],
+				detail: { tags: ['Clan'] },
+			},
 			async () => {
 				const data = await listingService.getConsumables()
 				return data.map((item) => ({
@@ -27,10 +31,6 @@ export const listingRoutes = clanContext.group('/listing', (app) =>
 					name: listingService.extractName(item),
 					category: item.category,
 				}))
-			},
-			{
-				beforeHandle: [requireAuth],
-				detail: { tags: ['Clan'] },
 			}
 		)
 )

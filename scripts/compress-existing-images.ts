@@ -120,7 +120,7 @@ async function compressOne(
 	let res: Response
 	try {
 		const form = new FormData()
-		form.append('file', new Blob([raw], { type: mime }), 'image')
+		form.append('file', new Blob([new Uint8Array(raw)], { type: mime }), 'image')
 		res = await fetch(`${SERVICE_URL}/compress`, {
 			method: 'POST',
 			body: form,

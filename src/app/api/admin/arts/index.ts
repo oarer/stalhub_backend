@@ -20,9 +20,17 @@ async function requireArtManage({ store, set }: AuthContext) {
 export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 	app
 		.use(jwtPlugin)
-		.get(
-			'',
-			async ({ query }) => {
+		.get('', {
+				beforeHandle: [requireAuth, requireArtManage],
+				query: t.Object({
+					take: t.Optional(t.Numeric()),
+					page: t.Optional(t.Numeric()),
+					search: t.Optional(t.String()),
+					type: t.Optional(t.Enum(ArtType)),
+					tags: t.Optional(t.String()),
+				}),
+				detail: { tags: ['Admin'] },
+			}, async ({ query }) => {
 				const take = query.take ?? 24
 				const page = (query.page ?? 1) - 1
 				const tags = query.tags
@@ -38,23 +46,27 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 					query.type,
 					tags
 				)
-			},
-			{
+			})
+
+		.post('', {
 				beforeHandle: [requireAuth, requireArtManage],
-				query: t.Object({
-					take: t.Optional(t.Numeric()),
-					page: t.Optional(t.Numeric()),
-					search: t.Optional(t.String()),
+				body: t.Object({
+					title: t.Optional(t.String({ maxLength: 200 })),
+					description: t.Optional(t.String({ maxLength: 2000 })),
 					type: t.Optional(t.Enum(ArtType)),
-					tags: t.Optional(t.String()),
+					image_url: t.Optional(t.String()),
+					image_urls: t.Optional(
+						t.Array(t.String(), { maxItems: 10 })
+					),
+					tags: t.Optional(t.Array(t.String())),
+					author_id: t.Optional(t.Numeric()),
+					author_name: t.Optional(t.String({ maxLength: 100 })),
+					author_social_links: t.Optional(
+						t.Record(t.String(), t.String())
+					),
 				}),
 				detail: { tags: ['Admin'] },
-			}
-		)
-
-		.post(
-			'',
-			async ({ body, set }) => {
+			}, async ({ body, set }) => {
 				try {
 					if (body.image_urls && body.image_urls.length > 10) {
 						set.status = 400
@@ -75,48 +87,43 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 					set.status = 400
 					return { error: (err as Error).message }
 				}
-			},
-			{
-				beforeHandle: [requireAuth, requireArtManage],
-				body: t.Object({
-					title: t.Optional(t.String({ maxLength: 200 })),
-					description: t.Optional(t.String({ maxLength: 2000 })),
-					type: t.Optional(t.Enum(ArtType)),
-					image_url: t.Optional(t.String()),
-					image_urls: t.Optional(
-						t.Array(t.String(), { maxItems: 10 })
-					),
-					tags: t.Optional(t.Array(t.String())),
-					author_id: t.Optional(t.Numeric()),
-					author_name: t.Optional(t.String({ maxLength: 100 })),
-					author_social_links: t.Optional(
-						t.Record(t.String(), t.String())
-					),
-				}),
-				detail: { tags: ['Admin'] },
-			}
-		)
+			})
 
-		.get(
-			'/:id',
-			async ({ params, set }) => {
+		.get('/:id', {
+				beforeHandle: [requireAuth, requireArtManage],
+				params: t.Object({ id: t.Numeric() }),
+				detail: { tags: ['Admin'] },
+			}, async ({ params, set }) => {
 				const result = await adminArtsService.get(Number(params.id))
 				if (!result) {
 					set.status = 404
 					return { error: 'Art not found' }
 				}
 				return result
-			},
-			{
+			})
+
+		.patch('/:id', {
 				beforeHandle: [requireAuth, requireArtManage],
 				params: t.Object({ id: t.Numeric() }),
+				body: t.Object({
+					title: t.Optional(t.Nullable(t.String({ maxLength: 200 }))),
+					description: t.Optional(
+						t.Nullable(t.String({ maxLength: 2000 }))
+					),
+					type: t.Optional(t.Enum(ArtType)),
+					image_url: t.Optional(t.Nullable(t.String())),
+					image_urls: t.Optional(
+						t.Nullable(t.Array(t.String(), { maxItems: 10 }))
+					),
+					tags: t.Optional(t.Array(t.String())),
+					author_id: t.Optional(t.Nullable(t.Numeric())),
+					author_name: t.Optional(t.Nullable(t.String())),
+					author_social_links: t.Optional(
+						t.Nullable(t.Record(t.String(), t.String()))
+					),
+				}),
 				detail: { tags: ['Admin'] },
-			}
-		)
-
-		.patch(
-			'/:id',
-			async ({ params, body, set }) => {
+			}, async ({ params, body, set }) => {
 				if (body.image_urls && body.image_urls.length > 10) {
 					set.status = 400
 					return { error: 'Too many images (max 10)' }
@@ -154,45 +161,18 @@ export const adminArtsRoutes = createElysia().group('/arts', (app) =>
 					return { error: 'Art not found' }
 				}
 				return result
-			},
-			{
+			})
+
+		.delete('/:id', {
 				beforeHandle: [requireAuth, requireArtManage],
 				params: t.Object({ id: t.Numeric() }),
-				body: t.Object({
-					title: t.Optional(t.Nullable(t.String({ maxLength: 200 }))),
-					description: t.Optional(
-						t.Nullable(t.String({ maxLength: 2000 }))
-					),
-					type: t.Optional(t.Enum(ArtType)),
-					image_url: t.Optional(t.Nullable(t.String())),
-					image_urls: t.Optional(
-						t.Nullable(t.Array(t.String(), { maxItems: 10 }))
-					),
-					tags: t.Optional(t.Array(t.String())),
-					author_id: t.Optional(t.Nullable(t.Numeric())),
-					author_name: t.Optional(t.Nullable(t.String())),
-					author_social_links: t.Optional(
-						t.Nullable(t.Record(t.String(), t.String()))
-					),
-				}),
 				detail: { tags: ['Admin'] },
-			}
-		)
-
-		.delete(
-			'/:id',
-			async ({ params, set }) => {
+			}, async ({ params, set }) => {
 				const ok = await adminArtsService.remove(Number(params.id))
 				if (!ok) {
 					set.status = 404
 					return { error: 'Art not found' }
 				}
 				return { success: true }
-			},
-			{
-				beforeHandle: [requireAuth, requireArtManage],
-				params: t.Object({ id: t.Numeric() }),
-				detail: { tags: ['Admin'] },
-			}
-		)
+			})
 )

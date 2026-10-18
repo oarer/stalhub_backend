@@ -7,7 +7,7 @@ import {
 import type { UpgradePricesResponse } from './upgrade-prices.type'
 
 export const upgradePricesRoutes = new Elysia()
-	.onStart(async () => {
+	.setup(async () => {
 		try {
 			await updateAllRegions()
 		} catch (err) {

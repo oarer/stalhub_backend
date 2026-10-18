@@ -145,9 +145,12 @@ export const telegramAuth = createElysia()
 	.use(jwtPlugin)
 	.group('/telegram', (app) =>
 		app
-			.get(
-				'/login',
-				async ({ query, request }) => {
+			.get('/login', {
+					query: desktopLoginQuery,
+					detail: {
+						tags: ['Auth: Telegram'],
+					},
+				}, async ({ query, request }) => {
 					const verifier = base64urlEncode(
 						crypto.getRandomValues(new Uint8Array(32)).buffer
 					)
@@ -182,18 +185,17 @@ export const telegramAuth = createElysia()
 					if (desktopRedirect)
 						url.searchParams.set('redirect_uri', desktopRedirect)
 					return { url: url.toString() }
-				},
-				{
-					query: desktopLoginQuery,
+				})
+
+			.get('/callback', {
+					query: t.Object({
+						code: t.String(),
+						state: t.String(),
+					}),
 					detail: {
 						tags: ['Auth: Telegram'],
 					},
-				}
-			)
-
-			.get(
-				'/callback',
-				async ({
+				}, async ({
 					query: { code, state },
 					headers,
 					cookie: { refresh_token, access_token },
@@ -338,21 +340,16 @@ export const telegramAuth = createElysia()
 					})
 
 					return { success: true }
-				},
-				{
-					query: t.Object({
-						code: t.String(),
-						state: t.String(),
+				})
+
+			.post('/callback', {
+					body: t.Object({
+						id_token: t.String(),
 					}),
 					detail: {
 						tags: ['Auth: Telegram'],
 					},
-				}
-			)
-
-			.post(
-				'/callback',
-				async ({
+				}, async ({
 					body: { id_token },
 					headers,
 					cookie: { access_token, refresh_token },
@@ -430,20 +427,12 @@ export const telegramAuth = createElysia()
 					})
 
 					return { success: true }
-				},
-				{
-					body: t.Object({
-						id_token: t.String(),
-					}),
-					detail: {
-						tags: ['Auth: Telegram'],
-					},
-				}
-			)
+				})
 
-			.get(
-				'/link',
-				async ({ store }) => {
+			.get('/link', {
+					beforeHandle: [requireAuth],
+					detail: { tags: ['Auth: Telegram'] },
+				}, async ({ store }) => {
 					const { user_id } = fromStore(store)
 					const existing = await prisma.telegramAuth.findUnique({
 						where: { userid: user_id },
@@ -476,25 +465,16 @@ export const telegramAuth = createElysia()
 					url.searchParams.set('code_challenge', challenge)
 					url.searchParams.set('code_challenge_method', 'S256')
 					return { url: url.toString(), verifier }
-				},
-				{
+				})
+
+			.delete('/link', {
 					beforeHandle: [requireAuth],
 					detail: { tags: ['Auth: Telegram'] },
-				}
-			)
-
-			.delete(
-				'/link',
-				async ({ store }) => {
+				}, async ({ store }) => {
 					const { user_id } = fromStore(store)
 					await prisma.telegramAuth.deleteMany({
 						where: { userid: user_id },
 					})
 					return { success: true }
-				},
-				{
-					beforeHandle: [requireAuth],
-					detail: { tags: ['Auth: Telegram'] },
-				}
-			)
+				})
 	)

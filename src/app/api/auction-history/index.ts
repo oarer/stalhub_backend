@@ -1,4 +1,4 @@
-import { cron } from '@elysiajs/cron'
+import { cron } from '@elysia/cron'
 import { env } from '@/env'
 import { requireAdmin, requireAuth } from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
@@ -41,7 +41,7 @@ export const routeAuctionHistory = createElysia()
 			},
 		})
 	)
-	.onStart(async () => {
+	.setup(async () => {
 		if (!isAuctionDbEnabled()) {
 			console.log('[AuctionHistory] disabled (no AUCTION_DATABASE_URL)')
 			return
@@ -64,7 +64,7 @@ export const routeAuctionHistory = createElysia()
 			console.error('[AuctionHistory] initial backfill failed:', err)
 		)
 	})
-	.get('/auction-history/status', async ({ status }) => {
+	.get('/auction-history/status', async ({ status }: any) => {
 		const st = { ...ingestStatus(), ...rollupStatus() }
 		if (!st.enabled) {
 			return status(503, {
@@ -95,9 +95,10 @@ export const routeAuctionHistory = createElysia()
 		}
 		return { ...st, db }
 	})
-	.get(
-		'/auction-history/progress',
-		async ({ status }) => {
+	.get('/auction-history/progress', {
+			beforeHandle: [requireAuth, requireAdmin],
+			detail: { tags: ['Admin'] },
+		}, async ({ status }: any) => {
 			const [progress, st] = await Promise.all([
 				auctionProgress().catch((err) => {
 					console.error(
@@ -115,15 +116,11 @@ export const routeAuctionHistory = createElysia()
 				})
 			}
 			return { ...progress, ...st }
-		},
-		{
+		})
+	.post('/auction-history/deepen', {
 			beforeHandle: [requireAuth, requireAdmin],
 			detail: { tags: ['Admin'] },
-		}
-	)
-	.post(
-		'/auction-history/deepen',
-		async ({ status }) => {
+		}, async ({ status }: any) => {
 			const st = { ...ingestStatus(), ...rollupStatus() }
 			if (!st.enabled) {
 				return status(503, {
@@ -142,15 +139,11 @@ export const routeAuctionHistory = createElysia()
 				console.error('[AuctionHistory] deepen failed:', err)
 			)
 			return { started: true }
-		},
-		{
+		})
+	.post('/auction-history/census', {
 			beforeHandle: [requireAuth, requireAdmin],
 			detail: { tags: ['Admin'] },
-		}
-	)
-	.post(
-		'/auction-history/census',
-		async ({ status }) => {
+		}, async ({ status }: any) => {
 			const st = { ...ingestStatus(), ...rollupStatus() }
 			if (st.censusRunning) {
 				return status(409, {
@@ -163,15 +156,11 @@ export const routeAuctionHistory = createElysia()
 				console.error('[AuctionHistory] census failed:', err)
 			)
 			return { started: true }
-		},
-		{
+		})
+	.post('/auction-history/rollup', {
 			beforeHandle: [requireAuth, requireAdmin],
 			detail: { tags: ['Admin'] },
-		}
-	)
-	.post(
-		'/auction-history/rollup',
-		async ({ status }) => {
+		}, async ({ status }: any) => {
 			const st = { ...ingestStatus(), ...rollupStatus() }
 			if (st.rollupRunning) {
 				return status(409, {
@@ -184,9 +173,4 @@ export const routeAuctionHistory = createElysia()
 				console.error('[AuctionHistory] rollup failed:', err)
 			)
 			return { started: true }
-		},
-		{
-			beforeHandle: [requireAuth, requireAdmin],
-			detail: { tags: ['Admin'] },
-		}
-	)
+		})

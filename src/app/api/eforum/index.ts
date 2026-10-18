@@ -33,6 +33,19 @@ export const eforumRoutes = createElysia().group('/eforum', (app) =>
 	app
 		.get(
 			'/latest',
+			{
+				query: t.Object({
+					author: t.Optional(t.String()),
+					authors: t.Optional(
+						t.Union([t.String(), t.Array(t.String())])
+					),
+					limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
+					offset: t.Optional(t.Numeric({ minimum: 0 })),
+					since: t.Optional(t.String()),
+					refresh: t.Optional(t.BooleanString()),
+				}),
+				detail: { tags: ['EForum'] },
+			},
 			async ({ query }) => {
 				if (query.refresh) {
 					await checkNewPosts()
@@ -49,23 +62,14 @@ export const eforumRoutes = createElysia().group('/eforum', (app) =>
 					...toFrontendFeed(items, total, limit, offset, updatedAt),
 					lastCheck: getStatus().lastCheck,
 				}
-			},
-			{
-				query: t.Object({
-					author: t.Optional(t.String()),
-					authors: t.Optional(
-						t.Union([t.String(), t.Array(t.String())])
-					),
-					limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
-					offset: t.Optional(t.Numeric({ minimum: 0 })),
-					since: t.Optional(t.String()),
-					refresh: t.Optional(t.BooleanString()),
-				}),
-				detail: { tags: ['EForum'] },
 			}
 		)
 		.get(
 			'/post/:postId',
+			{
+				params: t.Object({ postId: t.String() }),
+				detail: { tags: ['EForum'] },
+			},
 			async ({ params, set }) => {
 				const found = findByPostId(params.postId)
 				if (!found) {
@@ -73,34 +77,46 @@ export const eforumRoutes = createElysia().group('/eforum', (app) =>
 					return { error: 'Post not found in history' }
 				}
 				return toFrontendItem(found)
-			},
-			{
-				params: t.Object({ postId: t.String() }),
-				detail: { tags: ['EForum'] },
 			}
 		)
 		.get(
 			'/authors',
+			{
+				detail: { tags: ['EForum'] },
+			},
 			() => ({
 				total: TRACKED_AUTHORS.length,
 				authors: [...TRACKED_AUTHORS].map((name) => ({
 					name,
 					profileUrl: `https://forum.exbo.net/u/${name}`,
 				})),
-			}),
+			})
+		)
+		.get(
+			'/status',
 			{
 				detail: { tags: ['EForum'] },
-			}
+			},
+			() => getStatus()
 		)
-		.get('/status', () => getStatus(), {
-			detail: { tags: ['EForum'] },
-		})
-		.get('/ping', async () => getPing(), {
-			detail: { tags: ['EForum'] },
-		})
+		.get(
+			'/ping',
+			{
+				detail: { tags: ['EForum'] },
+			},
+			async () => getPing()
+		)
 
 		.post(
 			'/preview',
+			{
+				body: t.Object({
+					author: t.String({ minLength: 1 }),
+					contentHtml: t.String(),
+					link: t.Optional(t.String()),
+				}),
+				detail: { tags: ['EForum'] },
+			},
 			async ({ body }) => {
 				const formatted = await previewMessage(
 					body.author,
@@ -121,14 +137,6 @@ export const eforumRoutes = createElysia().group('/eforum', (app) =>
 					responseHtml: formatted.responseHtml,
 					checkedAt: new Date().toISOString(),
 				})
-			},
-			{
-				body: t.Object({
-					author: t.String({ minLength: 1 }),
-					contentHtml: t.String(),
-					link: t.Optional(t.String()),
-				}),
-				detail: { tags: ['EForum'] },
 			}
 		)
 )
