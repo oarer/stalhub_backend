@@ -1,5 +1,6 @@
 import { redis } from 'bun'
 import type { Prisma } from 'generated/prisma/client'
+import { isMapAssetPath } from '@/app/api/map3d/request-policy'
 import {
 	abuseWarningsTotal,
 	autoBansTotal,
@@ -193,7 +194,10 @@ const RPS_SKIP_PREFIXES = [
 ]
 
 export function shouldSkipRps(pathname: string): boolean {
-	return RPS_SKIP_PREFIXES.some((p) => pathname.startsWith(p))
+	return (
+		isMapAssetPath(pathname) ||
+		RPS_SKIP_PREFIXES.some((p) => pathname.startsWith(p))
+	)
 }
 
 export async function enforceRateLimit(

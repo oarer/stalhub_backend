@@ -3,6 +3,7 @@
 	"version": "1.0.50",
 	"scripts": {
 		"test": "bun test",
+		"test:map3d": "bun test map3d",
 		"dev": "bun run --watch src/index.ts",
 		"db:deploy": "bunx prisma migrate deploy && bunx prisma generate",
 		"grenade:seed": "bun run scripts/grenade-seed-snapshots.ts"

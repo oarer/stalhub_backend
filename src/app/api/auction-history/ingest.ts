@@ -386,7 +386,16 @@ const touchItem = async (
 const ensureItems = async (
 	dataPaths: string[]
 ): Promise<
-	Map<string, { id: number; histNewest: number | null; hasBackfill: boolean }>
+	Map<
+		string,
+		{
+			id: number
+			histNewest: number | null
+			hasBackfill: boolean
+			dealsCount: number
+			lastSeen: number | null
+		}
+	>
 > => {
 	const pool = auctionPool()
 	if (!pool) return new Map()
@@ -399,27 +408,48 @@ const ensureItems = async (
 	const res = await pool.query(
 		`SELECT id, data_path,
 			EXTRACT(EPOCH FROM hist_newest) AS hist_newest,
-			hist_oldest IS NOT NULL AS has_backfill
+			hist_oldest IS NOT NULL AS has_backfill,
+			deals_count::bigint AS deals_count,
+			EXTRACT(EPOCH FROM last_seen) AS last_seen
 		 FROM items WHERE data_path = ANY($1)`,
 		[dataPaths]
 	)
 	const map = new Map<
 		string,
-		{ id: number; histNewest: number | null; hasBackfill: boolean }
+		{
+			id: number
+			histNewest: number | null
+			hasBackfill: boolean
+			dealsCount: number
+			lastSeen: number | null
+		}
 	>()
 	for (const row of res.rows as {
 		id: number
 		data_path: string
 		hist_newest: string | null
 		has_backfill: boolean
+		deals_count: string
+		last_seen: string | null
 	}[]) {
 		map.set(row.data_path, {
 			id: row.id,
 			histNewest: row.hist_newest ? Number(row.hist_newest) * 1000 : null,
 			hasBackfill: row.has_backfill,
+			dealsCount: Number(row.deals_count),
+			lastSeen: row.last_seen ? Number(row.last_seen) * 1000 : null,
 		})
 	}
 	return map
+}
+
+/** Отметка "проверен, пусто": чтобы не дёргать мёртвые предметы каждый проход. */
+const touchChecked = async (itemDbId: number): Promise<void> => {
+	const pool = auctionPool()
+	if (!pool) return
+	await pool.query(`UPDATE items SET last_seen = now() WHERE id = $1`, [
+		itemDbId,
+	])
 }
 
 const listUniverse = async (): Promise<{ id: string; dataPath: string }[]> => {
@@ -459,9 +489,17 @@ export const backfillOnce = async (): Promise<IngestStats> => {
 		const universe = await listUniverse()
 		const known = await ensureItems(universe.map((u) => u.dataPath))
 
+		// только предметы без завершённого прохода; пустые (проверены,
+		// истории нет) — не чаще раза в сутки, иначе каждый рестарт
+		// впустую дёргает ~900 мёртвых предметов
+		const dayAgo = Date.now() - 86400_000
 		const pending = universe.filter((u) => {
 			const k = known.get(u.dataPath)
-			return k !== undefined && !k.hasBackfill
+			return (
+				k !== undefined &&
+				!k.hasBackfill &&
+				(k.lastSeen === null || k.lastSeen < dayAgo)
+			)
 		})
 		console.log(
 			`[AuctionHistory] backfill: ${pending.length}/${universe.length} items need walk`
@@ -486,6 +524,12 @@ export const backfillOnce = async (): Promise<IngestStats> => {
 					const rows = (page.prices ?? [])
 						.map(toRow)
 						.filter((r): r is DealRow => r !== null)
+					if (rows.length === 0) {
+						// истории нет вообще — помечаем проверенным, чтобы
+						// не дёргать предмет при каждом рестарте
+						if (offset === 0) await touchChecked(k.id)
+						break
+					}
 					if (rows.length > 0) {
 						const inserted = await upsertRows(k.id, rows)
 						await touchItem(k.id, rows, inserted)
@@ -544,6 +588,16 @@ export const sweepOnce = async (): Promise<IngestStats> => {
 		await runPool(ordered, env.AUCTION_SWEEP_CONCURRENCY, async (u) => {
 			const k = known.get(u.dataPath)
 			if (!k) return
+			// мёртвый предмет (0 сделок, никогда не виден, проверен < часа
+			// назад) — скипаем: иначе каждый свип впустую дёргает ~900 штук
+			if (
+				k.dealsCount === 0 &&
+				k.histNewest === null &&
+				k.lastSeen !== null &&
+				Date.now() - k.lastSeen < 3600_000
+			) {
+				return
+			}
 			stats.items++
 			try {
 				let pages = 0
@@ -560,7 +614,11 @@ export const sweepOnce = async (): Promise<IngestStats> => {
 					const rows = (page.prices ?? [])
 						.map(toRow)
 						.filter((r): r is DealRow => r !== null)
-					if (rows.length > 0) {
+					if (rows.length === 0) {
+						if (pages <= 1) await touchChecked(k.id)
+						break
+					}
+					{
 						const inserted = await upsertRows(k.id, rows)
 						await touchItem(k.id, rows, inserted)
 						await upsertBuckets(k.id, rows)

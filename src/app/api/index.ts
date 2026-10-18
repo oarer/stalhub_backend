@@ -23,6 +23,7 @@ import { internalRoutes } from './internal'
 import { botRoutes } from './internal/bot'
 import { loadoutRoutes } from './loadout'
 import { routeLoot } from './loot'
+import { map3dRoutes } from './map3d'
 import { metricsRoute } from './metrics'
 import { personalRoutes } from './personal'
 import { playersRoute } from './player'
@@ -33,6 +34,7 @@ import { usersRoutes } from './users'
 
 export const api = createElysia()
 	.use(routeHealth)
+	.use(map3dRoutes)
 	.use(routeArsenal)
 	.use(artifactsRoutes)
 	.use(auctionRoutes)
