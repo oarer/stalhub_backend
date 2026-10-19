@@ -108,6 +108,118 @@ export function assetKey(resource: string, url: URL) {
 	return resource + (p.size ? '?' + p.toString() : '')
 }
 
+export class MapNotes {
+	private notes?: Database
+	constructor(private notesPath: string, private validate: (slug: string) => void) {}
+	close() {
+		this.notes?.close()
+	}
+	private json(value: unknown, status = 200, head = false) {
+		return new Response(head ? null : JSON.stringify(value), {
+			status,
+			headers: {
+				'content-type': 'application/json',
+				'cache-control': 'no-store',
+				'Cross-Origin-Resource-Policy': 'same-origin',
+			},
+		})
+	}
+	private notesDb() {
+		if (!this.notes) {
+			mkdirSync(dirname(resolve(this.notesPath)), { recursive: true })
+			this.notes = new Database(this.notesPath, { create: true })
+			this.notes.exec(
+				'PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; CREATE TABLE IF NOT EXISTS notes(id TEXT PRIMARY KEY, data TEXT NOT NULL)'
+			)
+		}
+		return this.notes
+	}
+	async handleNotes(request: Request, id?: string) {
+		const db = this.notesDb(),
+			head = request.method === 'HEAD'
+		if (['GET', 'HEAD'].includes(request.method) && !id)
+			return this.json(
+				db
+					.query('SELECT data FROM notes ORDER BY rowid')
+					.all()
+					.map((row) => JSON.parse((row as { data: string }).data)),
+				200,
+				head
+			)
+		if (request.method === 'DELETE' && id) {
+			if (!/^[a-f\d-]{36}$/i.test(id))
+				throw new MapError(400, 'Invalid note id')
+			db.query('DELETE FROM notes WHERE id=?').run(id)
+			return new Response(null, { status: 204 })
+		}
+		if (request.method !== 'POST' || id)
+			throw new MapError(405, 'Method not allowed')
+		const reader = request.body?.getReader()
+		const parts: Uint8Array[] = []
+		let size = 0
+		if (reader)
+			try {
+				for (;;) {
+					const { value, done } = await reader.read()
+					if (done) break
+					size += value.length
+					if (size > 65536) {
+						await reader.cancel()
+						throw new MapError(413, 'Note body too large')
+					}
+					parts.push(value)
+				}
+			} finally {
+				reader.releaseLock()
+			}
+		const bytes = new Uint8Array(size)
+		let offset = 0
+		for (const part of parts) {
+			bytes.set(part, offset)
+			offset += part.length
+		}
+		let note: Record<string, unknown>
+		try {
+			note = JSON.parse(new TextDecoder().decode(bytes))
+		} catch {
+			throw new MapError(400, 'Invalid JSON')
+		}
+		if (
+			!note ||
+			typeof note.id !== 'string' ||
+			!/^[a-f\d-]{36}$/i.test(note.id) ||
+			typeof note.instance !== 'string' ||
+			!['object', 'block', 'point', 'area'].includes(String(note.kind)) ||
+			typeof note.text !== 'string' ||
+			!note.text.trim() ||
+			note.text.length > 5000 ||
+			!['x', 'y', 'z'].every(
+				(k) => typeof note[k] === 'number' && Number.isFinite(note[k])
+			)
+		)
+			throw new MapError(400, 'Invalid note')
+		this.validate(note.instance)
+		const save = db.transaction(() => {
+			if (
+				!db
+					.query('SELECT 1 FROM notes WHERE id=?')
+					.get(note.id as string) &&
+				(
+					db.query('SELECT count(*) AS n FROM notes').get() as {
+						n: number
+					}
+				).n >= 5000
+			)
+				throw new MapError(400, 'Note limit reached')
+			db.query(
+				'INSERT INTO notes(id,data) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data'
+			).run(note.id as string, JSON.stringify(note))
+		})
+		save()
+		return this.json(note)
+	}
+}
+
 export class MapBundle {
 	readonly db: Database
 	readonly root: string
@@ -526,6 +638,8 @@ export class MapBundle {
 function resolvePath(root: string) {
 	return resolve(root, 'map3d.sqlite')
 }
+let staticNotes: MapNotes | undefined
+let staticNotesPath = ''
 let current: MapBundle | undefined,
 	location = ''
 export async function handleMapAsset(request: Request, resource: string) {
@@ -536,6 +650,26 @@ export async function handleMapAsset(request: Request, resource: string) {
 			process.env.MAP3D_NOTES_DB ??
 			resolve(process.cwd(), 'runtime/map3d-notes.sqlite')
 	try {
+		if (process.env.MAP3D_STATIC_MODE === '1') {
+			if (!/^notes(?:\/[a-f\d-]{36})?$/i.test(resource))
+				return Response.json(
+					{ error: 'Map assets are served by the static host' },
+					{ status: 404 }
+				)
+			if (!staticNotes || staticNotesPath !== notes) {
+				staticNotes?.close()
+				staticNotes = new MapNotes(notes, (slug) => {
+					if (
+						!slug ||
+						slug.length > 200 ||
+						/[\\/\x00]/.test(slug)
+					)
+						throw new MapError(400, 'Invalid instance')
+				})
+				staticNotesPath = notes
+			}
+			return await staticNotes.handleNotes(request, resource.split('/')[1])
+		}
 		if (!current || location !== root) {
 			current?.close()
 			current = new MapBundle(root, notes)
@@ -543,6 +677,8 @@ export async function handleMapAsset(request: Request, resource: string) {
 		}
 		return await current.handle(request, resource)
 	} catch (e) {
+		if (e instanceof MapError)
+			return Response.json({ error: e.message }, { status: e.status })
 		console.error('Cannot open prepared map bundle', e)
 		return Response.json(
 			{ error: 'Пакет данных 3D-карты не установлен' },

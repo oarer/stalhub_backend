@@ -10,7 +10,10 @@ export function fixture() {
 	mkdirSync(join(root, 'packs'))
 	const db = new Database(join(root, 'map3d.sqlite'))
 	db.exec(
-		readFileSync(new URL('./map3d-schema.sql', import.meta.url), 'utf8')
+		readFileSync(
+			new URL('../../../asset-preparation/schema.sql', import.meta.url),
+			'utf8'
+		)
 	)
 	for (const [k, v] of [
 		['schema', '1'],
