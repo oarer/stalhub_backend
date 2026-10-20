@@ -43,7 +43,8 @@ function integer(
 		throw new MapError(400, 'Invalid numeric parameter')
 	return +value
 }
-
+// Compiled Bun modules share the executable's import.meta URL. The explicit
+// worker entrypoint keeps its source-tree path inside the executable.
 function searchWorkerUrl() {
 	return new URL(
 		import.meta.url.endsWith('/bundle.ts')
@@ -61,11 +62,11 @@ export function assetKey(resource: string, url: URL) {
 	) {
 		const name = input.get('name') ?? ''
 		if (
-			!/^[\w]+:[\p{L}\p{N}_./-]+$/u.test(name) ||
+			!/^[\w]+:[\p{L}\p{N}_./ ()'-]+$/u.test(name) ||
 			name
 				.split(':')[1]
 				.split('/')
-				.some((s) => !s || s === '.' || s === '..') ||
+				.some((s) => !s || s.endsWith('.') || s.endsWith(' ')) ||
 			/\.xeon$/i.test(name)
 		)
 			throw new MapError(400, 'Invalid resource name')
@@ -110,7 +111,10 @@ export function assetKey(resource: string, url: URL) {
 
 export class MapNotes {
 	private notes?: Database
-	constructor(private notesPath: string, private validate: (slug: string) => void) {}
+	constructor(
+		private notesPath: string,
+		private validate: (slug: string) => void
+	) {}
 	close() {
 		this.notes?.close()
 	}
@@ -154,6 +158,7 @@ export class MapNotes {
 		}
 		if (request.method !== 'POST' || id)
 			throw new MapError(405, 'Method not allowed')
+		// Bound the stream before parsing, including requests without Content-Length.
 		const reader = request.body?.getReader()
 		const parts: Uint8Array[] = []
 		let size = 0
@@ -220,12 +225,13 @@ export class MapNotes {
 	}
 }
 
+/** Immutable prepared data. No game files, conversions, subprocesses or HTTP upstream. */
 export class MapBundle {
 	readonly db: Database
 	readonly root: string
 	readonly revision: string
 	readonly version: number
-	private notes?: Database
+	private notesStore?: MapNotes
 	private paths = new Map<string, string>()
 	constructor(
 		root: string,
@@ -257,7 +263,7 @@ export class MapBundle {
 			job.reject(Error('Map bundle closed'))
 		this.jobs.clear()
 		this.db.close()
-		this.notes?.close()
+		this.notesStore?.close()
 	}
 	private json(value: unknown, status = 200, head = false) {
 		return new Response(head ? null : JSON.stringify(value), {
@@ -275,101 +281,6 @@ export class MapBundle {
 			.get(slug) as { status: string } | null
 		if (!row) throw new MapError(404, 'Instance missing')
 		return JSON.parse(row.status)
-	}
-	private notesDb() {
-		if (!this.notes) {
-			mkdirSync(dirname(resolve(this.notesPath)), { recursive: true })
-			this.notes = new Database(this.notesPath, { create: true })
-			this.notes.exec(
-				'PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; CREATE TABLE IF NOT EXISTS notes(id TEXT PRIMARY KEY, data TEXT NOT NULL)'
-			)
-		}
-		return this.notes
-	}
-	private async handleNotes(request: Request, id?: string) {
-		const db = this.notesDb(),
-			head = request.method === 'HEAD'
-		if (['GET', 'HEAD'].includes(request.method) && !id)
-			return this.json(
-				db
-					.query('SELECT data FROM notes ORDER BY rowid')
-					.all()
-					.map((row) => JSON.parse((row as { data: string }).data)),
-				200,
-				head
-			)
-		if (request.method === 'DELETE' && id) {
-			if (!/^[a-f\d-]{36}$/i.test(id))
-				throw new MapError(400, 'Invalid note id')
-			db.query('DELETE FROM notes WHERE id=?').run(id)
-			return new Response(null, { status: 204 })
-		}
-		if (request.method !== 'POST' || id)
-			throw new MapError(405, 'Method not allowed')
-		// Bound the stream before parsing, including requests without Content-Length.
-		const reader = request.body?.getReader()
-		const parts: Uint8Array[] = []
-		let size = 0
-		if (reader)
-			try {
-				for (;;) {
-					const { value, done } = await reader.read()
-					if (done) break
-					size += value.length
-					if (size > 65536) {
-						await reader.cancel()
-						throw new MapError(413, 'Note body too large')
-					}
-					parts.push(value)
-				}
-			} finally {
-				reader.releaseLock()
-			}
-		const bytes = new Uint8Array(size)
-		let offset = 0
-		for (const part of parts) {
-			bytes.set(part, offset)
-			offset += part.length
-		}
-		let note: Record<string, unknown>
-		try {
-			note = JSON.parse(new TextDecoder().decode(bytes))
-		} catch {
-			throw new MapError(400, 'Invalid JSON')
-		}
-		if (
-			!note ||
-			typeof note.id !== 'string' ||
-			!/^[a-f\d-]{36}$/i.test(note.id) ||
-			typeof note.instance !== 'string' ||
-			!['object', 'block', 'point', 'area'].includes(String(note.kind)) ||
-			typeof note.text !== 'string' ||
-			!note.text.trim() ||
-			note.text.length > 5000 ||
-			!['x', 'y', 'z'].every(
-				(k) => typeof note[k] === 'number' && Number.isFinite(note[k])
-			)
-		)
-			throw new MapError(400, 'Invalid note')
-		this.instance(note.instance)
-		const save = db.transaction(() => {
-			if (
-				!db
-					.query('SELECT 1 FROM notes WHERE id=?')
-					.get(note.id as string) &&
-				(
-					db.query('SELECT count(*) AS n FROM notes').get() as {
-						n: number
-					}
-				).n >= 5000
-			)
-				throw new MapError(400, 'Note limit reached')
-			db.query(
-				'INSERT INTO notes(id,data) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data'
-			).run(note.id as string, JSON.stringify(note))
-		})
-		save()
-		return this.json(note)
 	}
 	private filePath(path: string) {
 		let full = this.paths.get(path)
@@ -471,8 +382,12 @@ export class MapBundle {
 			const url = new URL(request.url),
 				head = request.method === 'HEAD',
 				parts = resource.split('/')
-			if (parts[0] === 'notes' && parts.length <= 2)
-				return await this.handleNotes(request, parts[1])
+			if (parts[0] === 'notes' && parts.length <= 2) {
+				this.notesStore ??= new MapNotes(this.notesPath, (slug) => {
+					this.instance(slug)
+				})
+				return await this.notesStore.handleNotes(request, parts[1])
+			}
 			if (
 				!['GET', 'HEAD'].includes(request.method) &&
 				!(
@@ -659,16 +574,15 @@ export async function handleMapAsset(request: Request, resource: string) {
 			if (!staticNotes || staticNotesPath !== notes) {
 				staticNotes?.close()
 				staticNotes = new MapNotes(notes, (slug) => {
-					if (
-						!slug ||
-						slug.length > 200 ||
-						/[\\/\x00]/.test(slug)
-					)
+					if (!slug || slug.length > 200 || /[\\/\x00]/.test(slug))
 						throw new MapError(400, 'Invalid instance')
 				})
 				staticNotesPath = notes
 			}
-			return await staticNotes.handleNotes(request, resource.split('/')[1])
+			return await staticNotes.handleNotes(
+				request,
+				resource.split('/')[1]
+			)
 		}
 		if (!current || location !== root) {
 			current?.close()
