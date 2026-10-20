@@ -133,6 +133,8 @@ const envVariables = z.object({
 	LOOT_LANG_DIR: z.string().default(''),
 	LOOT_OUT_DIR: z.string().default('runtime/loot'),
 
+	MAP3D_ACCESS_KEY: z.string().default(''),
+
 	// auto-ban
 	LOGIN_MAX_FAILURES: z.coerce.number().default(999),
 	RPS_THRESHOLD: z.coerce.number().default(999),

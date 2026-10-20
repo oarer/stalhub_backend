@@ -10,16 +10,18 @@ test('existing Stalhub backend serves prepared maps with no upstream service', a
 	process.env.MAP3D_DATA_DIR = f.root
 	process.env.MAP3D_NOTES_DB = f.notes
 	const app = createElysia({ prefix: '/api/v1' }).use(map3dRoutes)
+	const access = process.env.MAP3D_ACCESS_KEY
 	const request = (path: string, method = 'GET', body?: string) =>
 		app.handle(
 			new Request(`http://localhost/api/v1/map3d/${path}`, {
 				method,
-				...(body === undefined
-					? {}
-					: {
-							body,
-							headers: { 'content-type': 'application/json' },
-						}),
+				headers: {
+					...(access ? { 'x-stalhub-map-key': access } : {}),
+					...(body === undefined
+						? {}
+						: { 'content-type': 'application/json' }),
+				},
+				...(body === undefined ? {} : { body }),
 			})
 		)
 	try {
@@ -50,5 +52,34 @@ test('existing Stalhub backend serves prepared maps with no upstream service', a
 		if (old === undefined) delete process.env.MAP3D_DATA_DIR
 		else process.env.MAP3D_DATA_DIR = old
 		delete process.env.MAP3D_NOTES_DB
+	}
+})
+
+test('map API requires the proxy access key when configured', async () => {
+	const previous = process.env.MAP3D_ACCESS_KEY
+	process.env.MAP3D_ACCESS_KEY = 'test-map-key'
+	const app = createElysia({ prefix: '/api/v1' }).use(map3dRoutes)
+	try {
+		assert.equal(
+			(
+				await app.handle(
+					new Request('http://localhost/api/v1/map3d/health')
+				)
+			).status,
+			403
+		)
+		assert.notEqual(
+			(
+				await app.handle(
+					new Request('http://localhost/api/v1/map3d/health', {
+						headers: { 'x-stalhub-map-key': 'test-map-key' },
+					})
+				)
+			).status,
+			403
+		)
+	} finally {
+		if (previous === undefined) delete process.env.MAP3D_ACCESS_KEY
+		else process.env.MAP3D_ACCESS_KEY = previous
 	}
 })
