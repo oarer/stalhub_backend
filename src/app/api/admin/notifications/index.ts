@@ -5,8 +5,8 @@ import { jwtPlugin } from '@/utils/jwt.plugin'
 import { adminNotificationService } from './notifications.service'
 
 const notificationBody = t.Object({
-	title: t.String({ }),
-	content: t.String({  maxLength: 5000 }),
+	title: t.String({}),
+	content: t.String({ maxLength: 5000 }),
 	type: t.Optional(t.Numeric()),
 	link: t.Optional(t.String()),
 })
@@ -56,9 +56,8 @@ export const notificationsRoutes = createElysia().group(
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
 						user_ids: t.Array(t.Number()),
-						title: t.String({ }),
+						title: t.String({}),
 						content: t.String({
-							
 							maxLength: 5000,
 						}),
 						type: t.Optional(t.Numeric()),

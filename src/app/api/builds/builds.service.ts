@@ -1,7 +1,9 @@
+import { resolve } from 'node:path'
 import { type Prisma, StarTargetType } from 'generated/prisma/client'
 import { getRegionCache } from '@/app/api/artifacts/cache'
 import { resolveArtifactPrice } from '@/app/api/artifacts/pricing'
 import { contentViewsTotal } from '@/app/api/metrics'
+import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
 import type { ArtifactAggregate } from '@/types/artifacts.type'
 import type { BuildData } from '@/types/build.type'
@@ -51,6 +53,84 @@ const artQualityToQualityIndex: Record<string, number> = {
 	ART_QUALITY_EXCLUSIVE: 4,
 	ART_QUALITY_LEGENDARY: 5,
 	ART_QUALITY_UNIQUE: 6,
+}
+
+const colorPriority: Record<string, number> = {
+	DEFAULT: 0,
+	RANK_NEWBIE: 1,
+	ART_QUALITY_COMMON: 1,
+	RANK_STALKER: 2,
+	ART_QUALITY_UNCOMMON: 2,
+	RANK_VETERAN: 3,
+	ART_QUALITY_SPECIAL: 3,
+	RANK_MASTER: 4,
+	ART_QUALITY_RARE: 4,
+	RANK_LEGEND: 5,
+	ART_QUALITY_EXCLUSIVE: 5,
+	ART_QUALITY_LEGENDARY: 6,
+	ART_QUALITY_UNIQUE: 7,
+}
+
+const listingColorCache = new Map<string, Promise<Map<string, string>>>()
+
+function parseListingColors(json: unknown): Map<string, string> {
+	const colors = new Map<string, string>()
+	if (typeof json !== 'object' || json === null) return colors
+	for (const [id, item] of Object.entries(
+		json as Record<string, { color?: string }>
+	)) {
+		if (item?.color) colors.set(id, item.color)
+	}
+	return colors
+}
+
+async function loadListingColors(type: string): Promise<Map<string, string>> {
+	let cached = listingColorCache.get(type)
+	if (!cached) {
+		cached = (async () => {
+			const file = resolve(
+				process.cwd(),
+				env.SC_DB_LISTING_DIR,
+				`${type}.json`
+			)
+			try {
+				return parseListingColors(JSON.parse(await Bun.file(file).text()))
+			} catch {
+				const res = await fetch(`${env.SC_DB_LISTING_URL}/${type}.json`)
+				if (!res.ok) throw new Error(`Failed to fetch listing ${type}`)
+				return parseListingColors(await res.json())
+			}
+		})()
+		listingColorCache.set(type, cached)
+	}
+	return cached
+}
+
+function colorRank(color: string | undefined): number {
+	return color ? (colorPriority[color] ?? 0) : 0
+}
+
+function buildQualityKey(
+	raw: string,
+	sort: 'armor' | 'container' | 'quality',
+	armorColors: Map<string, string>,
+	containerColors: Map<string, string>
+): number {
+	const data = decompress(raw)
+	const armorRank = colorRank(armorColors.get(data.armor?.id ?? ''))
+	const containerRank = colorRank(
+		containerColors.get(data.container?.id ?? '')
+	)
+	if (sort === 'armor') return armorRank
+	if (sort === 'container') return containerRank
+	return Math.max(
+		armorRank,
+		containerRank,
+		...(data.arts ?? []).map(
+			(a) => (artQualityToQualityIndex[a.quality_class] ?? -1) + 1
+		),
+		0
+	)
 }
 
 const priceCache = new Map<
@@ -107,9 +187,20 @@ class BuildsService {
 		page: number,
 		opts: {
 			tags?: string[]
-			sort?: 'newest' | 'stars' | 'price'
+			sort?:
+				| 'newest'
+				| 'stars'
+				| 'price'
+				| 'armor'
+				| 'container'
+				| 'quality'
 			price_min?: number
 			price_max?: number
+			armor_ids?: string[]
+			container_ids?: string[]
+			art_ids?: string[]
+			quality_min?: number
+			quality_max?: number
 			author_id?: number
 			user_id?: number
 		} = {}
@@ -129,8 +220,28 @@ class BuildsService {
 		}
 
 		const hasPriceFilter = price_min != null || price_max != null
+		const armorIds = opts.armor_ids ?? []
+		const containerIds = opts.container_ids ?? []
+		const artIds = opts.art_ids ?? []
+		const hasItemFilter =
+			armorIds.length > 0 || containerIds.length > 0 || artIds.length > 0
+		let quality_min = opts.quality_min
+		let quality_max = opts.quality_max
+		if (
+			quality_min != null &&
+			quality_max != null &&
+			quality_min > quality_max
+		) {
+			;[quality_min, quality_max] = [quality_max, quality_min]
+		}
+		const hasQualityFilter = quality_min != null || quality_max != null
+		const isQualitySort =
+			sort === 'armor' || sort === 'container' || sort === 'quality'
 		const needsFullScan =
-			sort === 'price' || sort === 'stars' || hasPriceFilter
+			sort !== 'newest' ||
+			hasPriceFilter ||
+			hasItemFilter ||
+			hasQualityFilter
 
 		const aggregate = await getRegionCache(PRICE_REGION)
 
@@ -147,18 +258,71 @@ class BuildsService {
 				include: authorInclude,
 			})
 
-			starCounts = await this.starCounts(all.map((r) => r.id))
+			let candidates = all
+			if (hasItemFilter) {
+				candidates = all.filter((row) => {
+					const data = decompress(row.data)
+					if (
+						armorIds.length &&
+						!(data.armor && armorIds.includes(data.armor.id))
+					)
+						return false
+					if (
+						containerIds.length &&
+						!(
+							data.container &&
+							containerIds.includes(data.container.id)
+						)
+					)
+						return false
+					if (
+						artIds.length &&
+						!(data.arts ?? []).some((a) => artIds.includes(a.item_id))
+					)
+						return false
+					return true
+				})
+			}
 
-			let priced = all.map((row) => ({
+			starCounts = await this.starCounts(candidates.map((r) => r.id))
+
+			const qualitySort = isQualitySort
+				? (sort as 'armor' | 'container' | 'quality')
+				: null
+			const qualityRequired = qualitySort != null || hasQualityFilter
+			let armorColors: Map<string, string> | null = null
+			let containerColors: Map<string, string> | null = null
+			if (qualityRequired) {
+				;[armorColors, containerColors] = await Promise.all([
+					loadListingColors('armor'),
+					loadListingColors('containers'),
+				])
+			}
+
+			let priced = candidates.map((row) => ({
 				row,
 				price: cachedBuildPrice(row, aggregate),
 				stars: starCounts.get(row.id) ?? 0,
+				quality: qualityRequired
+					? buildQualityKey(
+							row.data,
+							qualitySort ?? 'quality',
+							armorColors as Map<string, string>,
+							containerColors as Map<string, string>
+						)
+					: 0,
 			}))
 
 			if (price_min != null)
 				priced = priced.filter((entry) => entry.price >= price_min)
 			if (price_max != null)
 				priced = priced.filter((entry) => entry.price <= price_max)
+			if (hasQualityFilter)
+				priced = priced.filter(
+					(entry) =>
+						(quality_min == null || entry.quality >= quality_min) &&
+						(quality_max == null || entry.quality <= quality_max)
+				)
 
 			if (sort === 'price') priced.sort((a, b) => b.price - a.price)
 			else if (sort === 'stars')
@@ -166,6 +330,12 @@ class BuildsService {
 					(a, b) =>
 						b.stars - a.stars ||
 						a.row.created_at.getTime() - b.row.created_at.getTime()
+				)
+			else if (qualitySort)
+				priced.sort(
+					(a, b) =>
+						a.quality - b.quality ||
+						b.row.created_at.getTime() - a.row.created_at.getTime()
 				)
 
 			totalCount = priced.length

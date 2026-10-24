@@ -216,7 +216,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ user_id: t.Numeric() }),
 				body: t.Object({
-					role_id: t.Numeric({ }),
+					role_id: t.Numeric({}),
 				}),
 				detail: { tags: ['Admin'] },
 			},

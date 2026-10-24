@@ -22,7 +22,7 @@ export const permissionsRoutes = createElysia().group('/permissions', (app) =>
 			{
 				beforeHandle: [requireAuth, requireAdmin],
 				body: t.Object({
-					name: t.String({ }),
+					name: t.String({}),
 					description: t.Optional(t.String()),
 					role_id: t.Optional(t.Numeric()),
 				}),

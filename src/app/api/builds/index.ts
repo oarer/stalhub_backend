@@ -31,10 +31,18 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 							t.Literal('newest'),
 							t.Literal('stars'),
 							t.Literal('price'),
+							t.Literal('armor'),
+							t.Literal('container'),
+							t.Literal('quality'),
 						])
 					),
 					price_min: t.Optional(t.Numeric()),
 					price_max: t.Optional(t.Numeric()),
+					armor: t.Optional(t.String()),
+					container: t.Optional(t.String()),
+					art: t.Optional(t.String()),
+					quality_min: t.Optional(t.Numeric()),
+					quality_max: t.Optional(t.Numeric()),
 				}),
 				detail: { tags: ['Builds'] },
 			},
@@ -47,11 +55,23 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 							.map((t) => t.trim())
 							.filter(Boolean)
 					: undefined
+				const splitItemIds = (raw: string | undefined) =>
+					raw
+						? raw
+								.split(',')
+								.map((t) => t.trim())
+								.filter(Boolean)
+						: undefined
 				return buildsService.list(take, page, {
 					tags,
 					sort: query.sort ?? 'newest',
 					price_min: query.price_min,
 					price_max: query.price_max,
+					armor_ids: splitItemIds(query.armor),
+					container_ids: splitItemIds(query.container),
+					art_ids: splitItemIds(query.art),
+					quality_min: query.quality_min,
+					quality_max: query.quality_max,
 					user_id: fromStoreOpt(store).user_id,
 				})
 			}
