@@ -40,7 +40,6 @@ export const profileCommentsRoutes = createElysia().group(
 					params: t.Object({ id: t.Numeric() }),
 					body: t.Object({
 						content: t.String({
-							
 							maxLength: 5000,
 						}),
 						parent_id: t.Optional(t.Number()),

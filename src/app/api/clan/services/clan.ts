@@ -1,8 +1,8 @@
-import { apiClient } from '@/app/interceptors/sc.interceptor'
 import { scGateway } from '@/app/api/sc-gateway/gateway'
+import { apiClient } from '@/app/interceptors/sc.interceptor'
 import { prisma } from '@/lib/prisma'
-import { USER_WITH_BADGES_SELECT } from '@/utils/user-select'
 import { decryptSecretJson } from '@/utils/crypto'
+import { USER_WITH_BADGES_SELECT } from '@/utils/user-select'
 import type { RecruitmentSettingsInput } from './recruitment'
 
 interface ExboCharacterEntry {

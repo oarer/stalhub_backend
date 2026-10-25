@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
-import { apiClient } from '@/app/interceptors/sc.interceptor'
 import { analyticsService } from '@/app/api/clan/services/analytics'
+import { apiClient } from '@/app/interceptors/sc.interceptor'
 import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
 import { deleteUpload, putUpload } from '@/lib/uploads'

@@ -98,7 +98,6 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 				beforeHandle: [requireAuth],
 				body: t.Object({
 					title: t.String({
-						
 						maxLength: 200,
 					}),
 					data: t.Any(),

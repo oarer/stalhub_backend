@@ -1,4 +1,5 @@
 import { cron } from '@elysia/cron'
+import { sendAdminDigest } from '@/app/api/admin/dashboard/digest.service'
 import { updateAllRegions as updateArtifacts } from '@/app/api/artifacts/aggregate'
 import { refreshBalanceDiffs } from '@/app/api/balance/service'
 import { clanService } from '@/app/api/clan/services/clan'
@@ -8,6 +9,7 @@ import { personalService } from '@/app/api/personal/service'
 import { serverOnlineService } from '@/app/api/server-online/server-online.service'
 import { generateSystemTierLists } from '@/app/api/tier-lists/generator'
 import { updateAllRegions as updateUpgradePrices } from '@/app/api/upgrade-prices/upgrade-prices.service'
+import { withTracking } from '@/lib/cron-status'
 import { prisma } from '@/lib/prisma'
 import { createElysia } from '@/utils/elysia'
 
@@ -16,16 +18,18 @@ export const crons = createElysia()
 		cron({
 			name: 'clanSync',
 			pattern: '0 * * * *',
-			async run() {
+			run: withTracking('clanSync', '0 * * * *', undefined, async () => {
 				const clans = await prisma.clan.findMany({
 					where: { status: 'ACTIVE' },
 				})
 				for (const c of clans) {
 					try {
 						await clanService.sync(c.id, c.region)
-					} catch {}
+					} catch {
+						// sync failure for a single clan is non-fatal
+					}
 				}
-			},
+			}),
 		})
 	)
 
@@ -36,12 +40,17 @@ export const crons = createElysia()
 			name: 'tournamentBeforeStages',
 			pattern: '5 20 * * 4,5,6',
 			timezone: 'Europe/Moscow',
-			async run() {
-				await grenadesService.takeSnapshotAll(
-					'TOURNAMENT',
-					'BEFORE_STAGES'
-				)
-			},
+			run: withTracking(
+				'tournamentBeforeStages',
+				'5 20 * * 4,5,6',
+				'Europe/Moscow',
+				async () => {
+					await grenadesService.takeSnapshotAll(
+						'TOURNAMENT',
+						'BEFORE_STAGES'
+					)
+				}
+			),
 		})
 	)
 	.use(
@@ -49,12 +58,17 @@ export const crons = createElysia()
 			name: 'tournamentBetween1and2',
 			pattern: '30 20 * * 4,5,6',
 			timezone: 'Europe/Moscow',
-			async run() {
-				await grenadesService.takeSnapshotAll(
-					'TOURNAMENT',
-					'BETWEEN_1_2'
-				)
-			},
+			run: withTracking(
+				'tournamentBetween1and2',
+				'30 20 * * 4,5,6',
+				'Europe/Moscow',
+				async () => {
+					await grenadesService.takeSnapshotAll(
+						'TOURNAMENT',
+						'BETWEEN_1_2'
+					)
+				}
+			),
 		})
 	)
 	.use(
@@ -62,12 +76,17 @@ export const crons = createElysia()
 			name: 'tournamentBetween2and3',
 			pattern: '55 20 * * 4,5,6',
 			timezone: 'Europe/Moscow',
-			async run() {
-				await grenadesService.takeSnapshotAll(
-					'TOURNAMENT',
-					'BETWEEN_2_3'
-				)
-			},
+			run: withTracking(
+				'tournamentBetween2and3',
+				'55 20 * * 4,5,6',
+				'Europe/Moscow',
+				async () => {
+					await grenadesService.takeSnapshotAll(
+						'TOURNAMENT',
+						'BETWEEN_2_3'
+					)
+				}
+			),
 		})
 	)
 	.use(
@@ -75,12 +94,17 @@ export const crons = createElysia()
 			name: 'tournamentAfterStages',
 			pattern: '20 21 * * 4,5,6',
 			timezone: 'Europe/Moscow',
-			async run() {
-				await grenadesService.takeSnapshotAll(
-					'TOURNAMENT',
-					'AFTER_STAGES'
-				)
-			},
+			run: withTracking(
+				'tournamentAfterStages',
+				'20 21 * * 4,5,6',
+				'Europe/Moscow',
+				async () => {
+					await grenadesService.takeSnapshotAll(
+						'TOURNAMENT',
+						'AFTER_STAGES'
+					)
+				}
+			),
 		})
 	)
 
@@ -91,9 +115,17 @@ export const crons = createElysia()
 			name: 'brawlBeforeStages',
 			pattern: '5 20 * * 0,1,2,3',
 			timezone: 'Europe/Moscow',
-			async run() {
-				await grenadesService.takeSnapshotAll('BRAWL', 'BEFORE_STAGES')
-			},
+			run: withTracking(
+				'brawlBeforeStages',
+				'5 20 * * 0,1,2,3',
+				'Europe/Moscow',
+				async () => {
+					await grenadesService.takeSnapshotAll(
+						'BRAWL',
+						'BEFORE_STAGES'
+					)
+				}
+			),
 		})
 	)
 	.use(
@@ -101,9 +133,17 @@ export const crons = createElysia()
 			name: 'brawlBetween1and2',
 			pattern: '30 20 * * 0,1,2,3',
 			timezone: 'Europe/Moscow',
-			async run() {
-				await grenadesService.takeSnapshotAll('BRAWL', 'BETWEEN_1_2')
-			},
+			run: withTracking(
+				'brawlBetween1and2',
+				'30 20 * * 0,1,2,3',
+				'Europe/Moscow',
+				async () => {
+					await grenadesService.takeSnapshotAll(
+						'BRAWL',
+						'BETWEEN_1_2'
+					)
+				}
+			),
 		})
 	)
 	.use(
@@ -111,9 +151,17 @@ export const crons = createElysia()
 			name: 'brawlBetween2and3',
 			pattern: '55 20 * * 0,1,2,3',
 			timezone: 'Europe/Moscow',
-			async run() {
-				await grenadesService.takeSnapshotAll('BRAWL', 'BETWEEN_2_3')
-			},
+			run: withTracking(
+				'brawlBetween2and3',
+				'55 20 * * 0,1,2,3',
+				'Europe/Moscow',
+				async () => {
+					await grenadesService.takeSnapshotAll(
+						'BRAWL',
+						'BETWEEN_2_3'
+					)
+				}
+			),
 		})
 	)
 	.use(
@@ -121,9 +169,17 @@ export const crons = createElysia()
 			name: 'brawlAfterStages',
 			pattern: '20 21 * * 0,1,2,3',
 			timezone: 'Europe/Moscow',
-			async run() {
-				await grenadesService.takeSnapshotAll('BRAWL', 'AFTER_STAGES')
-			},
+			run: withTracking(
+				'brawlAfterStages',
+				'20 21 * * 0,1,2,3',
+				'Europe/Moscow',
+				async () => {
+					await grenadesService.takeSnapshotAll(
+						'BRAWL',
+						'AFTER_STAGES'
+					)
+				}
+			),
 		})
 	)
 
@@ -134,12 +190,17 @@ export const crons = createElysia()
 			name: 'baseCaptureBeforeStages',
 			pattern: '5 19 * * 0',
 			timezone: 'Europe/Moscow',
-			async run() {
-				await grenadesService.takeSnapshotAll(
-					'BASE_CAPTURE',
-					'BEFORE_STAGES'
-				)
-			},
+			run: withTracking(
+				'baseCaptureBeforeStages',
+				'5 19 * * 0',
+				'Europe/Moscow',
+				async () => {
+					await grenadesService.takeSnapshotAll(
+						'BASE_CAPTURE',
+						'BEFORE_STAGES'
+					)
+				}
+			),
 		})
 	)
 	.use(
@@ -147,12 +208,17 @@ export const crons = createElysia()
 			name: 'baseCaptureBetween1and2',
 			pattern: '30 19 * * 0',
 			timezone: 'Europe/Moscow',
-			async run() {
-				await grenadesService.takeSnapshotAll(
-					'BASE_CAPTURE',
-					'BETWEEN_1_2'
-				)
-			},
+			run: withTracking(
+				'baseCaptureBetween1and2',
+				'30 19 * * 0',
+				'Europe/Moscow',
+				async () => {
+					await grenadesService.takeSnapshotAll(
+						'BASE_CAPTURE',
+						'BETWEEN_1_2'
+					)
+				}
+			),
 		})
 	)
 	.use(
@@ -160,12 +226,17 @@ export const crons = createElysia()
 			name: 'baseCaptureBetween2and3',
 			pattern: '55 19 * * 0',
 			timezone: 'Europe/Moscow',
-			async run() {
-				await grenadesService.takeSnapshotAll(
-					'BASE_CAPTURE',
-					'BETWEEN_2_3'
-				)
-			},
+			run: withTracking(
+				'baseCaptureBetween2and3',
+				'55 19 * * 0',
+				'Europe/Moscow',
+				async () => {
+					await grenadesService.takeSnapshotAll(
+						'BASE_CAPTURE',
+						'BETWEEN_2_3'
+					)
+				}
+			),
 		})
 	)
 	.use(
@@ -173,12 +244,17 @@ export const crons = createElysia()
 			name: 'baseCaptureBetween3and4',
 			pattern: '20 20 * * 0',
 			timezone: 'Europe/Moscow',
-			async run() {
-				await grenadesService.takeSnapshotAll(
-					'BASE_CAPTURE',
-					'BETWEEN_3_4'
-				)
-			},
+			run: withTracking(
+				'baseCaptureBetween3and4',
+				'20 20 * * 0',
+				'Europe/Moscow',
+				async () => {
+					await grenadesService.takeSnapshotAll(
+						'BASE_CAPTURE',
+						'BETWEEN_3_4'
+					)
+				}
+			),
 		})
 	)
 	.use(
@@ -186,12 +262,17 @@ export const crons = createElysia()
 			name: 'baseCaptureAfterStages',
 			pattern: '45 20 * * 0',
 			timezone: 'Europe/Moscow',
-			async run() {
-				await grenadesService.takeSnapshotAll(
-					'BASE_CAPTURE',
-					'AFTER_STAGES'
-				)
-			},
+			run: withTracking(
+				'baseCaptureAfterStages',
+				'45 20 * * 0',
+				'Europe/Moscow',
+				async () => {
+					await grenadesService.takeSnapshotAll(
+						'BASE_CAPTURE',
+						'AFTER_STAGES'
+					)
+				}
+			),
 		})
 	)
 
@@ -201,9 +282,14 @@ export const crons = createElysia()
 			name: 'artifacts-update',
 			pattern: '0 0,12 * * *',
 			timezone: 'Europe/Moscow',
-			async run() {
-				await updateArtifacts()
-			},
+			run: withTracking(
+				'artifacts-update',
+				'0 0,12 * * *',
+				'Europe/Moscow',
+				async () => {
+					await updateArtifacts()
+				}
+			),
 		})
 	)
 
@@ -213,9 +299,14 @@ export const crons = createElysia()
 			name: 'upgrade-prices-update',
 			pattern: '30 1,13 * * *',
 			timezone: 'Europe/Moscow',
-			async run() {
-				await updateUpgradePrices()
-			},
+			run: withTracking(
+				'upgrade-prices-update',
+				'30 1,13 * * *',
+				'Europe/Moscow',
+				async () => {
+					await updateUpgradePrices()
+				}
+			),
 		})
 	)
 
@@ -224,9 +315,14 @@ export const crons = createElysia()
 		cron({
 			name: 'balance-diffs',
 			pattern: '*/15 * * * *',
-			async run() {
-				await refreshBalanceDiffs(true)
-			},
+			run: withTracking(
+				'balance-diffs',
+				'*/15 * * * *',
+				undefined,
+				async () => {
+					await refreshBalanceDiffs(true)
+				}
+			),
 		})
 	)
 
@@ -235,9 +331,14 @@ export const crons = createElysia()
 		cron({
 			name: 'server-online-snapshot',
 			pattern: '*/5 * * * *',
-			async run() {
-				await serverOnlineService.snapshot()
-			},
+			run: withTracking(
+				'server-online-snapshot',
+				'*/5 * * * *',
+				undefined,
+				async () => {
+					await serverOnlineService.snapshot()
+				}
+			),
 		})
 	)
 
@@ -246,18 +347,28 @@ export const crons = createElysia()
 		cron({
 			name: 'goldDropSchedule',
 			pattern: '5 21 * * *',
-			async run() {
-				await goldService.createSchedule(2)
-			},
+			run: withTracking(
+				'goldDropSchedule',
+				'5 21 * * *',
+				undefined,
+				async () => {
+					await goldService.createSchedule(2)
+				}
+			),
 		})
 	)
 	.use(
 		cron({
 			name: 'goldDropCleanup',
 			pattern: '30 3 * * *',
-			async run() {
-				await goldService.cleanup()
-			},
+			run: withTracking(
+				'goldDropCleanup',
+				'30 3 * * *',
+				undefined,
+				async () => {
+					await goldService.cleanup()
+				}
+			),
 		})
 	)
 	.use(
@@ -265,40 +376,62 @@ export const crons = createElysia()
 			name: 'systemTierLists',
 			pattern: '0 12 * * 3',
 			timezone: 'Europe/Moscow',
-			async run() {
-				console.log('[Cron] Generating system tier lists...')
-				await generateSystemTierLists()
-				console.log('[Cron] System tier lists generated.')
-			},
+			run: withTracking(
+				'systemTierLists',
+				'0 12 * * 3',
+				'Europe/Moscow',
+				async () => {
+					console.log('[Cron] Generating system tier lists...')
+					await generateSystemTierLists()
+					console.log('[Cron] System tier lists generated.')
+				}
+			),
 		})
 	)
 	.use(
 		cron({
 			name: 'personalSnapshots',
 			pattern: '7 */12 * * *',
-			async run() {
-				try {
+			run: withTracking(
+				'personalSnapshots',
+				'7 */12 * * *',
+				undefined,
+				async () => {
 					await personalService.snapshotAll()
-				} catch (err) {
-					console.error('[Personal] cron failed:', err)
 				}
-			},
+			),
 		})
 	)
 	.use(
 		cron({
 			name: 'eforumSync',
 			pattern: '*/2 * * * *',
-			async run() {
-				try {
+			run: withTracking(
+				'eforumSync',
+				'*/2 * * * *',
+				undefined,
+				async () => {
 					const { checkNewPosts } = await import(
 						'@/app/api/eforum/service'
 					)
 					await checkNewPosts()
-				} catch (err) {
-					console.error('[EForum] cron failed:', err)
 				}
-			},
+			),
+		})
+	)
+	.use(
+		cron({
+			name: 'adminDigest',
+			pattern: '0 9 * * *',
+			timezone: 'Europe/Moscow',
+			run: withTracking(
+				'adminDigest',
+				'0 9 * * *',
+				'Europe/Moscow',
+				async () => {
+					await sendAdminDigest()
+				}
+			),
 		})
 	)
 	.setup(async () => {

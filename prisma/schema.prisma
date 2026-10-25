@@ -191,15 +191,15 @@ model User {
 
   ban_logs BanLog[]
 
-  clan_profiles  UserClanProfile[]
-  loadout        UserLoadout?
-  absences       Absence[]
-  clan_members   ClanMember[]
-  stage_sessions StageSession[]
-  attendance     StageAttendance[]
-  clan_history   ClanHistory[]
-  clan_invite    ClanInvite?
-  authored_notes ClanMemberNote[]
+  clan_profiles    UserClanProfile[]
+  loadout          UserLoadout?
+  absences         Absence[]
+  clan_members     ClanMember[]
+  stage_sessions   StageSession[]
+  attendance       StageAttendance[]
+  clan_history     ClanHistory[]
+  clan_invite      ClanInvite?
+  authored_notes   ClanMemberNote[]
   personal_profile PersonalProfile?
 }
 
@@ -1054,12 +1054,12 @@ model ScApiNode {
 }
 
 model ScApiToken {
-  id             Int     @id @default(autoincrement())
-  label          String  @default("")
+  id              Int     @id @default(autoincrement())
+  label           String  @default("")
   token_encrypted String
-  token_hash     String  @unique // sha256 hex, for dedupe + safe display
-  token_tail     String  @default("") // last 6 chars for admin display
-  enabled        Boolean @default(true)
+  token_hash      String  @unique // sha256 hex, for dedupe + safe display
+  token_tail      String  @default("") // last 6 chars for admin display
+  enabled         Boolean @default(true)
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -1070,20 +1070,39 @@ model ScApiToken {
 // ================ END SC API NODES ===================
 
 model BanLog {
-  id      Int   @id @default(autoincrement())
-  user    User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  id      Int  @id @default(autoincrement())
+  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id Int
 
-  rule      String     
-  severity  BanSeverity   @default(WARN)
-  auto      Boolean       @default(true)
-  reason    String        @default("")
-  meta      Json?         // ip, route, попытки, id
-  created_at DateTime     @default(now())
+  rule       String
+  severity   BanSeverity @default(WARN)
+  auto       Boolean     @default(true)
+  reason     String      @default("")
+  meta       Json? // ip, route, попытки, id
+  created_at DateTime    @default(now())
 
   @@index([user_id, created_at])
   @@index([rule, created_at])
   @@map("ban_log")
+}
+
+// ===================== ADMIN AUDIT LOG ====================
+
+model AdminAuditLog {
+  id         Int      @id @default(autoincrement())
+  actor_id   Int?
+  actor_name String   @default("")
+  action     String
+  entity     String
+  entity_id  String?
+  meta       Json?
+  created_at DateTime @default(now())
+
+  @@index([created_at])
+  @@index([action, created_at])
+  @@index([entity, entity_id])
+  @@index([actor_id, created_at])
+  @@map("admin_audit_log")
 }
 
 // ================ PERSONAL ANALYTICS ===================

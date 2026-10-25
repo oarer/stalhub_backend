@@ -236,7 +236,7 @@ export function buildEmbedFallback(contentHtml: string): EmbedFallback {
 export function processMentions(htmlContent: string): string {
 	if (!htmlContent) return ''
 
-	let out = htmlContent.replace(
+	const out = htmlContent.replace(
 		/<a\b([^>]*\bclass\s*=\s*["'][^"']*(?:PostMention|UserMention)[^"']*["'][^>]*)>([\s\S]*?)<\/a>/gi,
 		(_full, _attrs, inner: string) => {
 			const username = inner

@@ -94,7 +94,9 @@ async function loadListingColors(type: string): Promise<Map<string, string>> {
 				`${type}.json`
 			)
 			try {
-				return parseListingColors(JSON.parse(await Bun.file(file).text()))
+				return parseListingColors(
+					JSON.parse(await Bun.file(file).text())
+				)
 			} catch {
 				const res = await fetch(`${env.SC_DB_LISTING_URL}/${type}.json`)
 				if (!res.ok) throw new Error(`Failed to fetch listing ${type}`)
@@ -277,7 +279,9 @@ class BuildsService {
 						return false
 					if (
 						artIds.length &&
-						!(data.arts ?? []).some((a) => artIds.includes(a.item_id))
+						!(data.arts ?? []).some((a) =>
+							artIds.includes(a.item_id)
+						)
 					)
 						return false
 					return true

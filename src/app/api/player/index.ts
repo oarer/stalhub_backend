@@ -58,7 +58,7 @@ export const playersRoute = createElysia()
 				{
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
-						uuid: t.String({ }),
+						uuid: t.String({}),
 					}),
 					detail: {
 						tags: ['Player'],
@@ -74,7 +74,7 @@ export const playersRoute = createElysia()
 				{
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
-						uuid: t.String({ }),
+						uuid: t.String({}),
 					}),
 					detail: {
 						tags: ['Player'],
@@ -90,13 +90,9 @@ export const playersRoute = createElysia()
 				{
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
-						uuid: t.String({ }),
-						description: t.String({
-							
-						}),
-						role: t.Enum(PlayerRole, {
-							
-						}),
+						uuid: t.String({}),
+						description: t.String({}),
+						role: t.Enum(PlayerRole, {}),
 					}),
 					detail: {
 						tags: ['Player'],
@@ -116,7 +112,7 @@ export const playersRoute = createElysia()
 				{
 					beforeHandle: [requireAuth, requireAdmin],
 					body: t.Object({
-						uuid: t.String({ }),
+						uuid: t.String({}),
 						description: t.Optional(t.String()),
 						role: t.Optional(t.Enum(PlayerRole)),
 					}),
@@ -183,9 +179,7 @@ export const playersRoute = createElysia()
 				'/all',
 				{
 					query: t.Object({
-						role: t.Enum(PlayerRole, {
-							
-						}),
+						role: t.Enum(PlayerRole, {}),
 					}),
 					detail: {
 						tags: ['Player'],

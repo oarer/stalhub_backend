@@ -30,6 +30,89 @@ export const notificationsRoutes = createElysia().group(
 			)
 
 			.post(
+				'/targeted',
+				{
+					beforeHandle: [requireAuth, requireAdmin],
+					body: t.Object({
+						target: t.Object({
+							kind: t.Union([
+								t.Literal('all'),
+								t.Literal('role'),
+								t.Literal('clan'),
+								t.Literal('banned'),
+							]),
+							role_id: t.Optional(t.Numeric()),
+							clan_id: t.Optional(t.String()),
+						}),
+						title: t.String({}),
+						content: t.String({ maxLength: 5000 }),
+						type: t.Optional(t.Numeric()),
+						link: t.Optional(t.String()),
+					}),
+					detail: {
+						tags: ['Admin'],
+						summary: 'Send notification to a target audience',
+					},
+				},
+				async ({ body }) => {
+					return adminNotificationService.sendToTarget(
+						{
+							title: body.title,
+							content: body.content,
+							type: body.type,
+							link: body.link,
+						},
+						{
+							kind: body.target.kind,
+							role_id: body.target.role_id,
+							clan_id: body.target.clan_id,
+						}
+					)
+				}
+			)
+
+			.post(
+				'/estimate',
+				{
+					beforeHandle: [requireAuth, requireAdmin],
+					body: t.Object({
+						target: t.Object({
+							kind: t.Union([
+								t.Literal('all'),
+								t.Literal('role'),
+								t.Literal('clan'),
+								t.Literal('banned'),
+							]),
+							role_id: t.Optional(t.Numeric()),
+							clan_id: t.Optional(t.String()),
+						}),
+					}),
+					detail: {
+						tags: ['Admin'],
+						summary: 'Count target audience',
+					},
+				},
+				async ({ body }) => {
+					return {
+						count: await adminNotificationService.countTarget({
+							kind: body.target.kind,
+							role_id: body.target.role_id,
+							clan_id: body.target.clan_id,
+						}),
+					}
+				}
+			)
+
+			.get(
+				'/stats',
+				{
+					beforeHandle: [requireAuth, requireAdmin],
+					detail: { tags: ['Admin'], summary: 'Notification stats' },
+				},
+				async () => adminNotificationService.stats()
+			)
+
+			.post(
 				'/user/:user_id',
 				{
 					beforeHandle: [requireAuth, requireAdmin],

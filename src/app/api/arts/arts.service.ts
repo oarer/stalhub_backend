@@ -9,7 +9,6 @@ import {
 } from '@/app/api/metrics/view-dedupe'
 import { prisma } from '@/lib/prisma'
 import { putUpload } from '@/lib/uploads'
-import { USER_BADGES_SELECT } from '@/utils/user-select'
 import {
 	compressImageBuffer,
 	detectImageMime,
@@ -17,6 +16,7 @@ import {
 	isCompressibleImageMime,
 } from '@/utils/image-compress'
 import { generateSlug } from '@/utils/slug'
+import { USER_BADGES_SELECT } from '@/utils/user-select'
 import { type ArtAuthorPayload, resolveArtAuthor } from './art-author'
 
 type ArtData = {

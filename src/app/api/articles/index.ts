@@ -190,11 +190,9 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 				beforeHandle: [requireAuth],
 				body: t.Object({
 					title: t.String({
-						
 						maxLength: 200,
 					}),
 					content: t.String({
-						
 						maxLength: 50000,
 					}),
 					type: t.Optional(t.Enum(ArticleType)),

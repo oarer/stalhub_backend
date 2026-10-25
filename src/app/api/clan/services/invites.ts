@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
-import { USER_WITH_BADGES_SELECT } from '@/utils/user-select'
 import { hashPassword } from '@/utils/crypto'
+import { USER_WITH_BADGES_SELECT } from '@/utils/user-select'
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const GUEST_USERNAME_PREFIX = 'guest_'

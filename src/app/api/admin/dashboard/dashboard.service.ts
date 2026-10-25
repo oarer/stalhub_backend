@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/prisma'
-import { serverOnlineService } from '../../server-online/server-online.service'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -93,6 +92,8 @@ export const dashboardService = {
 
 			registrationRows,
 			contentRows,
+			dauRows,
+			wauRows,
 		] = await Promise.all([
 			prisma.user.count(),
 			prisma.user.count({ where: { joined_at: { gte: since1d } } }),
@@ -182,6 +183,17 @@ export const dashboardService = {
 					select: { created_at: true },
 				}),
 			]),
+
+			prisma.sessions.findMany({
+				where: { revoked: false, last_used_at: { gte: since1d } },
+				select: { user_id: true },
+				distinct: ['user_id'],
+			}),
+			prisma.sessions.findMany({
+				where: { revoked: false, last_used_at: { gte: since7d } },
+				select: { user_id: true },
+				distinct: ['user_id'],
+			}),
 		])
 
 		const [buildRows, articleRows, artRows] = contentRows
@@ -195,25 +207,6 @@ export const dashboardService = {
 				arts: inBucket(artRows),
 			}
 		})
-
-		const [onlineLatest, onlineHistory] = await Promise.all([
-			serverOnlineService.latest().catch(
-				() =>
-					[] as {
-						region: string
-						server_id: string
-						online: number
-					}[]
-			),
-			serverOnlineService.history(24).catch(
-				() =>
-					[] as {
-						region: string
-						createdAt: Date
-						online: number
-					}[]
-			),
-		])
 
 		const [topBuilds, topArticles, topArts, topPlayers] = await Promise.all(
 			[
@@ -295,6 +288,8 @@ export const dashboardService = {
 					'user_joined_at',
 					buckets
 				),
+				dau_24h: dauRows.length,
+				wau_7d: wauRows.length,
 			},
 			content: {
 				builds: {
@@ -352,10 +347,6 @@ export const dashboardService = {
 				popular_players: popularPlayersTotal,
 				blacklist_size: blacklistSize,
 				player_notes: playerNotesTotal,
-			},
-			server_online: {
-				latest: onlineLatest,
-				history_24h: onlineHistory,
 			},
 			top: {
 				builds: topBuilds,

@@ -74,7 +74,7 @@ export const exboRoutes = createElysia().group('/exbo', (app) =>
 		{
 			beforeHandle: [requireAuth],
 			params: t.Object({
-				region: t.String({ }),
+				region: t.String({}),
 			}),
 			detail: { tags: ['EXBO'] },
 		},
