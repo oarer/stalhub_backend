@@ -5,7 +5,6 @@ import {
 	expandableBlockquote,
 	FormattableString,
 	format,
-	italic,
 } from 'gramio'
 import type { ListedItem } from './items'
 import { rankName } from './items'
@@ -185,14 +184,10 @@ export function itemArticle(
 	id = `item:${entry.id}`
 ): InlineArticle {
 	const primary = display(entry.name.ru ?? entry.name.en)
-	const secondary =
-		entry.name.en && entry.name.ru ? display(entry.name.en) : null
 	const rank = rankName(entry.color)
-	const card = limitFormattable(
-		format`${bold(primary)}${secondary ? format` · ${italic(secondary)}` : ''}
+	const card = limitFormattable(format`${bold(primary)}
 
-Ранг: ${bold(display(rank ?? '—'))}`
-	)
+	Ранг: ${bold(display(rank ?? '—'))}`)
 	const callback = `item:${entry.category}:${entry.id}`
 	const hasCallback = new TextEncoder().encode(callback).byteLength <= 64
 	const keyboard: InlineKeyboardButton[] = hasCallback

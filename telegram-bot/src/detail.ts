@@ -293,7 +293,7 @@ function renderSections(
 				.map(renderElement)
 				.filter((line): line is string => Boolean(line))
 			if (lines.length > 0) {
-				append(writer, '\n')
+				append(writer, '\n\n')
 				if (title && title.trim()) {
 					wrap(writer, title, 'bold')
 					append(writer, '\n')
@@ -305,7 +305,7 @@ function renderSections(
 		if (block.type === 'text') {
 			const text = messageToString(block.text)
 			if (!text) continue
-			append(writer, '\n')
+			append(writer, '\n\n')
 			if (text.length > 240) {
 				wrap(writer, 'Описание', 'bold')
 				append(writer, '\n')
@@ -316,7 +316,7 @@ function renderSections(
 			continue
 		}
 		if (block.type === 'damage') {
-			append(writer, '\n')
+			append(writer, '\n\n')
 			wrap(writer, 'Урон', 'bold')
 			append(
 				writer,

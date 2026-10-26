@@ -32,7 +32,7 @@ export type ItemLookup = {
 }
 
 const ITEM_RANK_NAMES = new Map([
-	['rank_newbie', 'Стажёр'],
+	['rank_newbie', 'Новичок'],
 	['rank_stalker', 'Сталкер'],
 	['rank_veteran', 'Ветеран'],
 	['rank_master', 'Мастер'],
