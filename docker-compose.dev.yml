@@ -59,6 +59,32 @@ services:
       NO_PROXY: app,localhost,127.0.0.1
       no_proxy: app,localhost,127.0.0.1
 
+  telegram-bot:
+    build: ./telegram-bot
+    container_name: StalHub_telegram_bot
+    command: sh -c "bun install && bun run --watch src/index.ts"
+    restart: unless-stopped
+    volumes:
+      - ./telegram-bot:/app
+      - /app/node_modules
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
+    environment:
+      TG_BOT_TOKEN: ${TG_BOT_TOKEN}
+      BACKEND_URL: http://app:3001
+      TG_POLLING_TIMEOUT_SECONDS: ${TG_POLLING_TIMEOUT_SECONDS:-30}
+      TG_CACHE_TTL_SECONDS: ${TG_CACHE_TTL_SECONDS:-60}
+      TG_RATE_LIMIT_PER_MINUTE: ${TG_RATE_LIMIT_PER_MINUTE:-10}
+      TG_SEARCH_DEBOUNCE_MS: ${TG_SEARCH_DEBOUNCE_MS:-250}
+      TG_REQUEST_TIMEOUT_MS: ${TG_REQUEST_TIMEOUT_MS:-4500}
+      NO_PROXY: app,localhost,127.0.0.1
+      no_proxy: app,localhost,127.0.0.1
+    depends_on:
+      app:
+        condition: service_started
+
   redis:
     image: redis:7-alpine
     container_name: StalHub_redis

@@ -53,3 +53,4 @@ test.*
 
 /discord-bot/node_modules
 /image-service/node_modules
+/telegram-bot/node_modules
