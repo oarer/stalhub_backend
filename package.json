@@ -11,7 +11,7 @@
 	"dependencies": {
 		"@elysia/cors": "^2.0.0-exp.1",
 		"@elysia/cron": "^2.0.0-exp.0",
-		"@elysia/jwt": "^2.0.0-exp.0",
+		"@elysia/jwt": "^2.0.0-rc.0",
 		"@elysia/openapi": "^2.0.0-exp.1",
 		"@prisma/adapter-pg": "^7.10.1",
 		"@prisma/client": "^7.10.1",
