@@ -60,6 +60,19 @@ describe('parseListing', () => {
 		expect(flare.pageUrl).toBe(`${webAppUrl}/items/other/qyvk`)
 	})
 
+	test('builds nested icon urls', () => {
+		const nested = parseListing(
+			[entry('supply/medicine', '9mmq', 'x', 'y')],
+			{
+				dbUrl,
+				webAppUrl,
+			}
+		)
+		expect(nested[0].iconUrl).toBe(
+			`${dbUrl}/icons/supply/medicine/9mmq.png`
+		)
+	})
+
 	test('skips malformed entries and tolerates missing fields', () => {
 		const parsed = parseListing(
 			[

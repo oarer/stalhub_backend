@@ -54,7 +54,7 @@ export function loadConfig(
 		token,
 		backendUrl,
 		webAppUrl: webAppUrl.origin + webAppUrl.pathname.replace(/\/$/, ''),
-		dbUrl: (env.TG_DB_URL ?? 'https://cdn.stalhub.dev/db').replace(
+		dbUrl: (env.TG_DB_URL ?? 'https://static.stalhub.dev/db').replace(
 			/\/$/,
 			''
 		),

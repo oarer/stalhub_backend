@@ -69,18 +69,21 @@ function parseCategory(data: string): { category: string; id: string } | null {
 	return match ? { category: match[1], id: match[2] } : null
 }
 
-function absoluteUrl(base: string, path: string | undefined): string | null {
-	if (!path) return null
-	if (path.startsWith('http://') || path.startsWith('https://')) return path
-	const joined = `${base.replace(/\/$/, '')}${path.startsWith('/') ? '' : '/'}${path}`
-	return /^https?:\/\//.test(joined) ? joined : null
-}
-
 type ListingEntry = {
 	data?: unknown
 	icon?: unknown
 	name?: unknown
 	color?: unknown
+}
+
+export function iconUrl(
+	dbUrl: string,
+	iconPath: string | undefined
+): string | null {
+	if (!iconPath) return null
+	if (!/^\/?icons\/[a-z0-9_/]+\.png$/.test(iconPath)) return null
+	if (!/^https:\/\//.test(dbUrl)) return null
+	return `${dbUrl.replace(/\/$/, '')}/${iconPath.replace(/^\//, '')}`
 }
 
 export function parseListing(
@@ -103,10 +106,10 @@ export function parseListing(
 			id: parsed.id,
 			name,
 			color: typeof entry.color === 'string' ? entry.color : 'DEFAULT',
-			iconUrl: absoluteUrl(
-				options.dbUrl,
-				typeof entry.icon === 'string' ? entry.icon : undefined
-			),
+			iconUrl:
+				typeof entry.icon === 'string'
+					? iconUrl(options.dbUrl, entry.icon)
+					: null,
 			pageUrl: `${options.webAppUrl.replace(/\/$/, '')}/items/${parsed.category}/${parsed.id}`,
 		})
 	}

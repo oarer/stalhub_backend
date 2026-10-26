@@ -227,10 +227,6 @@ function renderElement(element: ItemElement): string | null {
 	}
 }
 
-function findStatus(detail: ItemDetail): string | null {
-	return statusName(detail.status)
-}
-
 type Composed = {
 	text: string
 	entities: Array<{ type: string; offset: number; length: number }>
@@ -260,10 +256,8 @@ export function renderItemDetail(
 ): FormattableString {
 	const primary =
 		messageToString(detail.name) ?? options.fallbackName ?? 'Предмет'
-	const status = findStatus(detail)
 	const composed = compose((writer) => {
 		wrap(writer, primary, 'bold')
-		if (status) append(writer, `\nПривязка: ${status}`)
 		renderSections(writer, detail.infoBlocks)
 	})
 	return limitFormattable(

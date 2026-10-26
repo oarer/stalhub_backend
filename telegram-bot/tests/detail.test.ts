@@ -151,7 +151,6 @@ describe('renderItemDetail', () => {
 
 	test('bold name, status and visible sections', () => {
 		expect(card.text).toContain('АКС-74У')
-		expect(card.text).toContain('Привязка: Привязывается при использовании')
 		expect(card.text).toContain('Ранг: Отмычка')
 		expect(card.text).toContain('Класс: Автоматы')
 		expect(card.text).not.toContain('Прочность')

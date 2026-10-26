@@ -181,7 +181,8 @@ describe('inline item results', () => {
 		expect(results[0].input_message_content.message_text).toContain(
 			'Ранг: Мастер'
 		)
-		expect(results[0].reply_markup?.inline_keyboard.at(-1)?.[0].url).toBe(
+		const keyboard = results[0].reply_markup?.inline_keyboard ?? []
+		expect(keyboard[keyboard.length - 1]?.[0].url).toBe(
 			'https://stalhub.dev/items/other/qyvk'
 		)
 		expect(results[0].reply_markup?.inline_keyboard[0]).toEqual([
