@@ -162,11 +162,12 @@ describe('Telegram formatting', () => {
 		).toBe(false)
 	})
 
-	test('formats help text with code and bold entities', () => {
+	test('formats help text with custom emoji, code and bold entities', () => {
 		const help = helpText()
-		expect(help.text).toContain('StalHub | Bot')
+		expect(help.text).toContain('🦠 StalHub | Bot')
 		expect(help.text).toContain('@StalhubBot Nick EU')
 		expect(help.text).toContain('Без региона поиск выполняется в RU.')
+		expect(help.text).toContain('🔗 Сайт можно открыть')
 
 		const codeEntity = help.entities
 			.filter((entity) => entity.type === 'code')
@@ -174,6 +175,12 @@ describe('Telegram formatting', () => {
 				help.text.slice(entity.offset, entity.offset + entity.length)
 			)
 		expect(codeEntity).toContain('@StalhubBot Nick EU')
+
+		const emojiIds = help.entities
+			.filter((entity) => entity.type === 'custom_emoji')
+			.map((entity) => entity.custom_emoji_id)
+		expect(emojiIds).toContain('5345778951031658558')
+		expect(emojiIds).toContain('6028171274939797252')
 	})
 
 	test('bounds text length and keeps a blockquote when truncating', () => {

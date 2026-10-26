@@ -1,6 +1,7 @@
 import {
 	bold,
 	code,
+	customEmoji,
 	expandableBlockquote,
 	FormattableString,
 	format,
@@ -191,11 +192,11 @@ export function messageArticle(
 }
 
 export function helpText(): FormattableString {
-	return format`${bold`StalHub | Bot`}
+	return format`${bold`${customEmoji('🦠', '5345778951031658558')} StalHub | Bot`}
 
 В любом чате введите ${code`@StalhubBot ник [регион]`}.
 Без региона поиск выполняется в RU.
 Другой регион можно указать явно: ${code`@StalhubBot Nick EU`}.
 
-Сайт можно открыть прямо в Telegram: /app или кнопка меню.`
+${customEmoji('🔗', '6028171274939797252')} Сайт можно открыть прямо в Telegram: /app или кнопка меню.`
 }
