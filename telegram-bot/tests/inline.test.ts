@@ -144,29 +144,4 @@ describe('inline results', () => {
 		).toBeLessThanOrEqual(64)
 		expect(repeated[0].id).toBe(results[0].id)
 	})
-
-	test('propagates the web app url into profile card keyboards', async () => {
-		const results = await buildInlineResults(
-			'Nick RU',
-			async () => ({ username: 'Nick', stats: [] }),
-			{ webAppUrl: 'https://stalhub.dev' }
-		)
-		const buttons = results[0].reply_markup?.inline_keyboard.flat() ?? []
-		expect(
-			buttons.some(
-				(button) =>
-					button.web_app?.url === 'https://stalhub.dev/player/RU/Nick'
-			)
-		).toBe(true)
-
-		const withoutApp = await buildInlineResults('Nick RU', async () => ({
-			username: 'Nick',
-			stats: [],
-		}))
-		expect(
-			(withoutApp[0].reply_markup?.inline_keyboard.flat() ?? []).some(
-				(button) => button.web_app
-			)
-		).toBe(false)
-	})
 })

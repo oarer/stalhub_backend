@@ -156,26 +156,6 @@ describe('Telegram formatting', () => {
 		expect(text).not.toContain('<blockquote')
 	})
 
-	test('adds a web app button only when a web app url is provided', () => {
-		const withoutApp = profileArticle({ username: 'Nick' }, 'RU')
-		expect(
-			withoutApp.reply_markup?.inline_keyboard.some((row) =>
-				row.some((button) => button.web_app)
-			)
-		).toBe(false)
-
-		const withApp = profileArticle({ username: 'Nick&' }, 'RU', undefined, {
-			webAppUrl: 'https://stalhub.dev',
-		})
-		const appButton = withApp.reply_markup?.inline_keyboard
-			.flat()
-			.find((button) => button.web_app)
-		expect(appButton?.web_app?.url).toBe(
-			'https://stalhub.dev/player/RU/Nick%26'
-		)
-		expect(appButton?.text).toBe('Открыть в Telegram')
-	})
-
 	test('formats help text with HTML tags', () => {
 		const text = helpText()
 		expect(text).toContain('<b>StalHub Player Bot</b>')

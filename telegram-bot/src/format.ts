@@ -10,7 +10,6 @@ import {
 export type InlineKeyboardButton = {
 	text: string
 	url?: string
-	web_app?: { url: string }
 }
 
 export type InlineArticle = {
@@ -240,33 +239,10 @@ function cardText(
 export function profileArticle(
 	profile: PlayerProfile,
 	region: Region,
-	id = `${region}:${profile.username}`,
-	options: { webAppUrl?: string } = {}
+	id = `${region}:${profile.username}`
 ): InlineArticle {
 	const safeText = limitRichHtml(cardText(profile, region))
 	const username = normalize(profile.username)
-	const keyboard: InlineKeyboardButton[][] = [
-		[
-			{
-				text: 'Открыть на StalHub',
-				url: profileUrl(region, profile.username),
-			},
-		],
-	]
-	if (options.webAppUrl) {
-		keyboard.push([
-			{
-				text: 'Открыть в Telegram',
-				web_app: {
-					url: profileUrl(
-						region,
-						profile.username,
-						options.webAppUrl
-					),
-				},
-			},
-		])
-	}
 	return {
 		type: 'article',
 		id: resultId(id),
@@ -277,7 +253,14 @@ export function profileArticle(
 			parse_mode: 'HTML',
 		},
 		reply_markup: {
-			inline_keyboard: keyboard,
+			inline_keyboard: [
+				[
+					{
+						text: 'Открыть на StalHub',
+						url: profileUrl(region, profile.username),
+					},
+				],
+			],
 		},
 	}
 }

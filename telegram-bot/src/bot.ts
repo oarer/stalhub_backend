@@ -88,8 +88,7 @@ export function createBot({
 					async (isLatest) => {
 						const results = await buildInlineResults(
 							ctx.query,
-							lookup,
-							{ webAppUrl: config.webAppUrl }
+							lookup
 						)
 						if (!isLatest()) return
 						await ctx.answer(results, {
