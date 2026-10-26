@@ -95,7 +95,7 @@ describe('Telegram formatting', () => {
 			['merc', 'Наёмник'],
 			['covenant', 'Завет'],
 			['freedom', 'Заря'],
-			['duty', 'Долг'],
+			['duty', 'Рубеж'],
 			['bandits', 'Бандит'],
 			['stalkers', 'Сталкер'],
 			[' COVENANT ', 'Завет'],
@@ -167,7 +167,7 @@ describe('Telegram formatting', () => {
 		expect(help.text).toContain('🦠 StalHub | Bot')
 		expect(help.text).toContain('@StalhubBot ник [регион]')
 		expect(help.text).toContain('@StalhubBot ник EU')
-		expect(help.text).toContain( 'Поиск предметов')
+		expect(help.text).toContain('Поиск предметов')
 		expect(help.text).toContain('@StalhubBot /i вспышка')
 		expect(help.text).toContain('Без региона поиск выполняется в RU.')
 		expect(help.text).toContain('🔗 Сайт можно открыть')

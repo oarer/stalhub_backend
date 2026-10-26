@@ -6,7 +6,7 @@ import {
 	messageArticle,
 	profileArticle,
 } from './format'
-import { type ItemLookup } from './items'
+import type { ItemLookup } from './items'
 import { type ParsedQuery, parseInlineQuery, type Region } from './query'
 import type { PlayerProfile } from './stats'
 

@@ -8,6 +8,7 @@ import {
 } from 'gramio'
 import type { BotConfig } from './config'
 import type { KeyedDebouncer } from './debounce'
+import type { ItemDetailCache } from './detail'
 import { helpText, messageArticle } from './format'
 import { buildInlineResults, type InlineLookup } from './inline'
 import type { ItemLookup } from './items'
@@ -44,6 +45,7 @@ export type BotDependencies = {
 	config: BotConfig
 	lookup: InlineLookup
 	items: ItemLookup
+	details: ItemDetailCache
 	limiter: RateLimiter
 	searchDebouncer: KeyedDebouncer<number>
 }
@@ -52,6 +54,7 @@ export function createBot({
 	config,
 	lookup,
 	items,
+	details,
 	limiter,
 	searchDebouncer,
 }: BotDependencies): Bot {
@@ -76,6 +79,40 @@ export function createBot({
 					'🌐 StalHub',
 					config.webAppUrl
 				),
+			})
+		)
+		.command('items', (ctx) =>
+			ctx.send(
+				format`Поиск предметов: ${code`@StalhubBot /i название`} (например, ${code`@StalhubBot /i вспышка`}). Нажмите «Характеристики» под результатом, чтобы раскрыть статы.`
+			)
+		)
+		.callbackQuery(/^item:(.+):(.+)$/, (ctx) =>
+			processUpdate(ctx.updateId ?? 0, async () => {
+				const [, category, id] = ctx.queryData
+				try {
+					const payload = await details.detail(category, id)
+					await ctx.answer()
+					if (!ctx.inlineMessageId) return
+					await ctx.bot.api.editMessageText({
+						inline_message_id: ctx.inlineMessageId,
+						text: payload.text,
+						entities: payload.entities,
+						reply_markup: {
+							inline_keyboard: [
+								[
+									{
+										text: 'Открыть на StalHub',
+										url: payload.pageUrl,
+									},
+								],
+							],
+						},
+					})
+				} catch {
+					await ctx.answer({
+						text: 'Не удалось загрузить данные предмета.',
+					})
+				}
 			})
 		)
 		.inlineQuery((ctx) =>

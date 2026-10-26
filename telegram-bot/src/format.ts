@@ -7,9 +7,9 @@ import {
 	format,
 	italic,
 } from 'gramio'
-import { profileUrl, type Region } from './query'
 import type { ListedItem } from './items'
 import { rankName } from './items'
+import { profileUrl, type Region } from './query'
 import {
 	extractMetrics,
 	formatDate,
@@ -21,6 +21,7 @@ import {
 export type InlineKeyboardButton = {
 	text: string
 	url?: string
+	callback_data?: string
 }
 
 export type InlineArticle = {
@@ -46,7 +47,7 @@ const FACTION_NAMES = new Map([
 	['merc', 'Наёмник'],
 	['covenant', 'Завет'],
 	['freedom', 'Заря'],
-	['duty', 'Долг'],
+	['duty', 'Рубеж'],
 	['bandits', 'Бандит'],
 	['stalkers', 'Сталкер'],
 ])
@@ -99,7 +100,7 @@ function display(value: unknown, maxLength = MAX_DISPLAY_LENGTH): string {
 	return truncate(text, maxLength)
 }
 
-function limitFormattable(source: FormattableString): FormattableString {
+export function limitFormattable(source: FormattableString): FormattableString {
 	if (source.text.length <= MAX_MESSAGE_TEXT_LENGTH) return source
 
 	const text = `${source.text.slice(0, MAX_MESSAGE_TEXT_LENGTH - 1)}…`
@@ -179,15 +180,29 @@ export function profileArticle(
 	}
 }
 
-export function itemArticle(entry: ListedItem, id = `item:${entry.id}`): InlineArticle {
+export function itemArticle(
+	entry: ListedItem,
+	id = `item:${entry.id}`
+): InlineArticle {
 	const primary = display(entry.name.ru ?? entry.name.en)
-	const secondary = entry.name.en && entry.name.ru ? display(entry.name.en) : null
+	const secondary =
+		entry.name.en && entry.name.ru ? display(entry.name.en) : null
 	const rank = rankName(entry.color)
 	const card = limitFormattable(
 		format`${bold(primary)}${secondary ? format` · ${italic(secondary)}` : ''}
 
 Ранг: ${bold(display(rank ?? '—'))}`
 	)
+	const callback = `item:${entry.category}:${entry.id}`
+	const hasCallback = new TextEncoder().encode(callback).byteLength <= 64
+	const keyboard: InlineKeyboardButton[] = hasCallback
+		? [
+				{
+					text: 'Характеристики',
+					callback_data: callback,
+				},
+			]
+		: []
 	return {
 		type: 'article',
 		id: resultId(`${id}:${entry.category}`),
@@ -200,6 +215,7 @@ export function itemArticle(entry: ListedItem, id = `item:${entry.id}`): InlineA
 		},
 		reply_markup: {
 			inline_keyboard: [
+				...keyboard.map((button) => [button]),
 				[
 					{
 						text: 'Открыть на StalHub',

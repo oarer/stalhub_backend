@@ -49,7 +49,12 @@ describe('parseInlineQuery', () => {
 	})
 
 	test('parses item queries with /i, /item and /items aliases', () => {
-		for (const query of ['/i вспышка', '/item «Вспышка»', '/items flare', '@stalhub_bot /i вспышка']) {
+		for (const query of [
+			'/i вспышка',
+			'/item «Вспышка»',
+			'/items flare',
+			'@stalhub_bot /i вспышка',
+		]) {
 			expect(parseInlineQuery(query)).toEqual({
 				kind: 'item',
 				name: query.replace(/^(@\S+\s+)?\/\S+/i, '').trim(),

@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 import {
 	ItemDatabase,
+	type ListedItem,
 	normalizeItemName,
 	parseListing,
 	rankName,
 	rankPriority,
 	searchItems,
-	type ListedItem,
 } from '../src/items'
 
 const entry = (
@@ -62,7 +62,11 @@ describe('parseListing', () => {
 
 	test('skips malformed entries and tolerates missing fields', () => {
 		const parsed = parseListing(
-			[{ data: 'not-an-item.json' }, {}, { data: '/items/other/qyvk.json' }],
+			[
+				{ data: 'not-an-item.json' },
+				{},
+				{ data: '/items/other/qyvk.json' },
+			],
 			{ dbUrl, webAppUrl }
 		)
 		expect(parsed).toHaveLength(1)
@@ -102,7 +106,9 @@ describe('searchItems', () => {
 
 	test('returns at most the requested amount', () => {
 		const entries = parseListing(
-			[1, 2, 3].map((n) => entry('arms', `w${n}`, `Оружие ${n}`, `Weapon ${n}`)),
+			[1, 2, 3].map((n) =>
+				entry('arms', `w${n}`, `Оружие ${n}`, `Weapon ${n}`)
+			),
 			{ dbUrl, webAppUrl }
 		)
 		expect(searchItems(entries, 'оружие', 2)).toHaveLength(2)
@@ -157,7 +163,10 @@ describe('ItemDatabase', () => {
 	})
 
 	test('throws DbLoadError to the caller when the first load fails', async () => {
-		const { db } = database(3_600_000, () => new Response('boom', { status: 503 }))
+		const { db } = database(
+			3_600_000,
+			() => new Response('boom', { status: 503 })
+		)
 		await expect(db.search('вспы')).rejects.toMatchObject({
 			name: 'DbLoadError',
 			status: 503,
@@ -165,9 +174,8 @@ describe('ItemDatabase', () => {
 	})
 
 	test('keeps the previous catalog when a background refresh fails', async () => {
-		const { db, calls } = database(
-			0,
-			(n) => (n === 1 ? ok() : new Response('boom', { status: 503 }))
+		const { db, calls } = database(0, (n) =>
+			n === 1 ? ok() : new Response('boom', { status: 503 })
 		)
 		await db.search('вспы')
 		const second = await db.search('вспы')

@@ -3,6 +3,7 @@ import { ProfileCache } from './backend'
 import { createBot, type UpdateProcessResult } from './bot'
 import { loadConfig } from './config'
 import { KeyedDebouncer } from './debounce'
+import { ItemDetailCache } from './detail'
 import { createLookup } from './inline'
 import { ItemDatabase } from './items'
 import { RateLimiter } from './rate-limit'
@@ -14,15 +15,24 @@ async function main(): Promise<void> {
 	const cache = new ProfileCache(config.cacheTtlSeconds * 1000)
 	const lookup = createLookup(config, cache)
 	const items = new ItemDatabase(config)
+	const details = new ItemDetailCache(config)
 	const limiter = new RateLimiter(config.rateLimitPerMinute)
 	const searchDebouncer = new KeyedDebouncer<number>(config.searchDebounceMs)
-	const bot = createBot({ config, lookup, items, limiter, searchDebouncer })
+	const bot = createBot({
+		config,
+		lookup,
+		items,
+		details,
+		limiter,
+		searchDebouncer,
+	})
 
 	await bot.api.setMyCommands({
 		commands: [
 			{ command: 'start', description: 'Инструкция по inline-поиску' },
 			{ command: 'help', description: 'Показать помощь' },
 			{ command: 'player', description: 'Показать формат поиска' },
+			{ command: 'items', description: 'Поиск предметов' },
 			{ command: 'app', description: 'Открыть StalHub в Telegram' },
 		],
 	})
@@ -38,7 +48,11 @@ async function main(): Promise<void> {
 	console.log(`Telegram bot started; backend: ${config.backendUrl}`)
 	await bot.start({
 		longPolling: { timeout: config.pollingTimeoutSeconds },
-		allowedUpdates: AllowedUpdatesFilter.only('message', 'inline_query'),
+		allowedUpdates: AllowedUpdatesFilter.only(
+			'message',
+			'inline_query',
+			'callback_query'
+		),
 	})
 }
 

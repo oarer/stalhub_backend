@@ -103,7 +103,10 @@ export function parseListing(
 			id: parsed.id,
 			name,
 			color: typeof entry.color === 'string' ? entry.color : 'DEFAULT',
-			iconUrl: absoluteUrl(options.dbUrl, typeof entry.icon === 'string' ? entry.icon : undefined),
+			iconUrl: absoluteUrl(
+				options.dbUrl,
+				typeof entry.icon === 'string' ? entry.icon : undefined
+			),
 			pageUrl: `${options.webAppUrl.replace(/\/$/, '')}/items/${parsed.category}/${parsed.id}`,
 		})
 	}
@@ -138,8 +141,14 @@ export function searchItems(
 	const suffixCandidates: Candidate[] = []
 
 	for (const item of entries) {
-		const ru = typeof item.name.ru === 'string' ? normalizeItemName(item.name.ru) : null
-		const en = typeof item.name.en === 'string' ? normalizeItemName(item.name.en) : null
+		const ru =
+			typeof item.name.ru === 'string'
+				? normalizeItemName(item.name.ru)
+				: null
+		const en =
+			typeof item.name.en === 'string'
+				? normalizeItemName(item.name.en)
+				: null
 		const kind = (value: string | null): number =>
 			value === null ? 0 : matchKind(value, normalized)
 		const ruKind = kind(ru)
@@ -150,7 +159,8 @@ export function searchItems(
 			[en, enKind],
 		] as const) {
 			if (valueKind === 0 || value === null) continue
-			const target = valueKind === MATCH_PREFIX ? prefixCandidates : suffixCandidates
+			const target =
+				valueKind === MATCH_PREFIX ? prefixCandidates : suffixCandidates
 			target.push({
 				item,
 				length: value.length,
@@ -193,7 +203,10 @@ async function fetchListing(options: {
 			{ signal: controller.signal }
 		)
 		if (!response.ok)
-			throw new DbLoadError(response.status, `Listing request ${response.status}`)
+			throw new DbLoadError(
+				response.status,
+				`Listing request ${response.status}`
+			)
 		return await response.json()
 	} catch (error) {
 		if (error instanceof DbLoadError) throw error
@@ -227,7 +240,8 @@ export class ItemDatabase implements ItemLookup {
 	}
 
 	private refreshIfStale(): Promise<void> | null {
-		if (Date.now() - this.loadedAt < this.options.itemsRefreshMs) return null
+		if (Date.now() - this.loadedAt < this.options.itemsRefreshMs)
+			return null
 		return this.refresh()
 	}
 

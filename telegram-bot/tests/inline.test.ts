@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { BackendError } from '../src/backend'
 import { buildInlineResults, isNotFound } from '../src/inline'
-import { parseListing, type ItemLookup } from '../src/items'
+import { type ItemLookup, parseListing } from '../src/items'
 import type { Region } from '../src/query'
 
 const dbUrl = 'https://cdn.stalhub.dev/db'
@@ -19,7 +19,10 @@ const items = parseListing(
 
 const itemLookup: ItemLookup = {
 	search: async (query) =>
-		items.filter((item) => item.name.ru?.toLowerCase().includes(query.toLowerCase()))
+		items
+			.filter((item) =>
+				item.name.ru?.toLowerCase().includes(query.toLowerCase())
+			)
 			.slice(0, 8),
 }
 
@@ -178,9 +181,12 @@ describe('inline item results', () => {
 		expect(results[0].input_message_content.message_text).toContain(
 			'Ранг: Мастер'
 		)
-		expect(
-			results[0].reply_markup?.inline_keyboard[0][0].url
-		).toBe('https://stalhub.dev/items/other/qyvk')
+		expect(results[0].reply_markup?.inline_keyboard.at(-1)?.[0].url).toBe(
+			'https://stalhub.dev/items/other/qyvk'
+		)
+		expect(results[0].reply_markup?.inline_keyboard[0]).toEqual([
+			{ text: 'Характеристики', callback_data: 'item:other:qyvk' },
+		])
 	})
 
 	test('returns not found hint for missing items', async () => {
