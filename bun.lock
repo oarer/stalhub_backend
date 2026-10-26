@@ -6,7 +6,7 @@
       "name": "app",
       "dependencies": {
         "@elysia/cors": "^2.0.0-exp.1",
-        "@elysia/cron": "^2.0.0-exp.0",
+        "@elysia/cron": "^2.0.0-rc.0",
         "@elysia/jwt": "^2.0.0-exp.0",
         "@elysia/openapi": "^2.0.0-exp.1",
         "@prisma/adapter-pg": "^7.10.1",
@@ -39,7 +39,7 @@
 
     "@elysia/cors": ["@elysia/cors@2.0.0-exp.1", "", { "peerDependencies": { "elysia": ">= 2.0.0-exp.14" } }, "sha512-Y23iaNj82ml5jCjvckQAZIgdTDcCS7FZtEQU018Pf2Yd8a3Ogsqa8+hPdjwje7uCJHBLE88QyZeJgo2bly2Hrw=="],
 
-    "@elysia/cron": ["@elysia/cron@2.0.0-exp.0", "", { "dependencies": { "croner": "^6.0.3" }, "peerDependencies": { "elysia": ">= 2.0.0-exp.23" } }, "sha512-Jl6FhaRAIJ9fq2ToBaMCNeUCrsGoGLrHkjM1sD8et3GL1ElKOffVuExTprqetIItzxA5P19uh12VdBH7kqsJbg=="],
+    "@elysia/cron": ["@elysia/cron@2.0.0-rc.0", "", { "dependencies": { "croner": "^6.0.3" }, "peerDependencies": { "elysia": ">= 2.0.0-rc.0" } }, "sha512-bfFD7tOkubBVj/hd9s6V7B3usTO9IyECO+g0dAkZ4rPOeF1nYzOAMM11mSNDgoxDuaBaDbzmXZ2nym4cQPh8Ig=="],
 
     "@elysia/jwt": ["@elysia/jwt@2.0.0-exp.0", "", { "dependencies": { "jose": "^6.2.3" }, "peerDependencies": { "elysia": ">= 2.0.0-exp.23" } }, "sha512-FMFD9uk5oHE3MlxS+vVZXHH18IY7UdjtHUGcIo0yCMPEFTkqsHAmCCYkugmHT8YZ3TFNPrfajS/tjzsGltMCZA=="],
 
