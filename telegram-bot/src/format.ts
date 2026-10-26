@@ -286,11 +286,11 @@ export function messageArticle(
 
 export function helpText(): string {
 	return [
-		'<b>StalHub Player Bot</b>',
+		'<b>StalHub | Bot</b>',
 		'',
-		'В любом чате введите <code>@stalhubbot ник [регион]</code>.',
+		'В любом чате введите <code>@StalhubBot ник [регион]</code>.',
 		'Без региона поиск выполняется в RU, EU, NA, SEA и NEA.',
-		'Регион можно указать явно: <code>@stalhubbot Nick RU</code>.',
+		'Регион можно указать явно: <code>@StalhubBot Nick RU</code>.',
 		'',
 		'Сайт можно открыть прямо в Telegram: /app или кнопка меню.',
 	].join('\n')
