@@ -36,7 +36,8 @@ export function errorHint(message: string): InlineArticle {
 
 export async function buildInlineResults(
 	input: string,
-	lookup: InlineLookup
+	lookup: InlineLookup,
+	options: { webAppUrl?: string } = {}
 ): Promise<InlineArticle[]> {
 	const parsed = parseInlineQuery(input)
 	if (parsed.kind === 'empty') return [emptyHint()]
@@ -45,7 +46,12 @@ export async function buildInlineResults(
 	const lookupResult = await lookupProfiles(parsed, lookup)
 	if (lookupResult.successes.length > 0) {
 		return lookupResult.successes.map(({ profile, region }) =>
-			profileArticle(profile, region, `${region}:${profile.username}`)
+			profileArticle(
+				profile,
+				region,
+				`${region}:${profile.username}`,
+				options
+			)
 		)
 	}
 	if (lookupResult.errors.every(({ error }) => isNotFound(error))) {

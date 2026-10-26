@@ -50,6 +50,10 @@ export function parseInlineQuery(input: string): ParsedQuery {
 	return { kind: 'player', character, regions: [regionToken as Region] }
 }
 
-export function profileUrl(region: Region, character: string): string {
-	return `https://stalhub.dev/player/${region}/${encodeURIComponent(character)}`
+export function profileUrl(
+	region: Region,
+	character: string,
+	base = 'https://stalhub.dev'
+): string {
+	return `${base}/player/${region}/${encodeURIComponent(character)}`
 }

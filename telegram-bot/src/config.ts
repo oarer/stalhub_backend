@@ -1,6 +1,7 @@
 export type BotConfig = {
 	token: string
 	backendUrl: string
+	webAppUrl: string
 	pollingTimeoutSeconds: number
 	cacheTtlSeconds: number
 	rateLimitPerMinute: number
@@ -27,9 +28,22 @@ export function loadConfig(
 		? rawBackendUrl
 		: `${rawBackendUrl}/api/v1`
 
+	const rawWebAppUrl = (env.TG_WEBAPP_URL ?? 'https://stalhub.dev').replace(
+		/\/$/,
+		''
+	)
+	const webAppUrl = new URL(rawWebAppUrl)
+	const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(
+		webAppUrl.hostname
+	)
+	if (webAppUrl.protocol !== 'https:' && !isLocalHost) {
+		throw new Error('TG_WEBAPP_URL must be an https:// URL')
+	}
+
 	return {
 		token,
 		backendUrl,
+		webAppUrl: webAppUrl.origin + webAppUrl.pathname.replace(/\/$/, ''),
 		pollingTimeoutSeconds: positiveNumber(
 			env.TG_POLLING_TIMEOUT_SECONDS,
 			30

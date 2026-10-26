@@ -11,5 +11,8 @@
 	"devDependencies": {
 		"bun-types": "latest",
 		"typescript": "latest"
+	},
+	"dependencies": {
+		"gramio": "^0.15.3"
 	}
 }

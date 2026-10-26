@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test'
-import { processUpdate } from '../src/index'
+import { processUpdate } from '../src/bot'
 
 describe('update processing', () => {
 	test('does not finish until the update handler succeeds', async () => {
 		let attempts = 0
 		const delays: number[] = []
 		const result = await processUpdate(
-			{ update_id: 42 },
+			42,
 			async () => {
 				attempts += 1
 				if (attempts === 1) throw new Error('temporary failure')
@@ -25,7 +25,7 @@ describe('update processing', () => {
 	test('bounds retries and explicitly skips a permanently failing update', async () => {
 		let attempts = 0
 		const result = await processUpdate(
-			{ update_id: 43 },
+			43,
 			async () => {
 				attempts += 1
 				throw new Error('permanent failure')

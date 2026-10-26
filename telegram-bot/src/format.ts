@@ -7,6 +7,12 @@ import {
 	type PlayerProfile,
 } from './stats'
 
+export type InlineKeyboardButton = {
+	text: string
+	url?: string
+	web_app?: { url: string }
+}
+
 export type InlineArticle = {
 	type: 'article'
 	id: string
@@ -17,7 +23,7 @@ export type InlineArticle = {
 		parse_mode: 'HTML'
 	}
 	reply_markup?: {
-		inline_keyboard: Array<Array<{ text: string; url: string }>>
+		inline_keyboard: InlineKeyboardButton[][]
 	}
 }
 
@@ -234,10 +240,33 @@ function cardText(
 export function profileArticle(
 	profile: PlayerProfile,
 	region: Region,
-	id = `${region}:${profile.username}`
+	id = `${region}:${profile.username}`,
+	options: { webAppUrl?: string } = {}
 ): InlineArticle {
 	const safeText = limitRichHtml(cardText(profile, region))
 	const username = normalize(profile.username)
+	const keyboard: InlineKeyboardButton[][] = [
+		[
+			{
+				text: 'Открыть на StalHub',
+				url: profileUrl(region, profile.username),
+			},
+		],
+	]
+	if (options.webAppUrl) {
+		keyboard.push([
+			{
+				text: 'Открыть в Telegram',
+				web_app: {
+					url: profileUrl(
+						region,
+						profile.username,
+						options.webAppUrl
+					),
+				},
+			},
+		])
+	}
 	return {
 		type: 'article',
 		id: resultId(id),
@@ -248,14 +277,7 @@ export function profileArticle(
 			parse_mode: 'HTML',
 		},
 		reply_markup: {
-			inline_keyboard: [
-				[
-					{
-						text: 'Открыть на StalHub',
-						url: profileUrl(region, profile.username),
-					},
-				],
-			],
+			inline_keyboard: keyboard,
 		},
 	}
 }
@@ -286,5 +308,7 @@ export function helpText(): string {
 		'В любом чате введите <code>@stalhubbot ник [регион]</code>.',
 		'Без региона поиск выполняется в RU, EU, NA, SEA и NEA.',
 		'Регион можно указать явно: <code>@stalhubbot Nick RU</code>.',
+		'',
+		'Сайт можно открыть прямо в Telegram: /app или кнопка меню.',
 	].join('\n')
 }
