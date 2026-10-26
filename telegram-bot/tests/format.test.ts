@@ -95,7 +95,7 @@ describe('Telegram formatting', () => {
 			['merc', 'Наёмник'],
 			['covenant', 'Завет'],
 			['freedom', 'Заря'],
-			['duty', 'Рубеж'],
+			['duty', 'Долг'],
 			['bandits', 'Бандит'],
 			['stalkers', 'Сталкер'],
 			[' COVENANT ', 'Завет'],

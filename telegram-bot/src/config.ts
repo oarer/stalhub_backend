@@ -9,6 +9,8 @@ export type BotConfig = {
 	requestTimeoutMs: number
 	searchDebounceMs: number
 	itemsRefreshMs: number
+	imageServiceUrl: string
+	sessionTtlMs: number
 }
 
 function positiveNumber(value: string | undefined, fallback: number): number {
@@ -67,5 +69,10 @@ export function loadConfig(
 		rateLimitPerMinute: positiveNumber(env.TG_RATE_LIMIT_PER_MINUTE, 10),
 		requestTimeoutMs: positiveNumber(env.TG_REQUEST_TIMEOUT_MS, 4_500),
 		searchDebounceMs: positiveNumber(env.TG_SEARCH_DEBOUNCE_MS, 250),
+		imageServiceUrl: (
+			env.TG_IMAGE_SERVICE_URL ?? 'http://localhost:3002'
+		).replace(/\/$/, ''),
+		sessionTtlMs:
+			positiveNumber(env.TG_SESSION_TTL_MINUTES, 10) * 60 * 1000,
 	}
 }

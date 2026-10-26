@@ -1,0 +1,842 @@
+[
+	{
+		"id": "dun-pas",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Данжей пройдено"
+	},
+	{
+		"id": "kil",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Убито игроков"
+	},
+	{
+		"id": "ast",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Помощь в убийстве"
+	},
+	{
+		"id": "dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей"
+	},
+	{
+		"id": "max-kil-ser",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Максимальная серия убийств"
+	},
+	{
+		"id": "exp-kil",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Взорвано игроков"
+	},
+	{
+		"id": "col-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от холодного оружия"
+	},
+	{
+		"id": "exp-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от взрывов"
+	},
+	{
+		"id": "fal-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от падения"
+	},
+	{
+		"id": "suf-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от удушья"
+	},
+	{
+		"id": "suicides",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Самоубийств"
+	},
+	{
+		"id": "dam-dea-pla",
+		"category": "COMBAT",
+		"type": "DECIMAL",
+		"ru": "Нанесено урона игрокам"
+	},
+	{
+		"id": "dam-rec-pla",
+		"category": "COMBAT",
+		"type": "DECIMAL",
+		"ru": "Получено урона от игроков"
+	},
+	{
+		"id": "dam-dea-all",
+		"category": "COMBAT",
+		"type": "DECIMAL",
+		"ru": "Нанесено урона всего"
+	},
+	{
+		"id": "dam-rec-all",
+		"category": "COMBAT",
+		"type": "DECIMAL",
+		"ru": "Получено урона всего"
+	},
+	{
+		"id": "dam-exp",
+		"category": "COMBAT",
+		"type": "DECIMAL",
+		"ru": "Нанесено урона игрокам взрывами"
+	},
+	{
+		"id": "pla-tim",
+		"category": "EXPLORATION",
+		"type": "DURATION",
+		"ru": "Времени в игре"
+	},
+	{
+		"id": "reg-tim",
+		"category": "EXPLORATION",
+		"type": "DATE",
+		"ru": "Пришел в Зону"
+	},
+	{
+		"id": "dis-on-foo",
+		"category": "EXPLORATION",
+		"type": "DECIMAL",
+		"ru": "Преодолено пешком"
+	},
+	{
+		"id": "dis-cra",
+		"category": "EXPLORATION",
+		"type": "DECIMAL",
+		"ru": "Преодолено ползком"
+	},
+	{
+		"id": "dis-sne",
+		"category": "EXPLORATION",
+		"type": "DECIMAL",
+		"ru": "Преодолено крадучись"
+	},
+	{
+		"id": "dis-air",
+		"category": "EXPLORATION",
+		"type": "DECIMAL",
+		"ru": "Преодолено в полете (падении)"
+	},
+	{
+		"id": "ach-gai",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Достижений получено"
+	},
+	{
+		"id": "ite-cra",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Изготовлено предметов"
+	},
+	{
+		"id": "rad-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от заражения"
+	},
+	{
+		"id": "ble-to-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от кровопотери"
+	},
+	{
+		"id": "med-sup-use",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Медикаментов использовано"
+	},
+	{
+		"id": "back-fix",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Отремонтировано рюкзаков"
+	},
+	{
+		"id": "wea-fix",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Отремонтировано оружия"
+	},
+	{
+		"id": "arm-fix",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Отремонтировано брони"
+	},
+	{
+		"id": "foo-eat",
+		"category": "EXPLORATION",
+		"type": "DECIMAL",
+		"ru": "Пищи съедено"
+	},
+	{
+		"id": "tpacks-delivered",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Доставлено посылок"
+	},
+	{
+		"id": "tpacks-inter",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Перехвачено посылок"
+	},
+	{
+		"id": "tpacks-craft",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Изготовлено посылок"
+	},
+	{
+		"id": "tpacks-money",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Заработано денег на доставке посылок"
+	},
+	{
+		"id": "tpacks-money-w",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Потрачено денег на посылки"
+	},
+	{
+		"id": "tpacks-distance",
+		"category": "EXPLORATION",
+		"type": "DECIMAL",
+		"ru": "Преодолено с торговым рюкзаком"
+	},
+	{
+		"id": "raffle-tickets-ny22",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Найдено билетов участника"
+	},
+	{
+		"id": "blizzard-won",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Пережито аномальных буранов"
+	},
+	{
+		"id": "incident-part",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Проведено операций с группой Костелевского"
+	},
+	{
+		"id": "incident-win",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Проведено успешных операций с группой Костелевского"
+	},
+	{
+		"id": "completed-ops",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Операций пройдено"
+	},
+	{
+		"id": "big-cleanup-completed-ops",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Операций «Большая уборка» пройдено"
+	},
+	{
+		"id": "focus-completed-ops",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Операций «Фокусировка» пройдено"
+	},
+	{
+		"id": "sea-anienation-completed-ops",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Операций «Море отчуждения» пройдено"
+	},
+	{
+		"id": "kills-ops",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Противников убито в Операциях"
+	},
+	{
+		"id": "big-cleanup-max-key-ops",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Максимальный пройденный допуск Операции «Большая Уборка»"
+	},
+	{
+		"id": "focus-max-key-ops",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Максимальный пройденный допуск Операции «Фокусировка»"
+	},
+	{
+		"id": "sea-alienation-max-key-ops",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Максимальный пройденный допуск Операции «Море Отчуждения»"
+	},
+	{
+		"id": "scout-powerful-shot-damage-ops",
+		"category": "SESSION_MODES",
+		"type": "DECIMAL",
+		"ru": "Нанесено урона способностью «Мощный выстрел»"
+	},
+	{
+		"id": "scout-powerful-shot-max-damage-ops",
+		"category": "SESSION_MODES",
+		"type": "DECIMAL",
+		"ru": "Максимальный урон способностью «Мощный выстрел»"
+	},
+	{
+		"id": "support-healed-ops",
+		"category": "SESSION_MODES",
+		"type": "DECIMAL",
+		"ru": "Исцелено урона способностью «Лечебные патроны»"
+	},
+	{
+		"id": "support-grenades-used-ops",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Использований способности «Лечебный состав»"
+	},
+	{
+		"id": "tank-damage-delayed-ops",
+		"category": "SESSION_MODES",
+		"type": "DECIMAL",
+		"ru": "Урона отложено способностью «Отложенный урон»"
+	},
+	{
+		"id": "tank-ultimate-max-damage-ops",
+		"category": "SESSION_MODES",
+		"type": "DECIMAL",
+		"ru": "Максимальный урон способностью «Тремор»"
+	},
+	{
+		"id": "air-drops-fnd",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Обнаружено сброшенных контейнеров"
+	},
+	{
+		"id": "air-drops-hckd",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Взломано сброшенных контейнеров"
+	},
+	{
+		"id": "mining-count",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Тайников выкопано"
+	},
+	{
+		"id": "ano-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от аномалий"
+	},
+	{
+		"id": "fun-ano-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от «Омута»"
+	},
+	{
+		"id": "car-ano-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от «Волчка»"
+	},
+	{
+		"id": "kis-ano-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от «Холодца»"
+	},
+	{
+		"id": "tra-ano-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от «Батута»"
+	},
+	{
+		"id": "lig-ano-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от «Зажигалки»"
+	},
+	{
+		"id": "ste-ano-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от «Чайника»"
+	},
+	{
+		"id": "ele-ano-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от «Разряда»"
+	},
+	{
+		"id": "cir-ano-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от «Пекла»"
+	},
+	{
+		"id": "art-col",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Артефактов собрано"
+	},
+	{
+		"id": "scr-thr",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Болтов брошено"
+	},
+	{
+		"id": "scn-cnt",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Сканирований проведено"
+	},
+	{
+		"id": "sgn-fnd",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Обнаружено сигналов"
+	},
+	{
+		"id": "hid-wrk-crft",
+		"category": "HIDEOUT",
+		"type": "INTEGER",
+		"ru": "Изделий создано на верстаке"
+	},
+	{
+		"id": "hid-lab-crft",
+		"category": "HIDEOUT",
+		"type": "INTEGER",
+		"ru": "Изделий создано на лабораторном столе"
+	},
+	{
+		"id": "hid-ktch-crft",
+		"category": "HIDEOUT",
+		"type": "INTEGER",
+		"ru": "Изделий создано на кухонном столе"
+	},
+	{
+		"id": "hid-enrg",
+		"category": "HIDEOUT",
+		"type": "INTEGER",
+		"ru": "Сожжено энергии на создание изделий"
+	},
+	{
+		"id": "hid-plc",
+		"category": "HIDEOUT",
+		"type": "INTEGER",
+		"ru": "Поставлено объектов в Убежище"
+	},
+	{
+		"id": "hid-mat-mon",
+		"category": "HIDEOUT",
+		"type": "INTEGER",
+		"ru": "Потрачено ресурсов на создание изделий в денежном эквиваленте"
+	},
+	{
+		"id": "mut-kil",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Убито мутантов"
+	},
+	{
+		"id": "mut-pse-kil",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Убито диких гончих"
+	},
+	{
+		"id": "mut-dog-kil",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Убито шавок"
+	},
+	{
+		"id": "mut-flsh-kil",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Убито хрюш"
+	},
+	{
+		"id": "mut-psi-kil",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Убито пси-гончих"
+	},
+	{
+		"id": "mut-boar-kil",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Убито кабанов"
+	},
+	{
+		"id": "mut-krv-kil",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Убито упырей"
+	},
+	{
+		"id": "mut-elp-kil",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Убито шнырей"
+	},
+	{
+		"id": "mut-gig-kil",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Убито буреломов"
+	},
+	{
+		"id": "mut-tush-kil",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Убито крыс"
+	},
+	{
+		"id": "mut-chi-kill",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Убито бестий"
+	},
+	{
+		"id": "par-tim",
+		"category": "EXPLORATION",
+		"type": "DURATION",
+		"ru": "Времени в отряде"
+	},
+	{
+		"id": "tra",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Успешных обменов"
+	},
+	{
+		"id": "bul-dea",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Смертей от пуль"
+	},
+	{
+		"id": "sho-fir",
+		"category": "COMBAT",
+		"type": "INTEGER",
+		"ru": "Выстрелов произведено"
+	},
+	{
+		"id": "sho-hit",
+		"category": "COMBAT",
+		"type": "INTEGER",
+		"ru": "Количество попаданий"
+	},
+	{
+		"id": "sho-hea",
+		"category": "COMBAT",
+		"type": "INTEGER",
+		"ru": "Выстрелов в голову"
+	},
+	{
+		"id": "sho-bod",
+		"category": "COMBAT",
+		"type": "INTEGER",
+		"ru": "Выстрелов в тело"
+	},
+	{
+		"id": "sho-lim",
+		"category": "COMBAT",
+		"type": "INTEGER",
+		"ru": "Выстрелов в конечности"
+	},
+	{
+		"id": "gre-thr",
+		"category": "COMBAT",
+		"type": "INTEGER",
+		"ru": "Гранат брошено"
+	},
+	{
+		"id": "equ-upg",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Апгрейдов снаряжения"
+	},
+	{
+		"id": "suc-equ-upg",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Успешных апгрейдов снаряжения"
+	},
+	{
+		"id": "kni-kil",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Зарезано игроков"
+	},
+	{
+		"id": "gui-ent",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Вступлений в группировки"
+	},
+	{
+		"id": "unit-ent",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Вступлений в подразделения"
+	},
+	{
+		"id": "part-bf",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Проведено игр в режиме «Противостояние»"
+	},
+	{
+		"id": "gg-won",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Побед в режиме «Гонка Вооружений»"
+	},
+	{
+		"id": "kills-bf",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Убито игроков в режиме «Противостояние»"
+	},
+	{
+		"id": "deaths-bf",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Смертей в режиме «Противостояние»"
+	},
+	{
+		"id": "won-bf",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Побед в режиме «Противостояние»"
+	},
+	{
+		"id": "lost-bf",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Поражений в режиме «Противостояние»"
+	},
+	{
+		"id": "won-fights-equal",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Побед в поединках в равных условиях"
+	},
+	{
+		"id": "won-fights-personal",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Побед в поединках с личным снаряжением"
+	},
+	{
+		"id": "fights-part",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Участий в поединках"
+	},
+	{
+		"id": "earned-on-arenas",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Выиграно на ставках"
+	},
+	{
+		"id": "br-won",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Побед в королевской битве"
+	},
+	{
+		"id": "br-count",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Сыграно королевских битв"
+	},
+	{
+		"id": "br-kills",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Убийств в королевской битве"
+	},
+	{
+		"id": "br-tasks",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Выполнено задач в королевской битве"
+	},
+	{
+		"id": "ravent-count",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Сыграно матчей в Арене Ворона"
+	},
+	{
+		"id": "ravent-won",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Побед в Арене Ворона"
+	},
+	{
+		"id": "pres-plays",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Проведено игр в рейтинге Колизея"
+	},
+	{
+		"id": "pres-wins",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Побед в рейтинге Колизея"
+	},
+	{
+		"id": "pres-kills",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Убито игроков в рейтинге Колизея"
+	},
+	{
+		"id": "pres-deaths",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Смертей в рейтинге Колизея"
+	},
+	{
+		"id": "pres-captures",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Захвачено Разломов в рейтинге Колизея"
+	},
+	{
+		"id": "pres-bat-plc",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Внесено Батарей в Установки в рейтинге Колизея"
+	},
+	{
+		"id": "pres-recharged",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Заряжено Установок в рейтинге Колизея"
+	},
+	{
+		"id": "pres-plr-spot",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Обнаружено противников в рейтинге Колизея"
+	},
+	{
+		"id": "pres-cmbt-pts",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Набрано боевых очков в рейтинге Колизея"
+	},
+	{
+		"id": "pres-sup-pts",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Набрано очков поддержки в рейтинге Колизея"
+	},
+	{
+		"id": "pres-ctrl-pts",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Набрано очков объектов в рейтинге Колизея"
+	},
+	{
+		"id": "pres-revives",
+		"category": "SESSION_MODES",
+		"type": "INTEGER",
+		"ru": "Возрождено игроков в рейтинге Колизея"
+	},
+	{
+		"id": "cha-mes-sen",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Сообщений в чат отправлено"
+	},
+	{
+		"id": "npc-kil",
+		"category": "SURVIVAL",
+		"type": "INTEGER",
+		"ru": "Убито NPC"
+	},
+	{
+		"id": "mon-gai-tra",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Заработано денег от продажи торговцам"
+	},
+	{
+		"id": "mon-gai-que",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Заработано денег с квестов"
+	},
+	{
+		"id": "ite-bou-tra",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Куплено вещей у торговцев"
+	},
+	{
+		"id": "ite-sol-tra",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Продано вещей торговцам"
+	},
+	{
+		"id": "que-fin",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Заданий завершено"
+	},
+	{
+		"id": "dai-que-fin",
+		"category": "EXPLORATION",
+		"type": "INTEGER",
+		"ru": "Ежедневных заданий завершено"
+	},
+	{
+		"id": "max-mon-amo",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Наибольшее количество денег на счету"
+	},
+	{
+		"id": "mon-gai-dro",
+		"category": "ECONOMY",
+		"type": "INTEGER",
+		"ru": "Найдено денег"
+	}
+]

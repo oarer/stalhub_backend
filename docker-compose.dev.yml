@@ -80,10 +80,13 @@ services:
       TG_SEARCH_DEBOUNCE_MS: ${TG_SEARCH_DEBOUNCE_MS:-250}
       TG_REQUEST_TIMEOUT_MS: ${TG_REQUEST_TIMEOUT_MS:-4500}
       TG_WEBAPP_URL: ${TG_WEBAPP_URL:-https://stalhub.dev}
+      TG_IMAGE_SERVICE_URL: http://image-service:3002
       NO_PROXY: app,localhost,127.0.0.1
       no_proxy: app,localhost,127.0.0.1
     depends_on:
       app:
+        condition: service_started
+      image-service:
         condition: service_started
 
   redis:

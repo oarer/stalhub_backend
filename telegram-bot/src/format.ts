@@ -9,6 +9,8 @@ import {
 import type { ListedItem } from './items'
 import { rankName } from './items'
 import { profileUrl, type Region } from './query'
+import { profileSessionKey } from './session'
+import type { StatCategoryKey } from './stat-view'
 import {
 	extractMetrics,
 	formatDate,
@@ -42,16 +44,16 @@ const MAX_INLINE_ID_BYTES = 64
 const MAX_MESSAGE_TEXT_LENGTH = 4096
 const MAX_DISPLAY_LENGTH = 160
 
-const FACTION_NAMES = new Map([
+export const FACTION_NAMES = new Map([
 	['merc', 'Наёмник'],
 	['covenant', 'Завет'],
 	['freedom', 'Заря'],
-	['duty', 'Рубеж'],
+	['duty', 'Долг'],
 	['bandits', 'Бандит'],
 	['stalkers', 'Сталкер'],
 ])
 
-const CLAN_RANK_NAMES = new Map([
+export const CLAN_RANK_NAMES = new Map([
 	['leader', 'Лидер'],
 	['colonel', 'Полковник'],
 	['officer', 'Офицер'],
@@ -150,12 +152,39 @@ K/D Противостояния: ${bold(formatMetric(metrics.battleKd))}
 Точность: ${bold(`${formatMetric(metrics.accuracy)}%`)}`
 }
 
+export function profileCardText(
+	profile: PlayerProfile,
+	region: Region
+): FormattableString {
+	return limitFormattable(cardText(profile, region))
+}
+
+export function profileStatsKeyboard(hash: string): InlineKeyboardButton[][] {
+	const labels: Record<StatCategoryKey, string> = {
+		combat: '⚔ Боёвка',
+		survival: '🧭 Выживание',
+		exploration: '🗺 Исследование',
+		session: '🎯 Сессии',
+		economy: '💰 Экономика',
+		hideout: '🏠 Убежище',
+	}
+	const button = (key: StatCategoryKey): InlineKeyboardButton => ({
+		text: labels[key],
+		callback_data: `st:${hash}:${key}`,
+	})
+	return [
+		[button('combat'), button('survival'), button('exploration')],
+		[button('session'), button('economy'), button('hideout')],
+		[{ text: '📜 История кланов', callback_data: `st:${hash}:history` }],
+	]
+}
+
 export function profileArticle(
 	profile: PlayerProfile,
 	region: Region,
 	id = `${region}:${profile.username}`
 ): InlineArticle {
-	const card = limitFormattable(cardText(profile, region))
+	const card = profileCardText(profile, region)
 	const username = display(profile.username)
 	return {
 		type: 'article',
@@ -174,6 +203,9 @@ export function profileArticle(
 						url: profileUrl(region, profile.username),
 					},
 				],
+				...profileStatsKeyboard(
+					profileSessionKey(region, profile.username)
+				),
 			],
 		},
 	}
@@ -243,7 +275,9 @@ export function helpText(): FormattableString {
 
 В любом чате введите ${code`@StalhubBot ник [регион]`}.
 Без региона поиск выполняется в RU.
-Другой регион можно указать явно: ${code`@StalhubBot ник EU`}.
+	Другой регион можно указать явно: ${code`@StalhubBot ник EU`}.
+
+Карточку статистики можно получить командой ${code`/player ник [регион]`}.
 
 Поиск предметов: ${code`@StalhubBot /i название`} (например, ${code`@StalhubBot /i вспышка`}
 или ${code`@StalhubBot /i flare`}).

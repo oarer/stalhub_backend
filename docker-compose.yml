@@ -93,11 +93,14 @@ services:
       TG_RATE_LIMIT_PER_MINUTE: ${TG_RATE_LIMIT_PER_MINUTE:-10}
       TG_SEARCH_DEBOUNCE_MS: ${TG_SEARCH_DEBOUNCE_MS:-800}
       TG_WEBAPP_URL: ${TG_WEBAPP_URL:-https://stalhub.dev}
-      NO_PROXY: localhost,127.0.0.1,::1,app,host.docker.internal
-      no_proxy: localhost,127.0.0.1,::1,app,host.docker.internal
+      TG_IMAGE_SERVICE_URL: http://image-service:3002
+      NO_PROXY: localhost,127.0.0.1,::1,app,image-service,host.docker.internal
+      no_proxy: localhost,127.0.0.1,::1,app,image-service,host.docker.internal
     depends_on:
       app:
         condition: service_healthy
+      image-service:
+        condition: service_started
     logging:
       driver: json-file
       options:

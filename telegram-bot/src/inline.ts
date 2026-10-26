@@ -8,6 +8,7 @@ import {
 } from './format'
 import type { ItemLookup } from './items'
 import { type ParsedQuery, parseInlineQuery, type Region } from './query'
+import { profileSessionKey, type SessionStore } from './session'
 import type { PlayerProfile } from './stats'
 
 export type InlineLookup = (
@@ -43,7 +44,8 @@ export function errorHint(message: string): InlineArticle {
 export async function buildInlineResults(
 	input: string,
 	lookup: InlineLookup,
-	items?: ItemLookup
+	items?: ItemLookup,
+	session?: SessionStore<PlayerProfile>
 ): Promise<InlineArticle[]> {
 	const parsed = parseInlineQuery(input)
 	if (parsed.kind === 'empty') return [emptyHint()]
@@ -52,6 +54,14 @@ export async function buildInlineResults(
 
 	const lookupResult = await lookupProfiles(parsed, lookup)
 	if (lookupResult.successes.length > 0) {
+		if (session) {
+			for (const { profile, region } of lookupResult.successes) {
+				session.set(
+					profileSessionKey(region, profile.username),
+					profile
+				)
+			}
+		}
 		return lookupResult.successes.map(({ profile, region }) =>
 			profileArticle(profile, region, `${region}:${profile.username}`)
 		)
