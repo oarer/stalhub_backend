@@ -1,7 +1,14 @@
-import { AllowedUpdatesFilter, Bot, bold, format, InlineKeyboard } from 'gramio'
+import {
+	AllowedUpdatesFilter,
+	Bot,
+	bold,
+	code,
+	format,
+	InlineKeyboard,
+} from 'gramio'
 import type { BotConfig } from './config'
 import type { KeyedDebouncer } from './debounce'
-import { escapeHtml, helpText, messageArticle } from './format'
+import { helpText, messageArticle } from './format'
 import { buildInlineResults, type InlineLookup } from './inline'
 import type { RateLimiter } from './rate-limit'
 
@@ -52,13 +59,13 @@ export function createBot({
 				error instanceof Error ? error.message : error
 			)
 		})
-		.command('start', (ctx) => ctx.send(helpText(), { parse_mode: 'HTML' }))
-		.command('help', (ctx) => ctx.send(helpText(), { parse_mode: 'HTML' }))
+		.command('start', (ctx) => ctx.send(helpText()))
+		.command('help', (ctx) => ctx.send(helpText()))
 		.command('player', (ctx) => {
 			const hint = ctx.args
-				? `Откройте inline-режим: @StalhubBot ${ctx.args}`
-				: 'Подсказка: в любом чате введите @StalhubBot ник (по умолчанию регион RU, например @StalhubBot Nick EU).'
-			return ctx.send(escapeHtml(hint), { parse_mode: 'HTML' })
+				? format`Откройте inline-режим: ${code`@StalhubBot ${ctx.args}`}`
+				: format`Подсказка: в любом чате введите ${code`@StalhubBot ник`} (по умолчанию регион RU, например ${code`@StalhubBot Nick EU`}).`
+			return ctx.send(hint)
 		})
 		.command('app', (ctx) =>
 			ctx.send(format`Открыть ${bold`StalHub`} прямо в Telegram:`, {

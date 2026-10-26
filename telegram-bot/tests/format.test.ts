@@ -1,25 +1,25 @@
 import { describe, expect, test } from 'bun:test'
 import {
-	escapeHtml,
-	helpText,
-	messageArticle,
-	profileArticle,
-} from '../src/format'
+	bold,
+	code,
+	expandableBlockquote,
+	type FormattableString,
+	format,
+} from 'gramio'
+import { helpText, messageArticle, profileArticle } from '../src/format'
 
-function parsedTextLength(html: string): number {
-	return html
-		.replace(/<\/?(?:b|code|blockquote(?: expandable)?)>/g, '')
-		.replace(/&(?:amp|lt|gt|quot);/g, 'x').length
+function entitiesOf(
+	article: ReturnType<typeof profileArticle>
+): FormattableString['entities'] {
+	return article.input_message_content.entities ?? []
+}
+
+function textOf(article: ReturnType<typeof profileArticle>): string {
+	return article.input_message_content.message_text
 }
 
 describe('Telegram formatting', () => {
-	test('escapes HTML text characters', () => {
-		expect(escapeHtml('& <tag> "quoted"')).toBe(
-			'&amp; &lt;tag&gt; &quot;quoted&quot;'
-		)
-	})
-
-	test('creates an HTML article with a profile button and message text', () => {
+	test('creates an article with a bold username, plain text and a profile button', () => {
 		const result = profileArticle(
 			{
 				username: 'A<&',
@@ -32,25 +32,22 @@ describe('Telegram formatting', () => {
 			},
 			'RU'
 		)
-		expect(result.input_message_content.parse_mode).toBe('HTML')
-		expect(result.input_message_content.message_text).toContain(
-			'<b>A&lt;&amp;</b> (RU)'
+		const text = textOf(result)
+		expect(text).toContain('A<& (RU)')
+		expect(text).toContain('Регион: RU')
+		expect(text).toContain('Фракция: duty & honor')
+		expect(text).not.toContain('Статус:')
+
+		const usernameBold = entitiesOf(result).find(
+			(entity) => entity.type === 'bold' && entity.offset === 0
 		)
-		expect(result.input_message_content.message_text).toContain(
-			'Регион: <b>RU</b>'
-		)
-		expect(result.input_message_content.message_text).toContain(
-			'Фракция: duty &amp; honor'
-		)
-		expect(result.input_message_content.message_text).not.toContain(
-			'Статус:'
-		)
+		expect(usernameBold?.length).toBe('A<&'.length)
 		expect(result.reply_markup?.inline_keyboard[0][0].url).toContain(
 			'/player/RU/A%3C%26'
 		)
 	})
 
-	test('formats clan history as expandable Telegram HTML', () => {
+	test('formats clan history as an expandable blockquote entity', () => {
 		const result = profileArticle(
 			{
 				username: 'Nick',
@@ -72,18 +69,25 @@ describe('Telegram formatting', () => {
 			},
 			'RU'
 		)
-		const text = result.input_message_content.message_text
+		const text = textOf(result)
 
 		expect(text).toContain('История кланов:')
-		expect(text).toContain(
-			'<blockquote expandable>Old &amp; Clan [OLD] · Офицер · EU · 07.06.2025</blockquote>'
-		)
-		expect(text).not.toContain('<blockquote expandable>\n')
-		expect(text).not.toContain('\n</blockquote>')
+		expect(text).toContain('Old & Clan [OLD] · Офицер · EU · 07.06.2025')
 		expect(text.indexOf('Клан:')).toBeLessThan(
 			text.indexOf('История кланов:')
 		)
 		expect(result.input_message_content).not.toHaveProperty('rich_message')
+
+		const blockquote = entitiesOf(result).find(
+			(entity) => entity.type === 'expandable_blockquote'
+		)
+		expect(blockquote).toBeDefined()
+		const quoted = text.slice(
+			blockquote?.offset ?? 0,
+			(blockquote?.offset ?? 0) + (blockquote?.length ?? 0)
+		)
+		expect(quoted.startsWith('\n')).toBe(false)
+		expect(quoted.endsWith('\n')).toBe(false)
 	})
 
 	test('maps faction names case-insensitively and preserves unknown values', () => {
@@ -95,7 +99,7 @@ describe('Telegram formatting', () => {
 			['bandits', 'Бандит'],
 			['stalkers', 'Сталкер'],
 			[' COVENANT ', 'Завет'],
-			['new<&', 'new&lt;&amp;'],
+			['new<&', 'new<&'],
 			['', '—'],
 		]) {
 			const text = profileArticle({ username: 'Nick', alliance }, 'RU')
@@ -118,7 +122,7 @@ describe('Telegram formatting', () => {
 			['COMMONER', 'Запасной'],
 			['RECRUIT', 'Рядовой'],
 			[' officer ', 'Офицер'],
-			['NEW<&', 'NEW&lt;&amp;'],
+			['NEW<&', 'NEW<&'],
 			['', '—'],
 		]) {
 			const text = profileArticle(
@@ -153,17 +157,26 @@ describe('Telegram formatting', () => {
 		const text = result.input_message_content.message_text
 
 		expect(text).not.toContain('История кланов:')
-		expect(text).not.toContain('<blockquote')
+		expect(
+			entitiesOf(result).some((entity) => entity.type === 'blockquote')
+		).toBe(false)
 	})
 
-	test('formats help text with HTML tags', () => {
-		const text = helpText()
-		expect(text).toContain('<b>StalHub | Bot</b>')
-		expect(text).toContain('<code>@StalhubBot Nick EU</code>')
-		expect(text).toContain('Без региона поиск выполняется в RU.')
+	test('formats help text with code and bold entities', () => {
+		const help = helpText()
+		expect(help.text).toContain('StalHub | Bot')
+		expect(help.text).toContain('@StalhubBot Nick EU')
+		expect(help.text).toContain('Без региона поиск выполняется в RU.')
+
+		const codeEntity = help.entities
+			.filter((entity) => entity.type === 'code')
+			.map((entity) =>
+				help.text.slice(entity.offset, entity.offset + entity.length)
+			)
+		expect(codeEntity).toContain('@StalhubBot Nick EU')
 	})
 
-	test('closes an expandable history blockquote when truncating', () => {
+	test('bounds text length and keeps a blockquote when truncating', () => {
 		const result = profileArticle(
 			{
 				username: 'Nick',
@@ -182,14 +195,20 @@ describe('Telegram formatting', () => {
 			},
 			'RU'
 		)
-		const text = result.input_message_content.message_text
+		const text = textOf(result)
 
-		expect(parsedTextLength(text)).toBeLessThanOrEqual(4096)
-		expect(text).toContain('<blockquote expandable>')
-		expect(text.endsWith('</blockquote>')).toBe(true)
+		expect(text.length).toBeLessThanOrEqual(4096)
+		expect(text.endsWith('…')).toBe(true)
+		const blockquote = entitiesOf(result).find(
+			(entity) => entity.type === 'expandable_blockquote'
+		)
+		expect(blockquote).toBeDefined()
+		expect(
+			(blockquote?.offset ?? 0) + (blockquote?.length ?? 0)
+		).toBeLessThanOrEqual(text.length)
 	})
 
-	test('bounds IDs and long HTML content', () => {
+	test('bounds IDs and long plain content', () => {
 		const longId = 'идентификатор-'.repeat(20)
 		const profile = profileArticle(
 			{
@@ -212,19 +231,28 @@ describe('Telegram formatting', () => {
 			new TextEncoder().encode(message.id).byteLength
 		).toBeLessThanOrEqual(64)
 		expect(
-			parsedTextLength(profile.input_message_content.message_text)
+			profile.input_message_content.message_text.length
 		).toBeLessThanOrEqual(4096)
 		expect(
-			parsedTextLength(message.input_message_content.message_text)
+			message.input_message_content.message_text.length
 		).toBeLessThanOrEqual(4096)
-		expect(profile.input_message_content.parse_mode).toBe('HTML')
-		expect(message.input_message_content.parse_mode).toBe('HTML')
-		expect(message.input_message_content.message_text).toContain('&amp;')
-		expect(message.input_message_content.message_text).toContain(
-			'&lt;tag&gt;'
-		)
 		expect(profile.input_message_content.message_text).not.toContain(
 			'Статус:'
 		)
+		expect(message.input_message_content.message_text).toContain(
+			'[status] & <tag>'
+		)
+		expect(message.input_message_content.entities).toBeUndefined()
+	})
+
+	test('builds formatting helpers expected by the bot', () => {
+		const sample = format`Hi ${bold`there`} ${code`cmd`}`
+		expect(sample.text).toBe('Hi there cmd')
+		expect(sample.entities.map((entity) => entity.type)).toEqual([
+			'bold',
+			'code',
+		])
+		const quote = expandableBlockquote`line`
+		expect(quote.text).toBe('line')
 	})
 })

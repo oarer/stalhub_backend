@@ -1,4 +1,10 @@
-import { customEmoji } from 'gramio'
+import {
+	bold,
+	code,
+	expandableBlockquote,
+	FormattableString,
+	format,
+} from 'gramio'
 import { profileUrl, type Region } from './query'
 import {
 	extractMetrics,
@@ -20,7 +26,7 @@ export type InlineArticle = {
 	description?: string
 	input_message_content: {
 		message_text: string
-		parse_mode: 'HTML'
+		entities?: FormattableString['entities']
 	}
 	reply_markup?: {
 		inline_keyboard: InlineKeyboardButton[][]
@@ -73,21 +79,6 @@ function resultId(value: string): string {
 	return `result:${shortHash(value)}`
 }
 
-export function escapeHtml(value: string): string {
-	return value.replace(/[&<>\"]/g, (character) => {
-		switch (character) {
-			case '&':
-				return '&amp;'
-			case '<':
-				return '&lt;'
-			case '>':
-				return '&gt;'
-			default:
-				return '&quot;'
-		}
-	})
-}
-
 function truncate(value: string, maxLength: number): string {
 	const characters = [...value]
 	return characters.length > maxLength
@@ -95,7 +86,7 @@ function truncate(value: string, maxLength: number): string {
 		: value
 }
 
-function normalize(value: unknown, maxLength = MAX_DISPLAY_LENGTH): string {
+function display(value: unknown, maxLength = MAX_DISPLAY_LENGTH): string {
 	const text =
 		value === null || value === undefined || value === ''
 			? '—'
@@ -103,138 +94,55 @@ function normalize(value: unknown, maxLength = MAX_DISPLAY_LENGTH): string {
 	return truncate(text, maxLength)
 }
 
-function display(value: unknown, maxLength = MAX_DISPLAY_LENGTH): string {
-	return escapeHtml(normalize(value, maxLength))
-}
+function limitFormattable(source: FormattableString): FormattableString {
+	if (source.text.length <= MAX_MESSAGE_TEXT_LENGTH) return source
 
-function entityLength(entity: string): number {
-	if (/^&(amp|lt|gt|quot);$/.test(entity)) return 1
-	if (/^&#(?:x[\da-f]+|\d+);$/i.test(entity)) return 1
-	return [...entity].length
-}
-
-function htmlTextLength(value: string): number {
-	let length = 0
-	for (let index = 0; index < value.length; index += 1) {
-		if (value[index] === '<') {
-			const end = value.indexOf('>', index + 1)
-			if (end !== -1) {
-				index = end
-				continue
-			}
-		}
-		if (value[index] === '&') {
-			const end = value.indexOf(';', index + 1)
-			if (end !== -1) {
-				const entity = value.slice(index, end + 1)
-				if (
-					/^&(?:amp|lt|gt|quot);$|^&#(?:x[\da-f]+|\d+);$/i.test(
-						entity
-					)
-				) {
-					length += entityLength(entity)
-					index = end
-					continue
-				}
-			}
-		}
-		const character = [...value.slice(index)][0]
-		length += 1
-		index += character.length - 1
-	}
-	return length
-}
-
-function limitRichHtml(value: string): string {
-	if (htmlTextLength(value) <= MAX_MESSAGE_TEXT_LENGTH) return value
-
-	const visibleLimit = MAX_MESSAGE_TEXT_LENGTH - 1
-	let visibleLength = 0
-	let output = ''
-	const openTags: string[] = []
-	for (
-		let index = 0;
-		index < value.length && visibleLength < visibleLimit;
-	) {
-		if (value[index] === '<') {
-			const end = value.indexOf('>', index + 1)
-			if (end !== -1) {
-				const tag = value.slice(index, end + 1)
-				output += tag
-				const opening = tag.match(
-					/^<(b|code|blockquote)(?: expandable)?>$/
-				)
-				const closing = tag.match(/^<\/(b|code|blockquote)>$/)
-				if (opening) openTags.push(opening[1])
-				if (closing) {
-					const openIndex = openTags.lastIndexOf(closing[1])
-					if (openIndex !== -1) openTags.splice(openIndex, 1)
-				}
-				index = end + 1
-				continue
-			}
-		}
-		if (value[index] === '&') {
-			const end = value.indexOf(';', index + 1)
-			if (end !== -1) {
-				const entity = value.slice(index, end + 1)
-				if (
-					/^&(?:amp|lt|gt|quot);$|^&#(?:x[\da-f]+|\d+);$/i.test(
-						entity
-					)
-				) {
-					output += entity
-					visibleLength += entityLength(entity)
-					index = end + 1
-					continue
-				}
-			}
-		}
-		const character = [...value.slice(index)][0]
-		output += character
-		visibleLength += 1
-		index += character.length
-	}
-	output += '…'
-	for (let index = openTags.length - 1; index >= 0; index -= 1) {
-		output += `</${openTags[index]}>`
-	}
-	return output
+	const text = `${source.text.slice(0, MAX_MESSAGE_TEXT_LENGTH - 1)}…`
+	const entities = source.entities
+		.filter((entity) => entity.offset < text.length)
+		.map((entity) => ({
+			...entity,
+			length: Math.min(entity.length, text.length - entity.offset),
+		}))
+		.filter((entity) => entity.length > 0)
+	return FormattableString.from(text, entities)
 }
 
 function cardText(
 	profile: PlayerProfile,
 	region: Region,
 	maxFieldLength = MAX_DISPLAY_LENGTH
-): string {
+): FormattableString {
 	const metrics = extractMetrics(profile)
 	const clan = profile.clan?.info?.name
 	const clanTag = profile.clan?.info?.tag
 	const clanText = clan ? `${clan}${clanTag ? ` [${clanTag}]` : ''}` : '—'
 	const clanHistory = profile.clan_history ?? []
 	const historyText = clanHistory.length
-		? `<blockquote expandable>${clanHistory
-				.map((entry) => {
-					const name = `${entry.clan_name}${entry.clan_tag ? ` [${entry.clan_tag}]` : ''}`
-					return `${display(name, maxFieldLength)} · ${display(mappedName(entry.rank, CLAN_RANK_NAMES))} · ${display(entry.region)} · ${display(formatDate(entry.joined_at ?? entry.seen_at))}`
-				})
-				.join('\n')}</blockquote>`
-		: null
+		? format`
 
-	return [
-		`<b>${display(profile.username, maxFieldLength)}</b> (${display(region)})`,
-		`Регион: <b>${display(region)}</b>`,
-		'',
-		`Фракция: ${display(mappedName(profile.alliance, FACTION_NAMES), maxFieldLength)}`,
-		`Клан: ${display(clanText, maxFieldLength)}`,
-		...(historyText ? ['', 'История кланов:', historyText] : []),
-		'',
-		`K/D: <b>${escapeHtml(formatMetric(metrics.kd))}</b>`,
-		`K/D Противостояния: <b>${escapeHtml(formatMetric(metrics.battleKd))}</b>`,
-		`Часы: <b>${escapeHtml(formatHours(metrics.hours))}</b>`,
-		`Начал играть: <b>${display(formatDate(metrics.registeredAt), maxFieldLength)}</b>`,
-		`Точность: <b>${escapeHtml(formatMetric(metrics.accuracy) + '%')}</b>`,
-	].join('\n')
+История кланов:
+${expandableBlockquote(
+	clanHistory
+		.map((entry) => {
+			const name = `${entry.clan_name}${entry.clan_tag ? ` [${entry.clan_tag}]` : ''}`
+			return `${display(name, maxFieldLength)} · ${display(mappedName(entry.rank, CLAN_RANK_NAMES))} · ${display(entry.region)} · ${display(formatDate(entry.joined_at ?? entry.seen_at))}`
+		})
+		.join('\n')
+)}`
+		: undefined
+
+	return format`${bold(display(profile.username, maxFieldLength))} (${display(region)})
+Регион: ${bold(display(region))}
+
+Фракция: ${display(mappedName(profile.alliance, FACTION_NAMES), maxFieldLength)}
+Клан: ${display(clanText, maxFieldLength)}${historyText}
+
+K/D: ${bold(formatMetric(metrics.kd))}
+K/D Противостояния: ${bold(formatMetric(metrics.battleKd))}
+Часы: ${bold(formatHours(metrics.hours))}
+Начал играть: ${bold(display(formatDate(metrics.registeredAt), maxFieldLength))}
+Точность: ${bold(`${formatMetric(metrics.accuracy)}%`)}`
 }
 
 export function profileArticle(
@@ -242,16 +150,16 @@ export function profileArticle(
 	region: Region,
 	id = `${region}:${profile.username}`
 ): InlineArticle {
-	const safeText = limitRichHtml(cardText(profile, region))
-	const username = normalize(profile.username)
+	const card = limitFormattable(cardText(profile, region))
+	const username = display(profile.username)
 	return {
 		type: 'article',
 		id: resultId(id),
 		title: `${username} (${region})`,
 		description: `Профиль ${username} — K/D ${formatMetric(extractMetrics(profile).kd)}`,
 		input_message_content: {
-			message_text: safeText,
-			parse_mode: 'HTML',
+			message_text: card.text,
+			entities: card.entities,
 		},
 		reply_markup: {
 			inline_keyboard: [
@@ -277,22 +185,17 @@ export function messageArticle(
 		title: options.title ?? 'StalHub',
 		description: options.description ?? message,
 		input_message_content: {
-			message_text: limitRichHtml(
-				escapeHtml(normalize(message, MAX_MESSAGE_TEXT_LENGTH))
-			),
-			parse_mode: 'HTML',
+			message_text: display(message, MAX_MESSAGE_TEXT_LENGTH),
 		},
 	}
 }
 
-export function helpText(): string {
-	return [
-		`<b>${customEmoji('🦠', '5345778951031658558')} StalHub</b>`,
-		'',
-		'В любом чате введите <code>@StalhubBot ник [регион]</code>.',
-		'Без региона поиск выполняется в RU.',
-		'Другой регион можно указать явно: <code>@StalhubBot Nick EU</code>.',
-		'',
-		`${customEmoji('🔗', '6028171274939797252')} Сайт можно открыть прямо в Telegram: /app или кнопка меню.`,
-	].join('\n')
+export function helpText(): FormattableString {
+	return format`${bold`StalHub | Bot`}
+
+В любом чате введите ${code`@StalhubBot ник [регион]`}.
+Без региона поиск выполняется в RU.
+Другой регион можно указать явно: ${code`@StalhubBot Nick EU`}.
+
+Сайт можно открыть прямо в Telegram: /app или кнопка меню.`
 }

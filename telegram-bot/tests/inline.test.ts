@@ -71,12 +71,15 @@ describe('inline results', () => {
 		}))
 		const content = results[0].input_message_content
 
-		expect(content.parse_mode).toBe('HTML')
 		expect(content.message_text).toContain('История кланов:')
-		expect(content.message_text).toContain('<blockquote expandable>')
 		expect(content.message_text).toContain(
 			'Former Clan [OLD] · Member · RU · 02.01.2024'
 		)
+		expect(
+			(content.entities ?? []).some(
+				(entity) => entity.type === 'expandable_blockquote'
+			)
+		).toBe(true)
 		expect(content).not.toHaveProperty('rich_message')
 	})
 
@@ -89,7 +92,7 @@ describe('inline results', () => {
 
 		expect(regions).toEqual(['RU'])
 		expect(results[0].input_message_content.message_text).toContain(
-			'Регион: <b>RU</b>'
+			'Регион: RU'
 		)
 	})
 
