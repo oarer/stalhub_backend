@@ -8,7 +8,7 @@
         "@elysia/cors": "^2.0.0-exp.1",
         "@elysia/cron": "^2.0.0-exp.0",
         "@elysia/jwt": "^2.0.0-exp.0",
-        "@elysia/openapi": "^2.0.0-exp.1",
+        "@elysia/openapi": "^2.0.0-rc.0",
         "@prisma/adapter-pg": "^7.10.1",
         "@prisma/client": "^7.10.1",
         "axios": "^1.20.0",
@@ -43,7 +43,7 @@
 
     "@elysia/jwt": ["@elysia/jwt@2.0.0-exp.0", "", { "dependencies": { "jose": "^6.2.3" }, "peerDependencies": { "elysia": ">= 2.0.0-exp.23" } }, "sha512-FMFD9uk5oHE3MlxS+vVZXHH18IY7UdjtHUGcIo0yCMPEFTkqsHAmCCYkugmHT8YZ3TFNPrfajS/tjzsGltMCZA=="],
 
-    "@elysia/openapi": ["@elysia/openapi@2.0.0-exp.1", "", { "peerDependencies": { "elysia": "2.0.0-exp.12", "typebox": "1.2.16" } }, "sha512-qfSp4OIodrSE7j3ABAQv2eAN0Ls5hucb/W1M7s6sgTOi0ixSotF3cVvOfUmjmt5wm5KREIKhoJMRLA69jxfz9w=="],
+    "@elysia/openapi": ["@elysia/openapi@2.0.0-rc.0", "", { "peerDependencies": { "elysia": ">= 2.0.0-rc.0" } }, "sha512-IkRdigbDxqZpQzZ9Dg/HpJT2S4SUdRboVZ5umT0uYrUffJTRnb11seetF/gt96xqxbrWSZSlG8pxKtuabJ6NGg=="],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.1", "", {}, "sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q=="],
 
