@@ -9,7 +9,7 @@
 		"grenade:seed": "bun run scripts/grenade-seed-snapshots.ts"
 	},
 	"dependencies": {
-		"@elysia/cors": "^2.0.0-exp.1",
+		"@elysia/cors": "^2.0.0-rc.0",
 		"@elysia/cron": "^2.0.0-exp.0",
 		"@elysia/jwt": "^2.0.0-exp.0",
 		"@elysia/openapi": "^2.0.0-exp.1",

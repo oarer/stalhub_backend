@@ -5,7 +5,7 @@
     "": {
       "name": "app",
       "dependencies": {
-        "@elysia/cors": "^2.0.0-exp.1",
+        "@elysia/cors": "^2.0.0-rc.0",
         "@elysia/cron": "^2.0.0-exp.0",
         "@elysia/jwt": "^2.0.0-exp.0",
         "@elysia/openapi": "^2.0.0-exp.1",
@@ -37,7 +37,7 @@
 
     "@electric-sql/pglite-tools": ["@electric-sql/pglite-tools@0.3.3", "", { "peerDependencies": { "@electric-sql/pglite": "0.4.3" } }, "sha512-AlzLJTRJ8+UFgK8CmxIpyIpJ0+YaFw02IiOSdYrqxwPXdSyeIShz8aa9Tq+tYFXdPwcaMp/Fc80mQZ1dkOQ/wg=="],
 
-    "@elysia/cors": ["@elysia/cors@2.0.0-exp.1", "", { "peerDependencies": { "elysia": ">= 2.0.0-exp.14" } }, "sha512-Y23iaNj82ml5jCjvckQAZIgdTDcCS7FZtEQU018Pf2Yd8a3Ogsqa8+hPdjwje7uCJHBLE88QyZeJgo2bly2Hrw=="],
+    "@elysia/cors": ["@elysia/cors@2.0.0-rc.0", "", { "peerDependencies": { "elysia": ">= 2.0.0-rc.0" } }, "sha512-mlkOv7lHhT3HCCIIwawZBYXzQ6Ok1B//IQvIKaNww0o9xE2JLH6S74xVFZfobsH12eOVKWQVITr9iM/7Z/Zcdw=="],
 
     "@elysia/cron": ["@elysia/cron@2.0.0-exp.0", "", { "dependencies": { "croner": "^6.0.3" }, "peerDependencies": { "elysia": ">= 2.0.0-exp.23" } }, "sha512-Jl6FhaRAIJ9fq2ToBaMCNeUCrsGoGLrHkjM1sD8et3GL1ElKOffVuExTprqetIItzxA5P19uh12VdBH7kqsJbg=="],
 
