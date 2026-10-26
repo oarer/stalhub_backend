@@ -21,20 +21,13 @@ describe('inline results', () => {
 		expect(isNotFound(new BackendError(502))).toBe(false)
 	})
 
-	test('keeps successful regions when another region returns 404', async () => {
-		const results = await buildInlineResults(
-			'Nick',
-			async (region: Region) => {
-				if (region === 'EU') throw new BackendError(404)
-				return { username: `Nick-${region}`, stats: [] }
-			}
-		)
-		expect(results.map((result) => result.title)).toEqual([
-			'Nick-RU (RU)',
-			'Nick-NA (NA)',
-			'Nick-SEA (SEA)',
-			'Nick-NEA (NEA)',
-		])
+	test('looks up a single default region when region is omitted', async () => {
+		const regions: Region[] = []
+		await buildInlineResults('Nick', async (region) => {
+			regions.push(region)
+			return { username: 'Nick', stats: [] }
+		})
+		expect(regions).toEqual(['RU'])
 	})
 
 	test('returns not found when every region returns 404', async () => {

@@ -1,3 +1,4 @@
+import { customEmoji } from 'gramio'
 import { profileUrl, type Region } from './query'
 import {
 	extractMetrics,
@@ -286,12 +287,12 @@ export function messageArticle(
 
 export function helpText(): string {
 	return [
-		'<b>StalHub | Bot</b>',
+		`<b>${customEmoji('🦠', '5345778951031658558')} StalHub</b>`,
 		'',
 		'В любом чате введите <code>@StalhubBot ник [регион]</code>.',
-		'Без региона поиск выполняется в RU, EU, NA, SEA и NEA.',
-		'Регион можно указать явно: <code>@StalhubBot Nick RU</code>.',
+		'Без региона поиск выполняется в RU.',
+		'Другой регион можно указать явно: <code>@StalhubBot Nick EU</code>.',
 		'',
-		'Сайт можно открыть прямо в Telegram: /app или кнопка меню.',
+		`${customEmoji('🔗', '6028171274939797252')} Сайт можно открыть прямо в Telegram: /app или кнопка меню.`,
 	].join('\n')
 }

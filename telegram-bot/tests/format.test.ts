@@ -158,8 +158,9 @@ describe('Telegram formatting', () => {
 
 	test('formats help text with HTML tags', () => {
 		const text = helpText()
-		expect(text).toContain('<b>StalHub Player Bot</b>')
-		expect(text).toContain('<code>@stalhubbot Nick RU</code>')
+		expect(text).toContain('<b>StalHub | Bot</b>')
+		expect(text).toContain('<code>@StalhubBot Nick EU</code>')
+		expect(text).toContain('Без региона поиск выполняется в RU.')
 	})
 
 	test('closes an expandable history blockquote when truncating', () => {

@@ -56,8 +56,8 @@ export function createBot({
 		.command('help', (ctx) => ctx.send(helpText(), { parse_mode: 'HTML' }))
 		.command('player', (ctx) => {
 			const hint = ctx.args
-				? `Откройте inline-режим: @stalhubbot ${ctx.args}`
-				: 'Подсказка: в любом чате введите @stalhubbot ник или @stalhubbot ник RU.'
+				? `Откройте inline-режим: @StalhubBot ${ctx.args}`
+				: 'Подсказка: в любом чате введите @StalhubBot ник (по умолчанию регион RU, например @StalhubBot Nick EU).'
 			return ctx.send(escapeHtml(hint), { parse_mode: 'HTML' })
 		})
 		.command('app', (ctx) =>

@@ -11,7 +11,7 @@ export type InlineLookup = (
 
 export function emptyHint(): InlineArticle {
 	const message =
-		'Введите имя персонажа, например: @stalhubbot Nick или @stalhubbot Nick RU'
+		'Введите имя персонажа: @StalhubBot Nick. По умолчанию регион RU, другой — @StalhubBot Nick EU'
 	return messageArticle(message, 'help', {
 		title: 'Поиск игрока',
 		description: message,

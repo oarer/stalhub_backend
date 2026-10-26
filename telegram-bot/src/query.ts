@@ -39,7 +39,7 @@ export function parseInlineQuery(input: string): ParsedQuery {
 		}
 	}
 	if (!regionToken) {
-		return { kind: 'player', character, regions: [...REGIONS] }
+		return { kind: 'player', character, regions: ['RU'] }
 	}
 	if (!regionSet.has(regionToken)) {
 		return {

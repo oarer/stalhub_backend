@@ -2,11 +2,11 @@ import { describe, expect, test } from 'bun:test'
 import { parseInlineQuery } from '../src/query'
 
 describe('parseInlineQuery', () => {
-	test('searches every region when region is omitted', () => {
+	test('defaults to RU when region is omitted', () => {
 		expect(parseInlineQuery('Nick')).toEqual({
 			kind: 'player',
 			character: 'Nick',
-			regions: ['RU', 'EU', 'NA', 'SEA', 'NEA'],
+			regions: ['RU'],
 		})
 	})
 
