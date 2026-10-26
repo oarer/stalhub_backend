@@ -4,6 +4,7 @@ import { createBot, type UpdateProcessResult } from './bot'
 import { loadConfig } from './config'
 import { KeyedDebouncer } from './debounce'
 import { createLookup } from './inline'
+import { ItemDatabase } from './items'
 import { RateLimiter } from './rate-limit'
 
 export type { UpdateProcessResult }
@@ -12,9 +13,10 @@ async function main(): Promise<void> {
 	const config = loadConfig()
 	const cache = new ProfileCache(config.cacheTtlSeconds * 1000)
 	const lookup = createLookup(config, cache)
+	const items = new ItemDatabase(config)
 	const limiter = new RateLimiter(config.rateLimitPerMinute)
 	const searchDebouncer = new KeyedDebouncer<number>(config.searchDebounceMs)
-	const bot = createBot({ config, lookup, limiter, searchDebouncer })
+	const bot = createBot({ config, lookup, items, limiter, searchDebouncer })
 
 	await bot.api.setMyCommands({
 		commands: [

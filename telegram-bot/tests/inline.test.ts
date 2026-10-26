@@ -1,7 +1,27 @@
 import { describe, expect, test } from 'bun:test'
 import { BackendError } from '../src/backend'
 import { buildInlineResults, isNotFound } from '../src/inline'
+import { parseListing, type ItemLookup } from '../src/items'
 import type { Region } from '../src/query'
+
+const dbUrl = 'https://cdn.stalhub.dev/db'
+const items = parseListing(
+	[
+		{
+			data: '/items/other/qyvk.json',
+			icon: '/icons/other/qyvk.png',
+			name: { ru: '«Вспышка»', en: 'Flare' },
+			color: 'RANK_MASTER',
+		},
+	],
+	{ dbUrl, webAppUrl: 'https://stalhub.dev' }
+)
+
+const itemLookup: ItemLookup = {
+	search: async (query) =>
+		items.filter((item) => item.name.ru?.toLowerCase().includes(query.toLowerCase()))
+			.slice(0, 8),
+}
 
 describe('inline results', () => {
 	test('returns a hint for an empty query', async () => {
@@ -9,8 +29,9 @@ describe('inline results', () => {
 			throw new Error('must not lookup')
 		})
 		expect(results).toHaveLength(1)
-		expect(results[0].title).toBe('Поиск игрока')
+		expect(results[0].title).toBe('Поиск StalHub')
 		expect(results[0].description).toContain('Введите имя персонажа')
+		expect(results[0].description).toContain('/i')
 		expect(results[0].input_message_content.message_text).toContain(
 			'Введите имя персонажа'
 		)
@@ -139,5 +160,41 @@ describe('inline results', () => {
 			new TextEncoder().encode(results[0].id).byteLength
 		).toBeLessThanOrEqual(64)
 		expect(repeated[0].id).toBe(results[0].id)
+	})
+})
+
+describe('inline item results', () => {
+	test('returns item cards with rank, icon and page link', async () => {
+		const results = await buildInlineResults(
+			'/i вспышка',
+			async () => {
+				throw new Error('must not lookup')
+			},
+			itemLookup
+		)
+		expect(results.map((result) => result.title)).toEqual(['«Вспышка»'])
+		expect(results[0].thumb_url).toBe(`${dbUrl}/icons/other/qyvk.png`)
+		expect(results[0].description).toContain('Мастер')
+		expect(results[0].input_message_content.message_text).toContain(
+			'Ранг: Мастер'
+		)
+		expect(
+			results[0].reply_markup?.inline_keyboard[0][0].url
+		).toBe('https://stalhub.dev/items/other/qyvk')
+	})
+
+	test('returns not found hint for missing items', async () => {
+		const results = await buildInlineResults(
+			'/i болт',
+			async () => {
+				throw new Error('must not lookup')
+			},
+			itemLookup
+		)
+		expect(results).toHaveLength(1)
+		expect(results[0].title).toBe('Ошибка поиска')
+		expect(results[0].input_message_content.message_text).toContain(
+			'не найден'
+		)
 	})
 })

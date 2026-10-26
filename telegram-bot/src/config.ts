@@ -2,11 +2,13 @@ export type BotConfig = {
 	token: string
 	backendUrl: string
 	webAppUrl: string
+	dbUrl: string
 	pollingTimeoutSeconds: number
 	cacheTtlSeconds: number
 	rateLimitPerMinute: number
 	requestTimeoutMs: number
 	searchDebounceMs: number
+	itemsRefreshMs: number
 }
 
 function positiveNumber(value: string | undefined, fallback: number): number {
@@ -40,10 +42,17 @@ export function loadConfig(
 		throw new Error('TG_WEBAPP_URL must be an https:// URL')
 	}
 
+	function positiveHours(value: string | undefined, fallbackHours: number): number {
+		const parsed = positiveNumber(value, fallbackHours)
+		return parsed * 60 * 60 * 1000
+	}
+
 	return {
 		token,
 		backendUrl,
 		webAppUrl: webAppUrl.origin + webAppUrl.pathname.replace(/\/$/, ''),
+		dbUrl: (env.TG_DB_URL ?? 'https://cdn.stalhub.dev/db').replace(/\/$/, ''),
+		itemsRefreshMs: positiveHours(env.TG_ITEMS_REFRESH_HOURS, 24),
 		pollingTimeoutSeconds: positiveNumber(
 			env.TG_POLLING_TIMEOUT_SECONDS,
 			30

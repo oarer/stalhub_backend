@@ -5,14 +5,36 @@ export type ParsedQuery =
 	| { kind: 'empty' }
 	| { kind: 'error'; message: string }
 	| { kind: 'player'; character: string; regions: Region[] }
+	| { kind: 'item'; name: string }
 
 const regionSet = new Set<string>(REGIONS)
 const MAX_CHARACTER_LENGTH = 64
+const MAX_ITEM_LENGTH = 64
+const ITEM_COMMANDS = new Set(['/i', '/item', '/items', '/i.'])
 
 export function parseInlineQuery(input: string): ParsedQuery {
 	const tokens = input.trim().split(/\s+/).filter(Boolean)
 	if (tokens[0]?.startsWith('@')) tokens.shift()
 	if (tokens.length === 0) return { kind: 'empty' }
+
+	const first = tokens[0].toLowerCase()
+	if (ITEM_COMMANDS.has(first)) {
+		const name = tokens.slice(1).join(' ').trim()
+		if (!name) {
+			return {
+				kind: 'error',
+				message: 'Укажите название предмета: @StalhubBot /i вспышка.',
+			}
+		}
+		if ([...name].length > MAX_ITEM_LENGTH) {
+			return {
+				kind: 'error',
+				message: `Название предмета не должно быть длиннее ${MAX_ITEM_LENGTH} символов.`,
+			}
+		}
+		return { kind: 'item', name }
+	}
+
 	if (tokens.length > 2) {
 		return {
 			kind: 'error',

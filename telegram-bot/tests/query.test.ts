@@ -47,4 +47,29 @@ describe('parseInlineQuery', () => {
 		expect(parseInlineQuery('😀'.repeat(64)).kind).toBe('player')
 		expect(parseInlineQuery('😀'.repeat(65)).kind).toBe('error')
 	})
+
+	test('parses item queries with /i, /item and /items aliases', () => {
+		for (const query of ['/i вспышка', '/item «Вспышка»', '/items flare', '@stalhub_bot /i вспышка']) {
+			expect(parseInlineQuery(query)).toEqual({
+				kind: 'item',
+				name: query.replace(/^(@\S+\s+)?\/\S+/i, '').trim(),
+			})
+		}
+		expect(parseInlineQuery('/i Мякоть солевика')).toEqual({
+			kind: 'item',
+			name: 'Мякоть солевика',
+		})
+	})
+
+	test('reports missing names and overlong item names', () => {
+		expect(parseInlineQuery('/i')).toEqual({
+			kind: 'error',
+			message: 'Укажите название предмета: @StalhubBot /i вспышка.',
+		})
+		expect(parseInlineQuery('/i ')).toEqual({
+			kind: 'error',
+			message: 'Укажите название предмета: @StalhubBot /i вспышка.',
+		})
+		expect(parseInlineQuery(`/I ${'a'.repeat(65)}`).kind).toBe('error')
+	})
 })

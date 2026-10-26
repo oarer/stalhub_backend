@@ -1,6 +1,12 @@
 import { BackendError, fetchProfile, type ProfileCache } from './backend'
 import type { BotConfig } from './config'
-import { type InlineArticle, messageArticle, profileArticle } from './format'
+import {
+	type InlineArticle,
+	itemArticle,
+	messageArticle,
+	profileArticle,
+} from './format'
+import { type ItemLookup } from './items'
 import { type ParsedQuery, parseInlineQuery, type Region } from './query'
 import type { PlayerProfile } from './stats'
 
@@ -11,9 +17,9 @@ export type InlineLookup = (
 
 export function emptyHint(): InlineArticle {
 	const message =
-		'Введите имя персонажа: @StalhubBot Nick. По умолчанию регион RU, другой — @StalhubBot Nick EU'
+		'Введите имя персонажа: @StalhubBot Nick или предмет: @StalhubBot /i вспышка. По умолчанию регион RU, другой — @StalhubBot Nick EU'
 	return messageArticle(message, 'help', {
-		title: 'Поиск игрока',
+		title: 'Поиск StalHub',
 		description: message,
 	})
 }
@@ -36,11 +42,13 @@ export function errorHint(message: string): InlineArticle {
 
 export async function buildInlineResults(
 	input: string,
-	lookup: InlineLookup
+	lookup: InlineLookup,
+	items?: ItemLookup
 ): Promise<InlineArticle[]> {
 	const parsed = parseInlineQuery(input)
 	if (parsed.kind === 'empty') return [emptyHint()]
 	if (parsed.kind === 'error') return [errorHint(parsed.message)]
+	if (parsed.kind === 'item') return itemResults(parsed, items)
 
 	const lookupResult = await lookupProfiles(parsed, lookup)
 	if (lookupResult.successes.length > 0) {
@@ -56,6 +64,23 @@ export async function buildInlineResults(
 		]
 	}
 	return [errorHint('Не удалось получить данные. Попробуйте позже.')]
+}
+
+async function itemResults(
+	parsed: Extract<ParsedQuery, { kind: 'item' }>,
+	items?: ItemLookup
+): Promise<InlineArticle[]> {
+	if (!items) return [errorHint('Поиск предметов недоступен.')]
+	try {
+		const matches = await items.search(parsed.name)
+		if (matches.length === 0)
+			return [errorHint(`Предмет «${parsed.name}» не найден.`)]
+		return matches.map((entry) =>
+			itemArticle(entry, `item:${entry.category}:${entry.id}`)
+		)
+	} catch {
+		return [errorHint('Каталог предметов недоступен. Попробуйте позже.')]
+	}
 }
 
 type LookupResult = {

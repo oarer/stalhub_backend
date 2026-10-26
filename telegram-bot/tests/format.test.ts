@@ -165,7 +165,10 @@ describe('Telegram formatting', () => {
 	test('formats help text with custom emoji, code and bold entities', () => {
 		const help = helpText()
 		expect(help.text).toContain('🦠 StalHub | Bot')
-		expect(help.text).toContain('@StalhubBot Nick EU')
+		expect(help.text).toContain('@StalhubBot ник [регион]')
+		expect(help.text).toContain('@StalhubBot ник EU')
+		expect(help.text).toContain( 'Поиск предметов')
+		expect(help.text).toContain('@StalhubBot /i вспышка')
 		expect(help.text).toContain('Без региона поиск выполняется в RU.')
 		expect(help.text).toContain('🔗 Сайт можно открыть')
 
@@ -174,7 +177,7 @@ describe('Telegram formatting', () => {
 			.map((entity) =>
 				help.text.slice(entity.offset, entity.offset + entity.length)
 			)
-		expect(codeEntity).toContain('@StalhubBot Nick EU')
+		expect(codeEntity).toContain('@StalhubBot ник [регион]')
 
 		const emojiIds = help.entities
 			.filter((entity) => entity.type === 'custom_emoji')

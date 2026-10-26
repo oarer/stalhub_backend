@@ -10,6 +10,7 @@ import type { BotConfig } from './config'
 import type { KeyedDebouncer } from './debounce'
 import { helpText, messageArticle } from './format'
 import { buildInlineResults, type InlineLookup } from './inline'
+import type { ItemLookup } from './items'
 import type { RateLimiter } from './rate-limit'
 
 export type UpdateProcessResult = 'handled' | 'skipped'
@@ -42,6 +43,7 @@ export async function processUpdate(
 export type BotDependencies = {
 	config: BotConfig
 	lookup: InlineLookup
+	items: ItemLookup
 	limiter: RateLimiter
 	searchDebouncer: KeyedDebouncer<number>
 }
@@ -49,6 +51,7 @@ export type BotDependencies = {
 export function createBot({
 	config,
 	lookup,
+	items,
 	limiter,
 	searchDebouncer,
 }: BotDependencies): Bot {
@@ -95,7 +98,8 @@ export function createBot({
 					async (isLatest) => {
 						const results = await buildInlineResults(
 							ctx.query,
-							lookup
+							lookup,
+							items
 						)
 						if (!isLatest()) return
 						await ctx.answer(results, {

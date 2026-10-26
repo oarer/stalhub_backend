@@ -5,8 +5,11 @@ import {
 	expandableBlockquote,
 	FormattableString,
 	format,
+	italic,
 } from 'gramio'
 import { profileUrl, type Region } from './query'
+import type { ListedItem } from './items'
+import { rankName } from './items'
 import {
 	extractMetrics,
 	formatDate,
@@ -25,6 +28,7 @@ export type InlineArticle = {
 	id: string
 	title: string
 	description?: string
+	thumb_url?: string
 	input_message_content: {
 		message_text: string
 		entities?: FormattableString['entities']
@@ -175,6 +179,38 @@ export function profileArticle(
 	}
 }
 
+export function itemArticle(entry: ListedItem, id = `item:${entry.id}`): InlineArticle {
+	const primary = display(entry.name.ru ?? entry.name.en)
+	const secondary = entry.name.en && entry.name.ru ? display(entry.name.en) : null
+	const rank = rankName(entry.color)
+	const card = limitFormattable(
+		format`${bold(primary)}${secondary ? format` · ${italic(secondary)}` : ''}
+
+Ранг: ${bold(display(rank ?? '—'))}`
+	)
+	return {
+		type: 'article',
+		id: resultId(`${id}:${entry.category}`),
+		title: primary,
+		description: `Предмет StalHub · Ранг: ${display(rank ?? '—')}`,
+		thumb_url: entry.iconUrl ?? undefined,
+		input_message_content: {
+			message_text: card.text,
+			entities: card.entities,
+		},
+		reply_markup: {
+			inline_keyboard: [
+				[
+					{
+						text: 'Открыть на StalHub',
+						url: entry.pageUrl,
+					},
+				],
+			],
+		},
+	}
+}
+
 export function messageArticle(
 	message: string,
 	id: string,
@@ -197,6 +233,9 @@ export function helpText(): FormattableString {
 В любом чате введите ${code`@StalhubBot ник [регион]`}.
 Без региона поиск выполняется в RU.
 Другой регион можно указать явно: ${code`@StalhubBot ник EU`}.
+
+Поиск предметов: ${code`@StalhubBot /i название`} (например, ${code`@StalhubBot /i вспышка`}
+или ${code`@StalhubBot /i flare`}).
 
 ${customEmoji('🔗', '6028171274939797252')} Сайт можно открыть прямо в Telegram: /app или кнопка меню.`
 }
