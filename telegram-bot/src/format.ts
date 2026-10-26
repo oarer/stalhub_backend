@@ -196,7 +196,7 @@ export function helpText(): FormattableString {
 
 В любом чате введите ${code`@StalhubBot ник [регион]`}.
 Без региона поиск выполняется в RU.
-Другой регион можно указать явно: ${code`@StalhubBot Nick EU`}.
+Другой регион можно указать явно: ${code`@StalhubBot ник EU`}.
 
 ${customEmoji('🔗', '6028171274939797252')} Сайт можно открыть прямо в Telegram: /app или кнопка меню.`
 }
