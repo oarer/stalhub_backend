@@ -85,8 +85,6 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     environment:
       TG_BOT_TOKEN: ${TG_BOT_TOKEN}
       BACKEND_URL: http://app:3001
