@@ -9,10 +9,6 @@ const TEXT_DECODER = new TextDecoder()
 
 type CompressibleMime = 'image/jpeg' | 'image/png' | 'image/webp'
 
-/**
- * Buffer -> тело ответа. Копия в свежий ArrayBuffer, иначе TS
- * (Buffer<ArrayBufferLike>) не сходится с BodyInit.
- */
 function toBody(buffer: Buffer): Uint8Array<ArrayBuffer> {
 	const copy = new Uint8Array(buffer.byteLength)
 	copy.set(buffer)

@@ -161,12 +161,12 @@ export function profileCardText(
 
 export function profileStatsKeyboard(hash: string): InlineKeyboardButton[][] {
 	const labels: Record<StatCategoryKey, string> = {
-		combat: '⚔ Боёвка',
-		survival: '🧭 Выживание',
-		exploration: '🗺 Исследование',
-		session: '🎯 Сессии',
-		economy: '💰 Экономика',
-		hideout: '🏠 Убежище',
+		combat: 'Боёвка',
+		survival: 'Выживание',
+		exploration: 'Исследование',
+		session: 'Сессии',
+		economy: 'Экономика',
+		hideout: 'Убежище',
 	}
 	const button = (key: StatCategoryKey): InlineKeyboardButton => ({
 		text: labels[key],
@@ -175,7 +175,7 @@ export function profileStatsKeyboard(hash: string): InlineKeyboardButton[][] {
 	return [
 		[button('combat'), button('survival'), button('exploration')],
 		[button('session'), button('economy'), button('hideout')],
-		[{ text: '📜 История кланов', callback_data: `st:${hash}:history` }],
+		[{ text: 'История кланов', callback_data: `st:${hash}:history` }],
 	]
 }
 
@@ -234,7 +234,7 @@ export function itemArticle(
 		type: 'article',
 		id: resultId(`${id}:${entry.category}`),
 		title: primary,
-		description: `Предмет StalHub · Ранг: ${display(rank ?? '—')}`,
+		description: `Предмет · Ранг: ${display(rank ?? '—')}`,
 		thumb_url: entry.iconUrl ?? undefined,
 		input_message_content: {
 			message_text: card.text,

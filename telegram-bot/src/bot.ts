@@ -5,26 +5,26 @@ import {
 	code,
 	format,
 	InlineKeyboard,
-	MediaUpload,
 } from 'gramio'
 import type { BotConfig } from './config'
 import type { KeyedDebouncer } from './debounce'
 import type { ItemDetailCache } from './detail'
-import { helpText, messageArticle, profileStatsKeyboard } from './format'
+import {
+	helpText,
+	messageArticle,
+	profileCardText,
+	profileStatsKeyboard,
+} from './format'
 import { buildInlineResults, type InlineLookup } from './inline'
 import type { ItemLookup } from './items'
 import { parseInlineQuery, type Region } from './query'
 import type { RateLimiter } from './rate-limit'
-import { RenderError, type RenderSvg } from './render'
 import { profileSessionKey, type SessionStore } from './session'
 import {
 	CLAN_KIND,
 	categoryMeta,
 	categoryStatsText,
-	clanHistoryCaption,
 	clanHistoryText,
-	renderCategoryStatsSvg,
-	renderMainStatsSvg,
 } from './stat-view'
 import type { PlayerProfile } from './stats'
 
@@ -63,7 +63,6 @@ export type BotDependencies = {
 	limiter: RateLimiter
 	searchDebouncer: KeyedDebouncer<number>
 	session: SessionStore<PlayerProfile>
-	render: RenderSvg
 }
 
 const STATS_CALLBACK = /^st:([0-9a-f]+):([a-z]+)$/
@@ -78,7 +77,6 @@ export function createBot({
 	limiter,
 	searchDebouncer,
 	session,
-	render,
 }: BotDependencies): Bot {
 	function statsKeyboard(hash: string): InlineKeyboard {
 		const keyboard = new InlineKeyboard()
@@ -93,29 +91,16 @@ export function createBot({
 		return keyboard
 	}
 
-	async function editToText(
-		ctx: {
-			inlineMessageId?: string
-			bot: Bot
-		},
-		hash: string,
-		kind: string,
-		profile: PlayerProfile
-	): Promise<void> {
-		if (!ctx.inlineMessageId) return
-		const card =
-			kind === CLAN_KIND
-				? clanHistoryText(profile)
-				: categoryStatsText(
-						profile,
-						categoryMeta(kind) ?? categoryMeta('combat')!
-					)
-		await ctx.bot.api.editMessageText({
-			inline_message_id: ctx.inlineMessageId,
-			text: card.text,
-			entities: card.entities,
-			reply_markup: statsKeyboard(hash),
-		})
+	function statsCard(
+		profile: PlayerProfile,
+		kind: string
+	): ReturnType<typeof categoryStatsText> {
+		return kind === CLAN_KIND
+			? clanHistoryText(profile)
+			: categoryStatsText(
+					profile,
+					categoryMeta(kind) ?? categoryMeta('combat')!
+				)
 	}
 
 	return new Bot(config.token)
@@ -150,16 +135,11 @@ export function createBot({
 				}
 				const hash = profileSessionKey(region, profile.username)
 				session.set(hash, profile)
-				try {
-					const image = await render(renderMainStatsSvg(profile))
-					await ctx.sendPhoto(MediaUpload.buffer(image), {
-						reply_markup: statsKeyboard(hash),
-					})
-				} catch {
-					await ctx.send(
-						'Сервис карточек статистики недоступен — попробуйте позже.'
-					)
-				}
+				const card = profileCardText(profile, region)
+				await ctx.send(card.text, {
+					entities: card.entities,
+					reply_markup: statsKeyboard(hash),
+				})
 			})
 		)
 		.command('app', (ctx) =>
@@ -215,10 +195,22 @@ export function createBot({
 					})
 					return
 				}
+				if (kind !== CLAN_KIND && !categoryMeta(kind)) {
+					await ctx.answer({
+						text: 'Неизвестная категория статистики.',
+					})
+					return
+				}
 				try {
+					const card = statsCard(profile, kind)
+					await ctx.answer()
 					if (ctx.inlineMessageId) {
-						await ctx.answer()
-						await editToText(ctx, hash, kind, profile)
+						await ctx.bot.api.editMessageText({
+							inline_message_id: ctx.inlineMessageId,
+							text: card.text,
+							entities: card.entities,
+							reply_markup: statsKeyboard(hash),
+						})
 						return
 					}
 					const message = ctx.message
@@ -226,48 +218,6 @@ export function createBot({
 						await ctx.answer(STATS_TTL_HINT)
 						return
 					}
-					await ctx.answer()
-					if (kind === CLAN_KIND) {
-						if (message.photo) {
-							await message.editCaption(
-								clanHistoryCaption(profile),
-								{
-									reply_markup: statsKeyboard(hash),
-								}
-							)
-							return
-						}
-						const card = clanHistoryText(profile)
-						await ctx.bot.api.editMessageText({
-							chat_id: message.chatId,
-							message_id: message.id,
-							text: card.text,
-							entities: card.entities,
-							reply_markup: statsKeyboard(hash),
-						})
-						return
-					}
-					const category = categoryMeta(kind)
-					if (!category) {
-						await ctx.answer({
-							text: 'Неизвестная категория статистики.',
-						})
-						return
-					}
-					if (message.photo) {
-						const image = await render(
-							renderCategoryStatsSvg(profile, category)
-						)
-						await message.editMessageMedia(
-							{
-								type: 'photo',
-								media: MediaUpload.buffer(image),
-							},
-							{ reply_markup: statsKeyboard(hash) }
-						)
-						return
-					}
-					const card = categoryStatsText(profile, category)
 					await ctx.bot.api.editMessageText({
 						chat_id: message.chatId,
 						message_id: message.id,
@@ -282,10 +232,7 @@ export function createBot({
 					)
 					await ctx
 						.answer({
-							text:
-								error instanceof RenderError
-									? 'Сервис карточек статистики недоступен.'
-									: 'Не удалось подготовить данные статистики.',
+							text: 'Не удалось подготовить данные статистики.',
 						})
 						.catch(() => undefined)
 				}

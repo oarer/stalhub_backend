@@ -1,15 +1,12 @@
 import { describe, expect, test } from 'bun:test'
-import catalog from '../src/stat-catalog.json'
+import { limitFormattable } from '../src/format'
 import {
 	CATEGORIES,
 	categoryMeta,
 	categoryStatsText,
-	clanHistoryCaption,
 	clanHistoryText,
 	collectCategoryStats,
 	formatStatValue,
-	renderCategoryStatsSvg,
-	renderMainStatsSvg,
 } from '../src/stat-view'
 
 type RawStat = { id: string; type?: string; value: unknown }
@@ -147,7 +144,7 @@ describe('text renderers', () => {
 		expect(text.text).toContain('Лидер')
 	})
 
-	test('clanHistoryCaption stays under 1024 characters and truncates', () => {
+	test('clanHistoryText is bounded to 4096 characters by limitFormattable', () => {
 		const longProfile = {
 			...SAMPLE_PROFILE,
 			clan_history: Array.from({ length: 100 }, (_, index) => ({
@@ -163,55 +160,7 @@ describe('text renderers', () => {
 				seen_at: '2025-06-07T03:04:05.000Z',
 			})),
 		}
-		const caption = clanHistoryCaption(longProfile)
-		expect(caption.length).toBeLessThanOrEqual(1024)
-	})
-})
-
-describe('svg renderers', () => {
-	test('main card includes player name and headline stats', () => {
-		const svg = renderMainStatsSvg(SAMPLE_PROFILE)
-		expect(svg).toContain('width="1200"')
-		expect(svg).toContain('height="630"')
-		expect(svg).toContain('>Nick</text>')
-		expect(svg).toContain('K/D')
-		expect(svg).toContain('Общая статистика')
-	})
-
-	test('main card escapes XML special characters in values', () => {
-		const svg = renderMainStatsSvg({
-			username: 'A<"&">B',
-			stats: [],
-		})
-		expect(svg).not.toMatch(/(?<!&)lt;/)
-		expect(svg).toContain('&lt;')
-	})
-
-	test('category card switches to three columns for long lists', () => {
-		const sessionCategory = categoryMeta('session')!
-		const allSessionStats = (
-			catalog as Array<{
-				id: string
-				category: string
-				type: string
-				ru: string
-			}>
-		)
-			.filter((stat) => stat.category === 'SESSION_MODES')
-			.map((stat) => ({ id: stat.id, value: 1 }))
-		const svg = renderCategoryStatsSvg(
-			{ username: 'Nick', stats: allSessionStats },
-			sessionCategory
-		)
-		expect(allSessionStats.length).toBeGreaterThan(12)
-		expect(svg.match(/<rect x="/g)?.length).toBe(allSessionStats.length)
-	})
-
-	test('category card renders label and values', () => {
-		const svg = renderCategoryStatsSvg(
-			SAMPLE_PROFILE,
-			categoryMeta('combat')!
-		)
-		expect(svg).toContain('>Боёвка<')
+		const text = limitFormattable(clanHistoryText(longProfile))
+		expect(text.text.length).toBeLessThanOrEqual(4096)
 	})
 })

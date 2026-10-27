@@ -7,7 +7,6 @@ import { ItemDetailCache } from './detail'
 import { createLookup } from './inline'
 import { ItemDatabase } from './items'
 import { RateLimiter } from './rate-limit'
-import { renderSvgPng } from './render'
 import { SessionStore } from './session'
 import type { PlayerProfile } from './stats'
 
@@ -22,7 +21,6 @@ async function main(): Promise<void> {
 	const limiter = new RateLimiter(config.rateLimitPerMinute)
 	const searchDebouncer = new KeyedDebouncer<number>(config.searchDebounceMs)
 	const session = new SessionStore<PlayerProfile>(config.sessionTtlMs)
-	const render = (svg: string) => renderSvgPng(config, svg)
 	const bot = createBot({
 		config,
 		lookup,
@@ -31,14 +29,13 @@ async function main(): Promise<void> {
 		limiter,
 		searchDebouncer,
 		session,
-		render,
 	})
 
 	await bot.api.setMyCommands({
 		commands: [
 			{ command: 'start', description: 'Инструкция по inline-поиску' },
 			{ command: 'help', description: 'Показать помощь' },
-			{ command: 'player', description: 'Карточка статистики игрока' },
+			{ command: 'player', description: 'Статистика игрока' },
 			{ command: 'items', description: 'Поиск предметов' },
 			{ command: 'app', description: 'Открыть StalHub в Telegram' },
 		],
