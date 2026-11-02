@@ -41,7 +41,7 @@ export const routeAuctionHistory = createElysia()
 			},
 		})
 	)
-	.setup(async () => {
+	.onStart(async () => {
 		if (!isAuctionDbEnabled()) {
 			console.log('[AuctionHistory] disabled (no AUCTION_DATABASE_URL)')
 			return

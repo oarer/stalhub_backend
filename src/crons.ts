@@ -434,7 +434,7 @@ export const crons = createElysia()
 			),
 		})
 	)
-	.setup(async () => {
+	.onStart(async () => {
 		console.log('[TierLists] Generating system tier lists...')
 		try {
 			const count = await generateSystemTierLists()

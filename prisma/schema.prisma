@@ -201,6 +201,12 @@ model User {
   clan_invite      ClanInvite?
   authored_notes   ClanMemberNote[]
   personal_profile PersonalProfile?
+
+  artist_profile        ArtistProfile?
+  commissions_requested CommissionOrder[]   @relation("CommissionCustomer")
+  commissions_received  CommissionOrder[]   @relation("CommissionArtist")
+  commission_messages   CommissionMessage[]
+  commission_files      CommissionFile[]
 }
 
 model UserBadges {
@@ -1141,4 +1147,185 @@ model PersonalSnapshot {
   @@map("personal_snapshots")
 }
 
-// всё будет хорошо
+model ArtistProfile {
+  user_id       Int               @id
+  user          User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  description   String            @default("")
+  accepting     Boolean           @default(false)
+  currency      String            @default("RUB")
+  terms         String            @default("")
+  revisions     Int               @default(2)
+  portfolio_ids String[]          @default([])
+  version       Int               @default(1)
+  prices        CommissionPrice[]
+  updated_at    DateTime          @updatedAt
+}
+
+model CommissionPrice {
+  id          String        @id @default(cuid())
+  artist_id   Int
+  artist      ArtistProfile @relation(fields: [artist_id], references: [user_id], onDelete: Cascade)
+  title       String
+  description String        @default("")
+  amount      Int
+  days_min    Int
+  days_max    Int
+  archived    Boolean       @default(false)
+  position    Int           @default(0)
+
+  @@index([artist_id, archived, position])
+}
+
+model CommissionOrder {
+  id                       String              @id @default(cuid())
+  customer_id              Int
+  customer                 User                @relation("CommissionCustomer", fields: [customer_id], references: [id], onDelete: Restrict)
+  artist_id                Int
+  artist                   User                @relation("CommissionArtist", fields: [artist_id], references: [id], onDelete: Restrict)
+  request_key              String
+  title                    String
+  brief                    String
+  items                    Json
+  terms                    String
+  currency                 String
+  total                    Int
+  revisions                Int
+  revisions_used           Int                 @default(0)
+  status                   String              @default("PENDING")
+  version                  Int                 @default(1)
+  due_at                   DateTime?
+  accepted_at              DateTime?
+  result_message_id        Int?
+  cancellation_by          Int?
+  customer_read            Int                 @default(0)
+  artist_read              Int                 @default(0)
+  customer_notification_id Int?
+  artist_notification_id   Int?
+  messages                 CommissionMessage[]
+  payments                 CommissionPayment[]
+  files                    CommissionFile[]
+  cases                    CommissionCase[]
+  review                   CommissionReview?
+  refunds                  CommissionRefund[]
+  created_at               DateTime            @default(now())
+  updated_at               DateTime            @updatedAt
+
+  @@unique([customer_id, request_key])
+  @@index([customer_id, updated_at])
+  @@index([artist_id, updated_at])
+}
+
+model CommissionPayment {
+  id           String          @id @default(cuid())
+  order_id     String
+  order        CommissionOrder @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  title        String
+  amount       Int
+  upfront      Boolean         @default(false)
+  instructions String
+  status       String          @default("EXPECTED")
+  note         String          @default("")
+  sent_at      DateTime?
+  received_at  DateTime?
+
+  @@index([order_id])
+}
+
+model CommissionMessage {
+  id         Int              @id @default(autoincrement())
+  order_id   String
+  order      CommissionOrder  @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  author_id  Int
+  author     User             @relation(fields: [author_id], references: [id], onDelete: Restrict)
+  key        String
+  kind       String           @default("CHAT")
+  content    String
+  data       Json?
+  files      CommissionFile[]
+  created_at DateTime         @default(now())
+
+  @@unique([order_id, author_id, key])
+  @@index([order_id, id])
+}
+
+model CommissionFile {
+  id         String             @id @default(cuid())
+  owner_id   Int
+  owner      User               @relation(fields: [owner_id], references: [id], onDelete: Restrict)
+  order_id   String?
+  order      CommissionOrder?   @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  message_id Int?
+  message    CommissionMessage? @relation(fields: [message_id], references: [id], onDelete: Cascade)
+  name       String
+  mime       String
+  size       Int
+  created_at DateTime           @default(now())
+
+  @@index([owner_id, created_at])
+  @@index([order_id])
+}
+
+model CommissionReview {
+  id          String           @id @default(cuid())
+  order_id    String           @unique
+  order       CommissionOrder  @relation(fields: [order_id], references: [id], onDelete: Restrict)
+  customer_id Int
+  artist_id   Int
+  score       Int
+  content     String
+  hidden      Boolean          @default(false)
+  cases       CommissionCase[]
+  created_at  DateTime         @default(now())
+  updated_at  DateTime         @updatedAt
+
+  @@index([customer_id, hidden, created_at])
+}
+
+model CommissionCase {
+  id              String               @id @default(cuid())
+  order_id        String
+  order           CommissionOrder      @relation(fields: [order_id], references: [id], onDelete: Restrict)
+  review_id       String?
+  review          CommissionReview?    @relation(fields: [review_id], references: [id], onDelete: Restrict)
+  kind            String               @default("ORDER")
+  opened_by       Int
+  assigned_to     Int?
+  reason          String
+  status          String               @default("OPEN")
+  previous_status String
+  decisions       CommissionDecision[]
+  version         Int                  @default(1)
+  created_at      DateTime             @default(now())
+  updated_at      DateTime             @updatedAt
+
+  @@index([status, assigned_to, created_at])
+  @@index([order_id, kind, status])
+}
+
+model CommissionDecision {
+  id          String             @id @default(cuid())
+  case_id     String
+  case        CommissionCase     @relation(fields: [case_id], references: [id], onDelete: Restrict)
+  arbiter_id  Int
+  outcome     String
+  reason      String
+  obligations String
+  refunds     CommissionRefund[]
+  created_at  DateTime           @default(now())
+}
+
+model CommissionRefund {
+  id          String             @id @default(cuid())
+  order_id    String
+  order       CommissionOrder    @relation(fields: [order_id], references: [id], onDelete: Restrict)
+  decision_id String
+  decision    CommissionDecision @relation(fields: [decision_id], references: [id], onDelete: Restrict)
+  amount      Int
+  due_at      DateTime
+  status      String             @default("EXPECTED")
+  note        String             @default("")
+  sent_at     DateTime?
+  received_at DateTime?
+
+  @@index([order_id])
+}

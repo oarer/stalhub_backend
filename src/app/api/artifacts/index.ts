@@ -17,7 +17,7 @@ const priceRequestSchema = t.Array(
 )
 
 export const artifactsRoutes = new Elysia()
-	.setup(async () => {
+	.onStart(async () => {
 		const missing = SUPPORTED_REGIONS.filter(
 			(region) => !getRegionCache(region)
 		)

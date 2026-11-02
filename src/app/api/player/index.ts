@@ -7,7 +7,7 @@ import { jwtPlugin } from '@/utils/jwt.plugin'
 import { playerService } from './player.service'
 
 export const playersRoute = createElysia()
-	.setup(async () => {
+	.onStart(async () => {
 		await playerService.init()
 	})
 	.group('/player', (app) =>

@@ -32,7 +32,7 @@ async function actorUsername(user_id: number): Promise<string> {
 }
 
 export const adminRoutes = createElysia()
-	.beforeHandle(async ({ request, store, body }) => {
+	.onBeforeHandle(async ({ request, store, body }) => {
 		const safeStore = store as Record<string, unknown>
 		if (!AUDIT_METHODS.has(request.method)) return
 		if (typeof safeStore.authUserId !== 'number') return
@@ -49,7 +49,7 @@ export const adminRoutes = createElysia()
 			safeStore.auditBody = null
 		}
 	})
-	.afterHandle(async ({ request, store, set }) => {
+	.onAfterHandle(async ({ request, store, set }) => {
 		const safeStore = store as Record<string, unknown>
 		if (!AUDIT_METHODS.has(request.method)) return
 		if (typeof safeStore.authUserId !== 'number') return

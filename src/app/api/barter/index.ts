@@ -22,7 +22,7 @@ export const routeBarter = createElysia()
 			run: resetCache,
 		})
 	)
-	.setup(async () => {
+	.onStart(async () => {
 		try {
 			await loadListing()
 			await loadBarter()

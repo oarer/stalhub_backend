@@ -18,7 +18,7 @@ export const routeAttachments = createElysia()
 			run: resetCache,
 		})
 	)
-	.setup(async () => {
+	.onStart(async () => {
 		try {
 			await loadAttachments()
 			await loadWeapons()

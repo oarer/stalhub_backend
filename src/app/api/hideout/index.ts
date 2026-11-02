@@ -11,7 +11,7 @@ export const routeHideout = createElysia()
 			run: updatePrices,
 		})
 	)
-	.setup(async () => {
+	.onStart(async () => {
 		try {
 			await loadHideoutData()
 		} catch (err) {

@@ -12,7 +12,7 @@ export const routeArsenal = createElysia()
 			run: updatePrices,
 		})
 	)
-	.setup(async () => {
+	.onStart(async () => {
 		const cached = await getCache()
 		if (!cached || shouldRevalidate(cached.updated_at)) {
 			await updatePrices()
