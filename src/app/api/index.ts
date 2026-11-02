@@ -30,6 +30,7 @@ import { personalRoutes } from './personal'
 import { playersRoute } from './player'
 import { serverOnlineRoutes } from './server-online'
 import { tierListsRoutes } from './tier-lists'
+import { unoRoutes } from './uno'
 import { upgradePricesRoutes } from './upgrade-prices'
 import { usersRoutes } from './users'
 
@@ -65,5 +66,6 @@ export const api = createElysia()
 	.use(routeLoot)
 	.use(personalRoutes)
 	.use(serverOnlineRoutes)
+	.use(unoRoutes)
 	.use(internalRoutes)
 	.use(botRoutes)

@@ -143,6 +143,15 @@ const envVariables = z.object({
 	AUTO_BAN_SKIP_RANK: z.coerce.number().default(0),
 	ADMIN_ALERT_WEBHOOK: z.string().default(''),
 
+	UNO_API_URL: z.string().default('https://server.tail0763fe.ts.net'),
+	UNO_API_TOKEN: z.string().default(''),
+	UNO_API_TIMEOUT_MS: z.coerce
+		.number()
+		.int()
+		.min(1000)
+		.max(120000)
+		.default(15000),
+
 	IMAGE_SERVICE_URL: z.string().default('http://localhost:3002'),
 	IMAGE_SERVICE_TIMEOUT_MS: z.coerce
 		.number()
