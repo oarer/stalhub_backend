@@ -92,16 +92,16 @@ export const app = createElysia()
 				return 'Forbidden'
 			}
 
-			if (isS3Uploads()) {
-				const url = s3PublicUrl(`/uploads/${decodedPath}`)
-				if (!url) {
-					set.status = 403
-					return 'Forbidden'
-				}
-				set.status = 302
-				set.headers.location = url
-				return
-			}
+			// if (isS3Uploads()) {
+			// 	const url = s3PublicUrl(`/uploads/${decodedPath}`)
+			// 	if (!url) {
+			// 		set.status = 403
+			// 		return 'Forbidden'
+			// 	}
+			// 	set.status = 302
+			// 	set.headers.location = url
+			// 	return
+			// }
 
 			const uploadsDir = resolve(process.cwd(), 'uploads')
 			try {
