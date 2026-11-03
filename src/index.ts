@@ -132,7 +132,7 @@ export const app = createElysia()
 		}
 	)
 
-	.onRequest(async ({ request, set, store, server }) => {
+	.request(async ({ request, set, store, server }) => {
 		;(store as Record<string, unknown>)._reqStart = Date.now()
 
 		const pathname = new URL(request.url).pathname
@@ -150,7 +150,7 @@ export const app = createElysia()
 			return { error: 'Too many requests, try again later' }
 		}
 	})
-	.onAfterHandle(({ request, set, store }) => {
+	.afterHandle(({ request, set, store }) => {
 		const start = (store as Record<string, unknown>)._reqStart as
 			| number
 			| undefined
