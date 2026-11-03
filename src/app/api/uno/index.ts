@@ -3,6 +3,7 @@ import type { UnoRawPlayer } from '@/types/uno.type'
 import { createElysia } from '@/utils/elysia'
 import { compactPlayerGear } from './compact'
 import { parsePlayerGear } from './gear'
+import { compactGridEvent } from './grids'
 import { getUnoItemLookup } from './item-db'
 import { UnoApiError, unoService } from './service'
 
@@ -211,16 +212,22 @@ export const unoRoutes = createElysia().group('/uno', (app) =>
 				query: t.Object({
 					q: t.Optional(t.String()),
 					rank: t.Optional(RANK),
+					timezone: t.Optional(t.String()),
 				}),
 				detail: { tags: ['UNO'] },
 			},
 			({ params, query, set }) =>
-				respond(set, () =>
-					unoService.request(
-						`/grids/${encodeURIComponent(params.grid_id)}`,
-						query
-					)
-				)
+				respond(set, async () => {
+					const gridId = encodeURIComponent(params.grid_id)
+					const [detail, exported] = await Promise.all([
+						unoService.request(`/grids/${gridId}`, {
+							q: query.q,
+							rank: query.rank,
+						}),
+						unoService.request(`/grids/${gridId}/export`),
+					])
+					return compactGridEvent(detail, exported, query.timezone)
+				})
 		)
 		.get(
 			'/grids/:grid_id/groups/:number',
