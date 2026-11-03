@@ -92,16 +92,16 @@ export const app = createElysia()
 				return 'Forbidden'
 			}
 
-			if (isS3Uploads()) {
-				const url = s3PublicUrl(`/uploads/${decodedPath}`)
-				if (!url) {
-					set.status = 403
-					return 'Forbidden'
-				}
-				set.status = 302
-				set.headers.location = url
-				return
-			}
+			// if (isS3Uploads()) {
+			// 	const url = s3PublicUrl(`/uploads/${decodedPath}`)
+			// 	if (!url) {
+			// 		set.status = 403
+			// 		return 'Forbidden'
+			// 	}
+			// 	set.status = 302
+			// 	set.headers.location = url
+			// 	return
+			// }
 
 			const uploadsDir = resolve(process.cwd(), 'uploads')
 			try {
@@ -132,7 +132,7 @@ export const app = createElysia()
 		}
 	)
 
-	.request(async ({ request, set, store, server }) => {
+	.onRequest(async ({ request, set, store, server }) => {
 		;(store as Record<string, unknown>)._reqStart = Date.now()
 
 		const pathname = new URL(request.url).pathname
@@ -150,7 +150,7 @@ export const app = createElysia()
 			return { error: 'Too many requests, try again later' }
 		}
 	})
-	.afterHandle(({ request, set, store }) => {
+	.onAfterHandle(({ request, set, store }) => {
 		const start = (store as Record<string, unknown>)._reqStart as
 			| number
 			| undefined
