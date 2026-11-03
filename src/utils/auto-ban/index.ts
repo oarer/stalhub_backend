@@ -202,9 +202,10 @@ export function shouldSkipRps(pathname: string): boolean {
 
 export async function enforceRateLimit(
 	ip: string,
-	normalizedRoute: string
+	normalizedRoute: string,
+	threshold = env.RPS_THRESHOLD
 ): Promise<boolean> {
-	if (!ip || env.RPS_THRESHOLD <= 0) return false
+	if (!ip || threshold <= 0) return false
 
 	if (await isIpBlocked(ip)) return true
 
@@ -214,8 +215,8 @@ export async function enforceRateLimit(
 		if (count === 1) {
 			await redis.expire(bucket, RPS_WINDOW_SECONDS)
 		}
-		if (count > env.RPS_THRESHOLD && !(await isIpBlocked(ip))) {
-			await blockIp(ip, `rps>${env.RPS_THRESHOLD} on ${normalizedRoute}`)
+		if (count > threshold && !(await isIpBlocked(ip))) {
+			await blockIp(ip, `rps>${threshold} on ${normalizedRoute}`)
 		}
 	} catch {
 		return false

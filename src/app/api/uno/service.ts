@@ -12,6 +12,47 @@ export class UnoApiError extends Error {
 
 type QueryValue = string | number | boolean | null | undefined
 
+async function readResponseBody(
+	response: Response,
+	maxBytes: number
+): Promise<string> {
+	const contentLength = Number(response.headers.get('content-length'))
+	if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+		throw new UnoApiError(502, { error: 'UNO response is too large' })
+	}
+
+	if (!response.body) return ''
+
+	const reader = response.body.getReader()
+	const chunks: Uint8Array[] = []
+	let total = 0
+
+	try {
+		while (true) {
+			const { done, value } = await reader.read()
+			if (done) break
+			if (!value) continue
+			total += value.byteLength
+			if (total > maxBytes) {
+				throw new UnoApiError(502, {
+					error: 'UNO response is too large',
+				})
+			}
+			chunks.push(value)
+		}
+	} finally {
+		reader.releaseLock()
+	}
+
+	const body = new Uint8Array(total)
+	let offset = 0
+	for (const chunk of chunks) {
+		body.set(chunk, offset)
+		offset += chunk.byteLength
+	}
+	return new TextDecoder().decode(body)
+}
+
 class UnoService {
 	private get baseUrl() {
 		return env.UNO_API_URL.replace(/\/+$/, '')
@@ -49,7 +90,10 @@ class UnoService {
 			})
 		}
 
-		const raw = await response.text()
+		const raw = await readResponseBody(
+			response,
+			env.UNO_API_MAX_RESPONSE_BYTES
+		)
 		let body: unknown = null
 
 		if (raw) {

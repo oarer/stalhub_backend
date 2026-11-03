@@ -9,7 +9,10 @@ import {
 	normalizeAndRecordHttpRequest,
 	normalizeRoute,
 } from '@/app/api/metrics'
-import { isS3Uploads, s3PublicUrl } from '@/lib/uploads'
+import {
+	isAllowedUnoRequest,
+	UNO_MAX_URL_LENGTH,
+} from '@/app/api/uno/request-policy'
 import { clientIp, enforceRateLimit, shouldSkipRps } from '@/utils/auto-ban'
 import { createElysia } from '@/utils/elysia'
 import { logger } from '@/utils/logger'
@@ -40,8 +43,6 @@ const allowedOrigins: string[] = [
 		].filter((v): v is string => !!v)
 	),
 ]
-
-const STALHUB_ORIGIN_RE = /^https:\/\/([a-z0-9-]+\.)*stalhub\.dev$/
 
 setFileTypeDetector(async (file) => {
 	const result = await fileTypeFromBlob(file)
@@ -136,6 +137,15 @@ export const app = createElysia()
 		;(store as Record<string, unknown>)._reqStart = Date.now()
 
 		const pathname = new URL(request.url).pathname
+		const isUnoRequest = pathname.startsWith('/api/v1/uno/')
+		if (isUnoRequest && !isAllowedUnoRequest(request, allowedOrigins)) {
+			set.status = 403
+			return { error: 'Forbidden origin' }
+		}
+		if (isUnoRequest && request.url.length > UNO_MAX_URL_LENGTH) {
+			set.status = 414
+			return { error: 'UNO request URI too long' }
+		}
 		if (shouldSkipRps(pathname)) return
 
 		const headers = Object.fromEntries(request.headers)
@@ -144,7 +154,11 @@ export const app = createElysia()
 		const routePath = pathname.startsWith('/api/v1')
 			? pathname.slice('/api/v1'.length)
 			: pathname
-		const blocked = await enforceRateLimit(ip, normalizeRoute(routePath))
+		const blocked = await enforceRateLimit(
+			ip,
+			normalizeRoute(routePath),
+			isUnoRequest ? env.UNO_RPS_THRESHOLD : env.RPS_THRESHOLD
+		)
 		if (blocked) {
 			set.status = 429
 			return { error: 'Too many requests, try again later' }

@@ -34,21 +34,21 @@ const dateRangeQuery = t.Object({
 	to: t.Optional(t.String({ format: 'date' })),
 	date: t.Optional(t.String({ format: 'date' })),
 	mode: t.Optional(MODE),
-	timezone: t.Optional(t.String()),
-	season: t.Optional(t.String()),
+	timezone: t.Optional(t.String({ maxLength: 64 })),
+	season: t.Optional(t.String({ maxLength: 64 })),
 })
 
 const clanListQuery = t.Object({
-	q: t.Optional(t.String()),
+	q: t.Optional(t.String({ maxLength: 64 })),
 	faction: t.Optional(FACTION),
 	rank: t.Optional(RANK),
-	limit: t.Optional(t.Numeric({ minimum: 1, maximum: 1000 })),
-	offset: t.Optional(t.Numeric({ minimum: 0 })),
+	limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
+	offset: t.Optional(t.Numeric({ minimum: 0, maximum: 10000 })),
 })
 
 const leaderboardQuery = t.Object({
 	...clanListQuery.properties,
-	season: t.Optional(t.String()),
+	season: t.Optional(t.String({ maxLength: 64 })),
 })
 
 const gridListQuery = t.Object({
