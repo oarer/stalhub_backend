@@ -169,7 +169,7 @@ function formattedValue(element: {
 	return typeof value === 'string' && value.trim() ? value : null
 }
 
-function renderElement(element: ItemElement): string | null {
+function renderElement(element: ItemElement, upgradeLevel = 0): string | null {
 	const row = (key: string, value: string): string => `${key}: ${value}`
 	switch (element.type) {
 		case 'key-value': {
@@ -195,7 +195,7 @@ function renderElement(element: ItemElement): string | null {
 			const name = messageToString(element.name)
 			if (!name) return null
 			const values = Array.isArray(element.value) ? element.value : []
-			const current = values[0]
+			const current = values[Math.min(upgradeLevel, Math.max(0, values.length - 1))]
 			const display = Array.isArray(current)
 				? `${round(current[0])} — ${round(current[1])}`
 				: typeof current === 'number'
@@ -250,15 +250,47 @@ function wrap(writer: Composed, value: string, type: string): void {
 	writer.entities.push({ type, offset, length })
 }
 
+export type ItemDetailRenderOptions = {
+	fallbackName?: string
+	upgradeLevel?: number
+}
+
+function isUpgradeItem(detail: ItemDetail): boolean {
+	return /^(?:weapon|armor)(?:\/|$)/i.test(detail.category ?? '')
+}
+
+function maxUpgradeLevel(blocks: ItemBlock[] | undefined): number {
+	if (!Array.isArray(blocks)) return 0
+	let max = 0
+	for (const block of blocks) {
+		if (block.type === 'grouped') {
+			max = Math.max(max, maxUpgradeLevel(block.compact), maxUpgradeLevel(block.detailed))
+			continue
+		}
+		if (block.type !== 'list' && block.type !== 'addStat') continue
+		for (const element of block.elements ?? []) {
+			if (element.type === 'numericVariants') {
+				max = Math.max(max, element.value.length - 1)
+			}
+		}
+	}
+	return Math.max(0, max)
+}
+
+export function itemUpgradeLevels(detail: ItemDetail): number {
+	return isUpgradeItem(detail) ? maxUpgradeLevel(detail.infoBlocks) : 0
+}
+
 export function renderItemDetail(
 	detail: ItemDetail,
-	options: { fallbackName?: string } = {}
+	options: ItemDetailRenderOptions = {}
 ): FormattableString {
 	const primary =
 		messageToString(detail.name) ?? options.fallbackName ?? 'Предмет'
+	const upgradeLevel = Math.max(0, Math.floor(options.upgradeLevel ?? 0))
 	const composed = compose((writer) => {
 		wrap(writer, primary, 'bold')
-		renderSections(writer, detail.infoBlocks)
+		renderSections(writer, detail.infoBlocks, upgradeLevel)
 	})
 	return limitFormattable(
 		FormattableString.from(
@@ -270,21 +302,22 @@ export function renderItemDetail(
 
 function renderSections(
 	writer: Composed,
-	blocks: ItemBlock[] | undefined
+	blocks: ItemBlock[] | undefined,
+	upgradeLevel = 0
 ): void {
 	if (!Array.isArray(blocks)) return
 	for (const block of blocks) {
 		if (block.type === 'show-all-toggle') continue
 		if (block.type === 'grouped') {
-			renderSections(writer, block.compact)
-			renderSections(writer, block.detailed)
+			renderSections(writer, block.compact, upgradeLevel)
+			renderSections(writer, block.detailed, upgradeLevel)
 			continue
 		}
 		if (block.type === 'list' || block.type === 'addStat') {
 			const title = messageToString(block.title)
 			const lines = (Array.isArray(block.elements) ? block.elements : [])
 				.filter(isVisible)
-				.map(renderElement)
+				.map((element) => renderElement(element, upgradeLevel))
 				.filter((line): line is string => Boolean(line))
 			if (lines.length > 0) {
 				append(writer, '\n\n')
@@ -325,6 +358,8 @@ export type ItemDetailResult = {
 	entities: FormattableString['entities']
 	title: string
 	pageUrl: string
+	upgradeLevels: number
+	upgradeLevel: number
 }
 
 export class ItemDetailCache {
@@ -360,14 +395,25 @@ export class ItemDetailCache {
 		return promise
 	}
 
-	async detail(category: string, id: string): Promise<ItemDetailResult> {
+	async detail(
+		category: string,
+		id: string,
+		upgradeLevel = 0
+	): Promise<ItemDetailResult> {
 		const detail = await this.get(category, id)
-		const card = renderItemDetail(detail)
+		const upgradeLevels = itemUpgradeLevels(detail)
+		const selectedLevel = Math.min(
+			Math.max(0, Math.floor(upgradeLevel)),
+			upgradeLevels
+		)
+		const card = renderItemDetail(detail, { upgradeLevel: selectedLevel })
 		return {
 			text: card.text,
 			entities: card.entities,
 			title: messageToString(detail.name) ?? id,
 			pageUrl: `${this.options.webAppUrl.replace(/\/$/, '')}/items/${category}/${id}`,
+			upgradeLevels,
+			upgradeLevel: selectedLevel,
 		}
 	}
 

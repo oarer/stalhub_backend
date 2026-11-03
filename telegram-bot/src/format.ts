@@ -206,6 +206,7 @@ export function profileArticle(
 				...profileStatsKeyboard(
 					profileSessionKey(region, profile.username)
 				),
+				[{ text: 'Главная', callback_data: 'home:inline' }],
 			],
 		},
 	}

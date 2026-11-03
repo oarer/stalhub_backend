@@ -15,7 +15,11 @@ import {
 	profileCardText,
 	profileStatsKeyboard,
 } from './format'
-import { buildInlineResults, type InlineLookup } from './inline'
+import {
+	buildInlineResults,
+	emptyHint,
+	type InlineLookup,
+} from './inline'
 import type { ItemLookup } from './items'
 import { parseInlineQuery, type Region } from './query'
 import type { RateLimiter } from './rate-limit'
@@ -68,6 +72,8 @@ export type BotDependencies = {
 const STATS_CALLBACK = /^st:([0-9a-f]+):([a-z]+)$/
 const STATS_TTL_HINT =
 	'Поиск устарел. Выполните его заново: @StalhubBot ник [регион].'
+const HOME_CALLBACK = 'home:inline'
+const ITEM_UPGRADE_CALLBACK = /^itemu:(.+):([^:]+):(\d+)$/
 
 export function createBot({
 	config,
@@ -80,7 +86,10 @@ export function createBot({
 }: BotDependencies): Bot {
 	function statsKeyboard(hash: string): InlineKeyboard {
 		const keyboard = new InlineKeyboard()
-		const rows = profileStatsKeyboard(hash)
+		const rows = [
+				...profileStatsKeyboard(hash),
+				[{ text: 'Главная', callback_data: HOME_CALLBACK }],
+			]
 		rows.forEach((row, rowIndex) => {
 			for (const button of row) {
 				if (button.url) keyboard.url(button.text, button.url)
@@ -91,7 +100,40 @@ export function createBot({
 		return keyboard
 	}
 
-	function statsCard(
+	async function updateItemMessage(
+			category: string,
+			id: string,
+			level: number,
+			ctx: any
+		): Promise<void> {
+			try {
+				const payload = await details.detail(category, id, level)
+				const levels = [0, 5, 10, 15]
+					.filter((level) => level <= payload.upgradeLevels)
+					.map((level) => ({
+						text: `${level === payload.upgradeLevel ? '✓ ' : ''}Заточка +${level}`,
+						callback_data: `itemu:${category}:${id}:${level}`,
+					}))
+				await ctx.answer()
+				if (!ctx.inlineMessageId) return
+				await ctx.bot.api.editMessageText({
+					inline_message_id: ctx.inlineMessageId,
+					text: payload.text,
+					entities: payload.entities,
+					reply_markup: {
+						inline_keyboard: [
+							...(levels.length > 1 ? [levels] : []),
+							[{ text: 'Открыть на StalHub', url: payload.pageUrl }],
+							[{ text: 'Главная', callback_data: HOME_CALLBACK }],
+						],
+					},
+				})
+			} catch {
+				await ctx.answer({ text: 'Не удалось загрузить данные предмета.' })
+			}
+		}
+
+		function statsCard(
 		profile: PlayerProfile,
 		kind: string
 	): ReturnType<typeof categoryStatsText> {
@@ -155,11 +197,31 @@ export function createBot({
 				format`Поиск предметов: ${code`@StalhubBot /i название`} (например, ${code`@StalhubBot /i вспышка`}). Нажмите «Характеристики» под результатом, чтобы раскрыть статы.`
 			)
 		)
-		.callbackQuery(/^item:(.+):(.+)$/, (ctx) =>
+		.callbackQuery(HOME_CALLBACK, (ctx) =>
+				processUpdate(ctx.updateId ?? 0, async () => {
+					await ctx.answer()
+					if (!ctx.inlineMessageId) return
+					const hint = emptyHint()
+					await ctx.bot.api.editMessageText({
+						inline_message_id: ctx.inlineMessageId,
+						text: hint.input_message_content.message_text,
+						reply_markup: { inline_keyboard: [[{ text: 'Главная', callback_data: HOME_CALLBACK }]] },
+					})
+				})
+			)
+			.callbackQuery(/^itemu:(.+):([^:]+):(\d+)$/, (ctx) =>
+				processUpdate(ctx.updateId ?? 0, async () => {
+					const [, category, id, level] = ctx.queryData
+					await updateItemMessage(category, id, Number(level), ctx)
+				})
+			)
+			.callbackQuery(/^item:(.+):(.+)$/, (ctx) =>
 			processUpdate(ctx.updateId ?? 0, async () => {
 				const [, category, id] = ctx.queryData
 				try {
-					const payload = await details.detail(category, id)
+					await updateItemMessage(category, id, 0, ctx)
+						return
+						const payload = await details.detail(category, id)
 					await ctx.answer()
 					if (!ctx.inlineMessageId) return
 					await ctx.bot.api.editMessageText({
