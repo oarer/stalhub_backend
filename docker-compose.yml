@@ -3,7 +3,7 @@ services:
     container_name: StalHub_backend
     build: .
     ports:
-      - "8000:3001"
+      - "127.0.0.1:8000:3001"
     env_file:
       - .env
     extra_hosts:
@@ -47,7 +47,7 @@ services:
     container_name: StalHub_image_service
     restart: unless-stopped
     ports:
-      - "3002:3002"
+      - "127.0.0.1:3002:3002"
     environment:
       PORT: 3002
     logging:
@@ -127,7 +127,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -145,7 +145,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: auction
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - auction_data:/var/lib/postgresql/data
     healthcheck:
@@ -159,7 +159,7 @@ services:
     container_name: StalHub_prometheus
     restart: unless-stopped
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     command:
       - "--storage.tsdb.retention.time=7d"
     volumes:
@@ -170,7 +170,7 @@ services:
     container_name: StalHub_grafana
     restart: unless-stopped
     ports:
-      - "3006:3000"
+      - "127.0.0.1:3006:3000"
     volumes:
       - grafana_data:/var/lib/grafana
     environment:

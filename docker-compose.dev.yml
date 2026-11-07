@@ -10,7 +10,7 @@ services:
       - .:/app
       - /app/node_modules
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
     env_file:
       - .env
     environment:
@@ -31,7 +31,7 @@ services:
     command: sh -c "bun install && bun run --watch src/index.ts"
     restart: unless-stopped
     ports:
-      - "3002:3002"
+      - "127.0.0.1:3002:3002"
     volumes:
       - ./image-service:/app
       - /app/node_modules
@@ -90,7 +90,7 @@ services:
     image: redis:7-alpine
     container_name: StalHub_redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     command: [ "redis-server", "--appendonly", "yes" ]
@@ -108,7 +108,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pg_data_dev:/var/lib/postgresql/data
     healthcheck:
