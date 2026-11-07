@@ -8,8 +8,12 @@ import {
 	paymentPlan,
 	priceTotal,
 	refundAvailable,
-} from './policy'
-import { commandSchema, createSchema, profileSchema } from './schemas'
+} from '@/app/api/commissions/policy'
+import {
+	commandSchema,
+	createSchema,
+	profileSchema,
+} from '@/app/api/commissions/schemas'
 
 describe('commission policy', () => {
 	test('money is positive integer minor units, bounded and without floating point', () => {

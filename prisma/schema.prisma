@@ -23,6 +23,12 @@ enum NotificationType {
   DANGER
 }
 
+enum GlobalNotificationType {
+  INFO
+  WARNING
+  DANGER
+}
+
 enum AvatarSource {
   DISCORD
   TELEGRAM
@@ -169,8 +175,9 @@ model User {
   sessions      Sessions[]
   user_settings UserSettings?
   customization UserCustomization?
-  notifications Notifications[]    @relation("Notifications")
-  joined_at     DateTime           @default(now())
+  notifications        Notifications[]       @relation("Notifications")
+  global_notifications GlobalNotification[]
+  joined_at            DateTime              @default(now())
 
   roles Role[]
 
@@ -277,6 +284,27 @@ model Notifications {
   read       Boolean  @default(false)
   link       String?
   created_at DateTime @default(now())
+}
+
+model GlobalNotification {
+  id         Int                   @id @default(autoincrement())
+  title      String
+  type       GlobalNotificationType
+  content    Json
+  is_active  Boolean               @default(true)
+  starts_at  DateTime              @default(now())
+  expires_at DateTime?
+
+  author    User? @relation(fields: [author_id], references: [id], onDelete: SetNull)
+  author_id Int?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([is_active, starts_at, expires_at])
+  @@index([created_at])
+  @@index([author_id])
+  @@map("global_notifications")
 }
 
 // ================ RBAC ===================

@@ -18,6 +18,7 @@ import { commissionsRoutes } from './commissions'
 import { routeDonate } from './donate'
 import { eforumRoutes } from './eforum'
 import { exboRoutes } from './exbo'
+import { globalNotificationsRoutes } from './global-notifications'
 import { routeHealth } from './health'
 import { routeHideout } from './hideout'
 import { internalRoutes } from './internal'
@@ -58,6 +59,7 @@ export const api = createElysia()
 	.use(upgradePricesRoutes)
 	.use(authorsRoutes)
 	.use(exboRoutes)
+	.use(globalNotificationsRoutes)
 	.use(adminRoutes)
 	.use(clanRoutes)
 	.use(clansPublicRoutes)

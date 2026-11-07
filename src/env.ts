@@ -51,8 +51,16 @@ const envVariables = z.object({
 	BLOG_OG_BASE_URL: z.string().default(''),
 
 	SC_DB_LISTING_URL: z.string().default('https://cdn.stalhub.dev/db/listing'),
+	SC_DB_ITEMS_URL: z.string().default('https://cdn.stalhub.dev/db/items'),
+	SC_DB_ITEMS_VERSION: z.string().default('render=1'),
+	SC_DB_ITEMS_FALLBACK_URL: z
+		.string()
+		.default(
+			'https://raw.githubusercontent.com/oarer/sc-db/main/merged/items'
+		),
 	SC_DB_LISTING_DIR: z.string().default('runtime/listing'),
 	SC_DB_DIFFS_DIR: z.string().default('runtime/balance_diffs'),
+	SC_ASSETS_CDN_URL: z.string().default('https://cdn.stalhub.dev'),
 
 	AUCTION_DATABASE_URL: z.string().default(''),
 	AUCTION_SWEEP_CRON: z.string().default('*/5 * * * *'),

@@ -7,7 +7,7 @@ import {
 	readUploadBytes,
 	s3PublicUrl,
 	toS3Key,
-} from './uploads'
+} from '@/lib/uploads'
 
 describe('toS3Key', () => {
 	it('maps /uploads/... to key', () => {

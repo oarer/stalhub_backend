@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
+import { compactPlayerGear } from '@/app/api/uno/compact'
+import { parsePlayerGear } from '@/app/api/uno/gear'
 import type { UnoRawPlayer } from '@/types/uno.type'
-import { compactPlayerGear } from './compact'
-import { parsePlayerGear } from './gear'
 
 const player: UnoRawPlayer = {
 	name: 'Tester',

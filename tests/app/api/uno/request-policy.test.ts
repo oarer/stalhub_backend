@@ -3,7 +3,7 @@ import {
 	isAllowedUnoOrigin,
 	isAllowedUnoRequest,
 	UNO_MAX_URL_LENGTH,
-} from './request-policy'
+} from '@/app/api/uno/request-policy'
 
 describe('UNO request policy', () => {
 	const allowedOrigins = ['https://stalhub.dev']

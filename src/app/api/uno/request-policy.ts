@@ -1,6 +1,6 @@
 export const UNO_MAX_URL_LENGTH = 4096
 
-const STALHUB_ORIGIN_RE = /^https:\/\/([a-z0-9-]+\.)*stalhub\.dev$/
+export const STALHUB_ORIGIN_RE = /^https:\/\/([a-z0-9-]+\.)*stalhub\.dev$/
 
 function originOf(url: string | undefined): string | null {
 	if (!url) return null

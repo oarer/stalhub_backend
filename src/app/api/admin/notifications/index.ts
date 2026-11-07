@@ -2,6 +2,7 @@ import { t } from 'elysia'
 import { requireAdmin, requireAuth } from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
+import { globalNotificationAdminRoutes } from './global'
 import { adminNotificationService } from './notifications.service'
 
 const notificationBody = t.Object({
@@ -16,6 +17,7 @@ export const notificationsRoutes = createElysia().group(
 	(app) =>
 		app
 			.use(jwtPlugin)
+			.use(globalNotificationAdminRoutes)
 
 			.post(
 				'/broadcast',
