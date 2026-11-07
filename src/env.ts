@@ -30,11 +30,13 @@ const envVariables = z.object({
 	EXBO_CLIENT_ID: z.string().default(''),
 	EXBO_CLIENT_SECRET: z.string().default(''),
 	EXBO_REDIRECT_URI: z.string().default(''),
-	ENCRYPT_KEY: z.string().default('dev'),
+	ENCRYPT_KEY: z
+		.string()
+		.min(32, 'ENCRYPT_KEY must be at least 32 characters'),
 
 	DESKTOP_AUTH_ORIGIN: z.string().default('https://api.stalhub.dev'),
 
-	JWT_SECRET: z.string().default('dev'),
+	JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
 
 	OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY'),
 	OPENAI_BASE_URL: z.string().default('https://api.openai.com/v1'),
@@ -134,7 +136,7 @@ const envVariables = z.object({
 		.max(600000)
 		.default(60000),
 
-	LOOT_KEY: z.string().default('dev'),
+	LOOT_KEY: z.string().min(32, 'LOOT_KEY must be at least 32 characters'),
 	LOOT_SOURCE_DIR: z.string().default(''),
 	LOOT_SHUFFLEBAGS_DIR: z.string().default(''),
 	LOOT_ITEMS_DIRS: z.string().default(''),

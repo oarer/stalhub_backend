@@ -51,11 +51,12 @@ export class NotesService {
 		})
 	}
 
-	async update(note_id: number, content: string) {
+	async update(note_id: number, clan_id: string, content: string) {
 		const note = await prisma.clanMemberNote.findUnique({
 			where: { id: note_id },
 		})
-		if (!note) throw new Error('Заметка не найдена')
+		if (!note || note.clan_id !== clan_id)
+			throw new Error('Заметка не найдена')
 
 		return prisma.clanMemberNote.update({
 			where: { id: note_id },
@@ -66,11 +67,12 @@ export class NotesService {
 		})
 	}
 
-	async delete(note_id: number) {
+	async delete(note_id: number, clan_id: string) {
 		const note = await prisma.clanMemberNote.findUnique({
 			where: { id: note_id },
 		})
-		if (!note) throw new Error('Заметка не найдена')
+		if (!note || note.clan_id !== clan_id)
+			throw new Error('Заметка не найдена')
 
 		await prisma.clanMemberNote.delete({ where: { id: note_id } })
 		return { ok: true }

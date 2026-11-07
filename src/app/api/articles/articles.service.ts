@@ -93,7 +93,12 @@ class ArticlesService {
 		})
 	}
 
-	async getById(id: string, user_id?: number, identity: ViewIdentity = {}) {
+	async getById(
+		id: string,
+		user_id?: number,
+		identity: ViewIdentity = {},
+		canViewUnpublished = false
+	) {
 		const num = Number(id)
 		const article = await prisma.article.findFirst({
 			where: isNaN(num)
@@ -105,6 +110,8 @@ class ArticlesService {
 		})
 
 		if (!article) return null
+		if (!canViewUnpublished && article.status !== ArticleStatus.APPROVED)
+			return null
 
 		const counted = await recordContentView('ARTICLE', article.id, {
 			...identity,
@@ -563,8 +570,8 @@ class ArticlesService {
 		})
 	}
 
-	async getVersion(id: number) {
-		return prisma.articleVersion.findUnique({ where: { id } })
+	async getVersion(article_id: number, id: number) {
+		return prisma.articleVersion.findFirst({ where: { id, article_id } })
 	}
 
 	async addStar(article_id: number, user_id: number) {

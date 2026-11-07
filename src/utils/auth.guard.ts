@@ -77,12 +77,12 @@ export function fromStoreOpt(store: Record<string, unknown>) {
 	}
 }
 
-async function findSession(session_id: string) {
+async function findSession(session_id: string, user_id: number) {
 	const session = await prisma.sessions.findUnique({
 		where: { session_id },
-		select: { id: true, revoked: true },
+		select: { id: true, user_id: true, revoked: true },
 	})
-	return session !== null && !session.revoked
+	return session !== null && !session.revoked && session.user_id === user_id
 }
 
 async function isUserBanned(user_id: number) {
@@ -177,7 +177,11 @@ export async function requireAuth({
 		return { error: 'Unauthorized' }
 	}
 	const user_id = Number(payload.sub)
-	const valid = await findSession(payload.sid)
+	if (!Number.isSafeInteger(user_id) || user_id <= 0) {
+		set.status = 401
+		return { error: 'Unauthorized' }
+	}
+	const valid = await findSession(payload.sid, user_id)
 	if (!valid) {
 		set.status = 401
 		return { error: 'Session expired' }
@@ -224,7 +228,16 @@ export async function requireRefreshAuth({
 		set.status = 401
 		return { error: 'Unauthorized' }
 	}
-	store.authUserId = Number(payload.sub)
+	const user_id = Number(payload.sub)
+	if (!Number.isSafeInteger(user_id) || user_id <= 0) {
+		set.status = 401
+		return { error: 'Unauthorized' }
+	}
+	if (!(await findSession(payload.sid, user_id))) {
+		set.status = 401
+		return { error: 'Session expired' }
+	}
+	store.authUserId = user_id
 	store.authSessionId = payload.sid
 }
 
@@ -235,7 +248,19 @@ export async function requireOptionalAuth({
 }: Omit<AuthContext, 'set'>) {
 	if (!access_token?.value) return
 	const payload = await jwt.verify(access_token.value)
-	if (payload && typeof payload.sub === 'string') {
-		store.authUserId = Number(payload.sub)
+	if (
+		payload &&
+		typeof payload.sub === 'string' &&
+		typeof payload.sid === 'string'
+	) {
+		const user_id = Number(payload.sub)
+		if (
+			Number.isSafeInteger(user_id) &&
+			user_id > 0 &&
+			(await findSession(payload.sid, user_id))
+		) {
+			store.authUserId = user_id
+			store.authSessionId = payload.sid
+		}
 	}
 }

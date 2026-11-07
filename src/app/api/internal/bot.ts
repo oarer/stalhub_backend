@@ -378,11 +378,15 @@ const botRoutes = createElysia().group('/internal/bot', (app) =>
 			{
 				beforeHandle: [botAuth],
 				params: t.Object({ id: t.Numeric() }),
+				body: t.Object({ clan_id: t.String() }),
 				detail: { tags: ['Internal'] },
 			},
-			async ({ params, set }) => {
+			async ({ params, body, set }) => {
 				try {
-					return await clanInviteService.revoke(params.id)
+					return await clanInviteService.revoke(
+						body.clan_id,
+						params.id
+					)
 				} catch (err) {
 					set.status = 400
 					return { error: (err as Error).message }

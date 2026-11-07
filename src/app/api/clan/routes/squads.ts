@@ -15,7 +15,8 @@ export const squadsRoutes = clanContext
 			params: t.Object({ clan_id: t.String() }),
 			detail: { tags: ['Clan'] },
 		},
-		({ params }) => squadService.list(params.clan_id)
+		({ params, store }) =>
+			squadService.list(params.clan_id, store.authUserId!)
 	)
 	.post(
 		'/squads',
@@ -51,6 +52,7 @@ export const squadsRoutes = clanContext
 				params.id,
 				body.member_id,
 				body.slot,
+				store.clan_id!,
 				store.authUserId!
 			)
 	)
@@ -62,7 +64,8 @@ export const squadsRoutes = clanContext
 			body: t.Object({ member_id: t.Nullable(t.Numeric()) }),
 			detail: { tags: ['Clan'] },
 		},
-		({ params, body }) => squadService.setLeader(params.id, body.member_id)
+		({ params, body, store }) =>
+			squadService.setLeader(params.id, body.member_id, store.clan_id!)
 	)
 	.delete(
 		'/squads/:id/slots/:slot',
@@ -74,7 +77,8 @@ export const squadsRoutes = clanContext
 			}),
 			detail: { tags: ['Clan'] },
 		},
-		({ params }) => squadService.removeMember(params.id, params.slot)
+		({ params, store }) =>
+			squadService.removeMember(params.id, params.slot, store.clan_id!)
 	)
 	.post(
 		'/squads/:id/requests',

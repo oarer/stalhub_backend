@@ -28,7 +28,7 @@ export const discordAuth = createElysia()
 					},
 				},
 				async ({ query, request }) => {
-					const state = crypto.randomUUID()
+					const state = createLinkState(0)
 					const url = new URL(`${DISCORD_API}/oauth2/authorize`)
 					url.searchParams.set('client_id', env.DISCORD_CLIENT_ID)
 					url.searchParams.set(
@@ -37,6 +37,7 @@ export const discordAuth = createElysia()
 					)
 					url.searchParams.set('response_type', 'code')
 					url.searchParams.set('scope', 'identify')
+					url.searchParams.set('state', state)
 					const desktopRedirect = await bindDesktopLogin(
 						query,
 						state,
@@ -56,7 +57,7 @@ export const discordAuth = createElysia()
 				{
 					query: t.Object({
 						code: t.String(),
-						state: t.Optional(t.String()),
+						state: t.String(),
 					}),
 					detail: {
 						tags: ['Auth: Discord'],
@@ -70,7 +71,11 @@ export const discordAuth = createElysia()
 					set,
 				}) => {
 					const desktop = await takeDesktopLogin('discord', state)
-					const linkUserId = state ? consumeLinkState(state) : null
+					const linkUserId = consumeLinkState(state)
+					if (linkUserId === null) {
+						set.status = 403
+						return { error: 'Invalid or expired state' }
+					}
 
 					const tokenRes = await fetch(
 						`${DISCORD_API}/oauth2/token`,

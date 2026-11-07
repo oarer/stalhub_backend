@@ -22,6 +22,9 @@ export function findXssThreat(value: string): string | null {
 	}
 
 	const decoded = value
+		.replace(/&colon;/gi, ':')
+		.replace(/&tab;/gi, '\t')
+		.replace(/&NewLine;/gi, '\n')
 		.replace(/&#x([0-9a-f]+);?/gi, (_, h) =>
 			String.fromCharCode(parseInt(h, 16))
 		)

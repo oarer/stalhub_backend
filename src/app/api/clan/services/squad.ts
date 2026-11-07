@@ -47,7 +47,14 @@ export class SquadService {
 		})
 	}
 
-	async list(clan_id: string) {
+	async list(clan_id: string, user_id?: number) {
+		if (user_id !== undefined) {
+			const profile = await prisma.userClanProfile.findFirst({
+				where: { user_id, clan_id, is_active: true },
+				select: { user_id: true },
+			})
+			if (!profile) throw new Error('Отряд не из вашего клана')
+		}
 		return prisma.clanSquad.findMany({
 			where: { clan_id },
 			include: squadInclude(),
@@ -82,6 +89,7 @@ export class SquadService {
 		squad_id: number,
 		clanMemberId: number,
 		slot: number,
+		clan_id: string,
 		actorUserId?: number
 	) {
 		if (slot < 0 || slot >= MAX_SLOTS) {
@@ -92,6 +100,8 @@ export class SquadService {
 			where: { id: squad_id },
 		})
 		if (!squad) throw new Error('Отряд не найден')
+		if (squad.clan_id !== clan_id)
+			throw new Error('Отряд не из вашего клана')
 
 		const member = await prisma.clanMember.findUnique({
 			where: { id: clanMemberId },
@@ -195,11 +205,17 @@ export class SquadService {
 		})
 	}
 
-	async setLeader(squad_id: number, member_id: number | null) {
+	async setLeader(
+		squad_id: number,
+		member_id: number | null,
+		clan_id: string
+	) {
 		const squad = await prisma.clanSquad.findUnique({
 			where: { id: squad_id },
 		})
 		if (!squad) throw new Error('Отряд не найден')
+		if (squad.clan_id !== clan_id)
+			throw new Error('Отряд не из вашего клана')
 
 		if (member_id !== null) {
 			const squadMember = await prisma.clanSquadMember.findUnique({
@@ -332,7 +348,7 @@ export class SquadService {
 		return result
 	}
 
-	async removeMember(squad_id: number, slot: number) {
+	async removeMember(squad_id: number, slot: number, clan_id: string) {
 		const slotRec = await prisma.clanSquadMember.findUnique({
 			where: { squad_id_slot: { squad_id, slot } },
 		})

@@ -162,12 +162,13 @@ class ClanInviteService {
 		})
 	}
 
-	async revoke(invite_id: number) {
+	async revoke(clan_id: string, invite_id: number) {
 		const invite = await prisma.clanInvite.findUnique({
 			where: { id: invite_id },
-			select: { user_id: true },
+			select: { user_id: true, clan_id: true },
 		})
-		if (!invite) throw new Error('Invite not found')
+		if (!invite || invite.clan_id !== clan_id)
+			throw new Error('Invite not found')
 		await prisma.$transaction([
 			prisma.clanInvite.delete({ where: { id: invite_id } }),
 			prisma.user.delete({ where: { id: invite.user_id } }),
@@ -176,6 +177,12 @@ class ClanInviteService {
 	}
 
 	async kickGuest(clan_id: string, user_id: number) {
+		const invite = await prisma.clanInvite.findFirst({
+			where: { clan_id, user_id },
+			select: { id: true },
+		})
+		if (!invite) throw new Error('Guest not found in this clan')
+
 		await prisma.$transaction([
 			prisma.userClanProfile.deleteMany({
 				where: { user_id, clan_id },
@@ -184,7 +191,7 @@ class ClanInviteService {
 				where: { user_id, clan_id },
 				data: { user_id: null },
 			}),
-			prisma.clanInvite.deleteMany({ where: { user_id } }),
+			prisma.clanInvite.deleteMany({ where: { user_id, clan_id } }),
 			prisma.user.delete({ where: { id: user_id } }),
 		])
 		return { ok: true }

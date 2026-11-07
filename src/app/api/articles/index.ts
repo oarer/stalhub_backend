@@ -13,7 +13,6 @@ import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 import { isSafeUrl, rejectOnXss } from '@/utils/xss-guard'
 import {
-	ARTICLE_IMAGE_MAX_BYTES,
 	normalizeQuestMap,
 	saveArticleImage,
 } from './article-media'
@@ -524,6 +523,7 @@ export const articlesRoutes = createElysia().group('/articles', (app) =>
 			},
 			async ({ params, set }) => {
 				const version = await articlesService.getVersion(
+					Number(params.id),
 					Number(params.version_id)
 				)
 				if (!version) {

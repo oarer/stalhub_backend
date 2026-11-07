@@ -12,7 +12,7 @@ export const refreshCookie = {
 }
 
 export const accessCookie = {
-	httpOnly: false,
+	httpOnly: true,
 	secure: isSecure,
 	sameSite: 'lax' as const,
 	path: '/',

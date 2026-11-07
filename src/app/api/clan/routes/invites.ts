@@ -53,7 +53,8 @@ export const inviteRoutes = clanContext
 			params: t.Object({ id: t.Numeric() }),
 			detail: { tags: ['Clan'] },
 		},
-		({ params }) => clanInviteService.revoke(params.id)
+		({ params, store }) =>
+			clanInviteService.revoke(store.clan_id!, params.id)
 	)
 	.delete(
 		'/invites/guest/:user_id',

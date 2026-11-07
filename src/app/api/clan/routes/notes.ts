@@ -75,7 +75,11 @@ export const notesRoutes = clanContext.group('/notes', (app) =>
 					set.status = 400
 					return { error: 'Invalid content' }
 				}
-				return notesService.update(params.note_id, body.content)
+				return notesService.update(
+					params.note_id,
+					store.clan_id!,
+					body.content
+				)
 			}
 		)
 		.delete(
@@ -85,6 +89,7 @@ export const notesRoutes = clanContext.group('/notes', (app) =>
 				params: t.Object({ note_id: t.Numeric() }),
 				detail: { tags: ['Clan Notes'] },
 			},
-			({ params }) => notesService.delete(params.note_id)
+			({ params, store }) =>
+				notesService.delete(params.note_id, store.clan_id!)
 		)
 )
