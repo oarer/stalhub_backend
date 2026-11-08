@@ -242,7 +242,8 @@ export function createBot({
 		)
 		.callbackQuery(HOME_CALLBACK, (ctx) =>
 			processUpdate(ctx.updateId ?? 0, async () => {
-				const [userId] = ctx.queryData
+				// RegExp matches contain the full callback data at index 0.
+				const [, userId] = ctx.queryData
 				if (!authorized(ctx, userId as string)) {
 					await ctx.answer({ text: AUTH_HINT, show_alert: true })
 					return
@@ -264,7 +265,7 @@ export function createBot({
 		)
 		.callbackQuery(ITEM_UPGRADE_CALLBACK, (ctx) =>
 			processUpdate(ctx.updateId ?? 0, async () => {
-				const [userId, category, id, level] = ctx.queryData
+				const [, userId, category, id, level] = ctx.queryData
 				if (!authorized(ctx, userId as string)) {
 					await ctx.answer({ text: AUTH_HINT, show_alert: true })
 					return
@@ -280,7 +281,7 @@ export function createBot({
 		)
 		.callbackQuery(ITEM_CALLBACK, (ctx) =>
 			processUpdate(ctx.updateId ?? 0, async () => {
-				const [userId, category, id] = ctx.queryData
+				const [, userId, category, id] = ctx.queryData
 				if (!authorized(ctx, userId as string)) {
 					await ctx.answer({ text: AUTH_HINT, show_alert: true })
 					return
@@ -296,7 +297,7 @@ export function createBot({
 		)
 		.callbackQuery(STATS_CALLBACK, (ctx) =>
 			processUpdate(ctx.updateId ?? 0, async () => {
-				const [userId, hash, kind] = ctx.queryData
+				const [, userId, hash, kind] = ctx.queryData
 				if (!authorized(ctx, userId as string)) {
 					await ctx.answer({ text: AUTH_HINT, show_alert: true })
 					return
