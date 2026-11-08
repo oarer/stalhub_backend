@@ -8,7 +8,7 @@
 - Контентные эндпоинты (`@me`, онбординг, баннер, аватар) требуют валидную и не отозванную сессию `access_token` через guard `requireAuth`: он проверяет подпись JWT, наличие `sub`/`sid`, существование и неотозванность сессии, а также бан пользователя (403). Гостевые роли (`clan_guest`) ограничены разрешённым списком путей.
 - Деструктивные эндпоинты (выход `DELETE /@me`, удаление аккаунта, `revoke-all`) используют `requireRefreshAuth` — он проверяет **только подпись** `refresh_token` и не перепроверяет отзыв сессии и бан-лист.
 - Публичные просмотры (`/id/:id`, `/:username`) используют `requireOptionalAuth`: если валидный `access_token` передан, в `store` подставляется `user_id` (для пометки `is_starred`), иначе запрос анонимный.
-- Загрузки баннера/аватара принимают только `png/jpeg/webp` (валидация MIME в схеме `t.File`).
+- Загрузки баннера/аватара принимают только `png/jpeg/webp/gif` (по магическим байтам, до 10 МБ, `maxSize` в схеме `t.File`).
 - Общие ответы guard'ов: **401** `{ "error": "Unauthorized" }`, **401** `{ "error": "Session expired" }`, **403** `{ "error": "Account banned", "reason": …, "expire_in": … }`, **403** `{ "error": "Guest access is limited to clan features" }`.
 
 ---
@@ -348,13 +348,13 @@
 
 ## `POST /api/v1/users/@me/banner`
 
-Загрузка баннера (guard `requireAuth`). Принимает файл в multipart-поле `file` (только `image/png`, `image/jpeg`, `image/webp`). Файл сохраняется в `./uploads/users/banners/<user_id>-<uuid><ext>`, предыдущий файл баннера удаляется с диска. В БД записывается путь в `banner_image`, а `banner_mode` переключается в `IMAGE`.
+Загрузка баннера (guard `requireAuth`). Принимает файл в multipart-поле `file` (только `image/png`, `image/jpeg`, `image/webp`, `image/gif` по магическим байтам, до 10 МБ). Расширение определяется из содержимого, имя файла клиента игнорируется. Файл сохраняется в `./uploads/users/banners/<user_id>-<uuid><ext>`, предыдущий файл баннера удаляется с диска. В БД записывается путь в `banner_image`, а `banner_mode` переключается в `IMAGE`.
 
 ### Тело запроса
 
 | Поле | Описание | Тип | Обязательный |
 | ---- | -------- | --- | :----------: |
-| `file` | Изображение баннера | `file` (png/jpeg/webp) | Да |
+| `file` | Изображение баннера | `file` (png/jpeg/webp/gif, ≤10 МБ) | Да |
 
 ### Тело ответа
 ```json
@@ -368,7 +368,7 @@
 
 ## `POST /api/v1/users/@me/avatar`
 
-Загрузка изображения аватара (guard `requireAuth`). Файл в multipart-поле `file` (только `image/png`, `image/jpeg`, `image/webp`). Сохраняется в `./uploads/users/avatars/<user_id>-<uuid><ext>`, предыдущий файл удаляется.
+Загрузка изображения аватара (guard `requireAuth`). Файл в multipart-поле `file` (только `image/png`, `image/jpeg`, `image/webp`, `image/gif` по магическим байтам, до 10 МБ). Сохраняется в `./uploads/users/avatars/<user_id>-<uuid><ext>`, предыдущий файл удаляется.
 
 ### Тело запроса
 

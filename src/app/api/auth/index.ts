@@ -63,6 +63,8 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 			async ({
 				body,
 				headers,
+				request,
+				server,
 				cookie: { access_token, refresh_token },
 				jwt,
 				set,
@@ -92,7 +94,10 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 					desktopUa
 						? `StalHubApp_${desktopUa}`
 						: (h['user-agent'] ?? 'Stalhub Desktop'),
-					h['x-forwarded-for'] ?? ''
+					clientIp(
+						h,
+						server?.requestIP?.(request)?.address ?? ''
+					)
 				)
 				const roles = user.roles.map((role) => role.name)
 				const accessValue = await jwt.sign({

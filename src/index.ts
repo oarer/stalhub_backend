@@ -126,6 +126,16 @@ export const app = createElysia()
 					return 'Not found'
 				}
 
+				// Только изображения (или octet-stream) и nosniff —
+				// загруженный HTML не должен исполняться в origin API.
+				const mime = file.type || 'application/octet-stream'
+				if (!/^image\//.test(mime)) {
+					set.status = 403
+					return 'Forbidden'
+				}
+				set.headers['x-content-type-options'] = 'nosniff'
+				set.headers['content-security-policy'] =
+					"default-src 'none'; sandbox"
 				return file
 			} catch {
 				set.status = 400

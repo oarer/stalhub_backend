@@ -3,6 +3,7 @@ import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
 import { fromStore, requireAuth } from '@/utils/auth.guard'
 import { assignDefaultRole, createSession } from '@/utils/auth.service'
+import { clientIp } from '@/utils/auto-ban'
 import {
 	bindDesktopLogin,
 	desktopLoginQuery,
@@ -66,6 +67,8 @@ export const discordAuth = createElysia()
 				async ({
 					query: { code, state },
 					headers,
+					request,
+					server,
 					cookie: { access_token, refresh_token },
 					jwt,
 					set,
@@ -192,10 +195,10 @@ export const discordAuth = createElysia()
 							'user-agent'
 						] ?? ''
 					const h = headers as Record<string, string | undefined>
-					const ip =
-						h['x-forwarded-for']?.split(',')[0]?.trim() ??
-						h['x-real-ip'] ??
-						''
+					const ip = clientIp(
+						h,
+						server?.requestIP?.(request)?.address ?? ''
+					)
 					const session = await createSession(user_id, ua, ip)
 					const access_token_value = await jwt.sign({
 						sub: String(user_id),

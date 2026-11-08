@@ -136,7 +136,7 @@ export const artsRoutes = createElysia().group('/arts', (app) =>
 			{
 				beforeHandle: [requireAuth, requireArtAuthor],
 				body: t.Object({
-					file: t.File(),
+					file: t.File({ maxSize: '10m' }),
 				}),
 				detail: { tags: ['Arts'] },
 			},

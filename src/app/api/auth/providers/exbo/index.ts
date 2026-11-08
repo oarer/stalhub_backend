@@ -3,6 +3,7 @@ import { clanService } from '@/app/api/clan/services/clan'
 import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
 import { Regions } from '@/types/api.type'
+import { clientIp } from '@/utils/auto-ban'
 import { fromStore, requireAuth } from '@/utils/auth.guard'
 import { assignDefaultRole, createSession } from '@/utils/auth.service'
 import { decryptSecretJson, encryptSecret } from '@/utils/crypto'
@@ -76,6 +77,8 @@ export const exboAuth = createElysia()
 				async ({
 					query: { code, state, region },
 					headers,
+					request,
+					server,
 					cookie: { refresh_token, access_token },
 					jwt,
 					set,
@@ -311,10 +314,10 @@ export const exboAuth = createElysia()
 							'user-agent'
 						] ?? ''
 					const h = headers as Record<string, string | undefined>
-					const ip =
-						h['x-forwarded-for']?.split(',')[0]?.trim() ??
-						h['x-real-ip'] ??
-						''
+					const ip = clientIp(
+						h,
+						server?.requestIP?.(request)?.address ?? ''
+					)
 					const session = await createSession(user_id, ua, ip)
 					const access_token_value = await jwt.sign({
 						sub: String(user_id),

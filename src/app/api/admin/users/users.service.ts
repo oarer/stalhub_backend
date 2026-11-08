@@ -308,6 +308,19 @@ class AdminUserService {
 		})
 	}
 
+	async revokeAllSessions(user_id: number) {
+		const user = await prisma.user.findUnique({
+			where: { id: user_id },
+			select: { id: true },
+		})
+		if (!user) return null
+		const { count } = await prisma.sessions.updateMany({
+			where: { user_id, revoked: false },
+			data: { revoked: true },
+		})
+		return { revoked: count }
+	}
+
 	async getUserRoles(user_id: number) {
 		const user = await prisma.user.findUnique({
 			where: { id: user_id },

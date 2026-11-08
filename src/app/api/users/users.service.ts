@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto'
-import path from 'node:path'
 import {
 	type AvatarSource,
 	type BannerMode,
@@ -16,6 +15,7 @@ import { deleteUpload, putUpload } from '@/lib/uploads'
 import { authService } from '@/utils/auth.service'
 import { decryptSecretJson } from '@/utils/crypto'
 import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
+import { validateImageUpload } from '@/utils/upload-validation'
 
 const USERNAME_COOLDOWN_DAYS = 30
 
@@ -72,6 +72,7 @@ class UsersService {
 		user_id: number,
 		file: { name: string; type: string; buffer: Buffer }
 	) {
+		const { mime, ext } = validateImageUpload(file.buffer)
 		const existing = await prisma.userCustomization.findUnique({
 			where: { user_id },
 			select: { banner_image: true },
@@ -85,10 +86,9 @@ class UsersService {
 			await deleteUpload(oldPath)
 		}
 
-		const ext = path.extname(file.name) || '.png'
 		const filename = `${user_id}-${randomUUID()}${ext}`
 		const banner_image = `/uploads/users/banners/${filename}`
-		await putUpload(banner_image, file.buffer, file.type || 'image/png')
+		await putUpload(banner_image, file.buffer, mime)
 		await prisma.userCustomization.upsert({
 			where: { user_id },
 			update: { banner_image, banner_mode: 'IMAGE' },
@@ -102,6 +102,7 @@ class UsersService {
 		user_id: number,
 		file: { name: string; type: string; buffer: Buffer }
 	) {
+		const { mime, ext } = validateImageUpload(file.buffer)
 		const existing = await prisma.userCustomization.findUnique({
 			where: { user_id },
 			select: { avatar_image: true },
@@ -115,10 +116,9 @@ class UsersService {
 			await deleteUpload(oldPath)
 		}
 
-		const ext = path.extname(file.name) || '.png'
 		const filename = `${user_id}-${randomUUID()}${ext}`
 		const avatar_image = `/uploads/users/avatars/${filename}`
-		await putUpload(avatar_image, file.buffer, file.type || 'image/png')
+		await putUpload(avatar_image, file.buffer, mime)
 		await prisma.userCustomization.upsert({
 			where: { user_id },
 			update: { avatar_image },

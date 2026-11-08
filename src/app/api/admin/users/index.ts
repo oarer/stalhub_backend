@@ -182,6 +182,35 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			}
 		)
 
+		.post(
+			'/:user_id/sessions/revoke-all',
+			{
+				beforeHandle: [requireAuth, requireAdmin],
+				params: t.Object({ user_id: t.Numeric() }),
+				detail: { tags: ['Admin'] },
+			},
+			async ({ store, params, set }) => {
+				const target_id = Number(params.user_id)
+				const canManage = await adminUserService.canManageUser(
+					fromStore(store).user_id,
+					target_id
+				)
+				if (!canManage) {
+					set.status = 403
+					return {
+						error: 'Cannot modify user with equal or higher rank',
+					}
+				}
+				const result =
+					await adminUserService.revokeAllSessions(target_id)
+				if (!result) {
+					set.status = 404
+					return { error: 'User not found' }
+				}
+				return { success: true, revoked: result.revoked }
+			}
+		)
+
 		.get(
 			'/:user_id/roles',
 			{
@@ -417,7 +446,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 				beforeHandle: [requireAuth, requireAdmin],
 				params: t.Object({ user_id: t.Numeric() }),
 				body: t.Object({
-					file: t.File(),
+					file: t.File({ maxSize: '10m' }),
 				}),
 				detail: { tags: ['Admin'] },
 			},

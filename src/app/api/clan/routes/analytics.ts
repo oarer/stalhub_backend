@@ -43,7 +43,7 @@ export const analyticsRoutes = clanContext.group('/analytics', (app) =>
 				beforeHandle: [requireAuth, requireClanOfficer],
 				params: idParams,
 				body: t.Object({
-					file: t.File(),
+					file: t.File({ maxSize: '10m' }),
 				}),
 				detail: { tags: ['Clan Analytics'] },
 			},

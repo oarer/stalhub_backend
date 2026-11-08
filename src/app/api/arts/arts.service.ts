@@ -11,12 +11,12 @@ import { prisma } from '@/lib/prisma'
 import { putUpload } from '@/lib/uploads'
 import {
 	compressImageBuffer,
-	detectImageMime,
 	IMAGE_MIME_EXTENSIONS,
 	isCompressibleImageMime,
 } from '@/utils/image-compress'
 import { generateSlug } from '@/utils/slug'
 import { USER_BADGES_SELECT } from '@/utils/user-select'
+import { validateImageUpload } from '@/utils/upload-validation'
 import { type ArtAuthorPayload, resolveArtAuthor } from './art-author'
 
 type ArtData = {
@@ -251,19 +251,15 @@ class ArtsService {
 	}
 
 	async saveArtMedia(file: { name: string; type: string; buffer: Buffer }) {
-		// Trust magic bytes over file name / Content-Type for images.
-		const detected = detectImageMime(file.buffer)
-		const declaredExt = path.extname(file.name) || '.png'
-		const ext = detected
-			? `.${IMAGE_MIME_EXTENSIONS[detected]}`
-			: declaredExt
-		// Recompress without resizing; gif/video pass through untouched.
-		const mime = detected ?? file.type
+		// Только изображения: магические байты вместо имени/Content-Type.
+		// Размер и mv-типы проверяет validateImageUpload.
+		const { mime } = validateImageUpload(file.buffer)
+		// Recompress without resizing; gif passes through untouched.
 		const data = isCompressibleImageMime(mime)
 			? await compressImageBuffer(file.buffer, mime)
 			: file.buffer
 
-		const filename = `${randomUUID()}${ext}`
+		const filename = `${randomUUID()}.${IMAGE_MIME_EXTENSIONS[mime]}`
 		const image_url = `/uploads/arts/${filename}`
 		await putUpload(image_url, data, mime)
 

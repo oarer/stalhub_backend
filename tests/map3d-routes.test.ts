@@ -9,14 +9,16 @@ test('existing Stalhub backend serves prepared maps with no upstream service', a
 		old = process.env.MAP3D_DATA_DIR
 	process.env.MAP3D_DATA_DIR = f.root
 	process.env.MAP3D_NOTES_DB = f.notes
+	process.env.MAP3D_ACCESS_KEY = 'test-map-key'
+	const hadStaticMode = process.env.MAP3D_STATIC_MODE
+	delete process.env.MAP3D_STATIC_MODE
 	const app = createElysia({ prefix: '/api/v1' }).use(map3dRoutes)
-	const access = process.env.MAP3D_ACCESS_KEY
 	const request = (path: string, method = 'GET', body?: string) =>
 		app.handle(
 			new Request(`http://localhost/api/v1/map3d/${path}`, {
 				method,
 				headers: {
-					...(access ? { 'x-stalhub-map-key': access } : {}),
+					'x-stalhub-map-key': 'test-map-key',
 					...(body === undefined
 						? {}
 						: { 'content-type': 'application/json' }),
@@ -52,22 +54,40 @@ test('existing Stalhub backend serves prepared maps with no upstream service', a
 		if (old === undefined) delete process.env.MAP3D_DATA_DIR
 		else process.env.MAP3D_DATA_DIR = old
 		delete process.env.MAP3D_NOTES_DB
+		delete process.env.MAP3D_ACCESS_KEY
+		if (hadStaticMode !== undefined)
+			process.env.MAP3D_STATIC_MODE = hadStaticMode
 	}
 })
 
-test('map API requires the proxy access key when configured', async () => {
+test('map API closed when access key is missing or wrong', async () => {
 	const previous = process.env.MAP3D_ACCESS_KEY
 	process.env.MAP3D_ACCESS_KEY = 'test-map-key'
+	const hadStaticMode = process.env.MAP3D_STATIC_MODE
+	delete process.env.MAP3D_STATIC_MODE
 	const app = createElysia({ prefix: '/api/v1' }).use(map3dRoutes)
 	try {
+		// нет заголовка
 		assert.equal(
 			(
 				await app.handle(
 					new Request('http://localhost/api/v1/map3d/health')
 				)
 			).status,
-			403
+			404
 		)
+		// неверный заголовок
+		assert.equal(
+			(
+				await app.handle(
+					new Request('http://localhost/api/v1/map3d/health', {
+						headers: { 'x-stalhub-map-key': 'wrong' },
+					})
+				)
+			).status,
+			404
+		)
+		// валидный заголовок проходит
 		assert.notEqual(
 			(
 				await app.handle(
@@ -76,10 +96,12 @@ test('map API requires the proxy access key when configured', async () => {
 					})
 				)
 			).status,
-			403
+			404
 		)
 	} finally {
 		if (previous === undefined) delete process.env.MAP3D_ACCESS_KEY
 		else process.env.MAP3D_ACCESS_KEY = previous
+		if (hadStaticMode !== undefined)
+			process.env.MAP3D_STATIC_MODE = hadStaticMode
 	}
 })

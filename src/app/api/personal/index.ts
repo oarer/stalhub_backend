@@ -174,7 +174,7 @@ export const personalRoutes = createElysia()
 					beforeHandle: [requireAuth],
 					params: idParams,
 					body: t.Object({
-						file: t.File(),
+						file: t.File({ maxSize: '10m' }),
 					}),
 					detail: { tags: ['Personal'] },
 				},

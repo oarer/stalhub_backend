@@ -4,6 +4,7 @@ import type { StageType } from 'generated/prisma/enums'
 import { MSK_OFFSET_MS } from '@/lib/msk'
 import { prisma } from '@/lib/prisma'
 import { deleteUpload, putUpload, readUploadBytes } from '@/lib/uploads'
+import { validateImageUpload } from '@/utils/upload-validation'
 import { USER_WITH_BADGES_SELECT } from '@/utils/user-select'
 import type { AIScreenshotResult } from '../types'
 import { analyzeScreenshot } from './ai'
@@ -98,20 +99,16 @@ class AnalyticsService {
 		if (existing > 0) {
 			throw new Error('Only one screenshot per stage is allowed')
 		}
-		const ext = path.extname(file.name) || '.png'
+		const { mime, ext } = validateImageUpload(file.buffer)
 		const filename = `${session_id}-${randomUUID()}${ext}`
 		const relativePath = path.join('uploads', 'screenshots', filename)
-		await putUpload(
-			`/${relativePath}`,
-			file.buffer,
-			file.type || 'image/png'
-		)
+		await putUpload(`/${relativePath}`, file.buffer, mime)
 
 		const row = await prisma.stageScreenshot.create({
 			data: {
 				session_id,
 				file_path: relativePath,
-				mime_type: file.type,
+				mime_type: mime,
 				size_bytes: file.buffer.length,
 			},
 		})

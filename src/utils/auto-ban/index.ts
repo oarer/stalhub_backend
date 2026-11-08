@@ -6,7 +6,7 @@ import {
 	autoBansTotal,
 	ipBlocksTotal,
 } from '@/app/api/metrics'
-import { env } from '@/env'
+import { env, TRUST_PROXY_IPS } from '@/env'
 import { prisma } from '@/lib/prisma'
 import { getUserMaxRank } from '@/utils/auth.guard'
 import {
@@ -14,6 +14,10 @@ import {
 	DiscordEmbedColors,
 	notifyAdmins,
 } from './notify'
+
+const TRUST_PROXY_CIDRS_LIST = TRUST_PROXY_IPS.filter((entry) =>
+	entry.includes('/')
+)
 
 export const AUTO_BAN_REASON =
 	'Аккаунт заблокирован, пока мы проводим расследование. Обратитесь в службу поддержки'
@@ -23,15 +27,68 @@ export type AbuseRule = 'request_abuse' | 'content_spam'
 const RPS_WINDOW_SECONDS = 3
 const IP_HITS_TTL_SECONDS = 7 * 24 * 60 * 60
 
+const IPV4_LOOPBACKS = new Set(['127.0.0.1', '::1'])
+
+function isTrustedProxyIp(ip: string): boolean {
+	if (TRUST_PROXY_IPS.includes(ip)) return true
+	// Локальные адреса чаще всего являются доверенным реверс-прокси.
+	if (IPV4_LOOPBACKS.has(ip)) return true
+	if (ip.startsWith('::ffff:')) {
+		const mapped = ip.slice('::ffff:'.length)
+		return (
+			IPV4_LOOPBACKS.has(mapped) || TRUST_PROXY_IPS.includes(mapped)
+		)
+	}
+	for (const cidr of TRUST_PROXY_CIDRS_LIST) {
+		if (ipInCidr(ip, cidr)) return true
+	}
+	return false
+}
+
+function ipToInt(ip: string): number | null {
+	const parts = ip.split('.')
+	if (parts.length !== 4) return null
+	let value = 0
+	for (const part of parts) {
+		if (!/^\d{1,3}$/.test(part)) return null
+		const octet = Number(part)
+		if (octet > 255) return null
+		value = value * 256 + octet
+	}
+	return value >>> 0
+}
+
+function ipInCidr(ip: string, cidr: string): boolean {
+	const [base, bitsRaw] = cidr.split('/')
+	const bits = Number(bitsRaw)
+	if (!Number.isInteger(bits) || bits < 0 || bits > 32) return false
+	const normalized = ip.startsWith('::ffff:') ? ip.slice(7) : ip
+	const ipInt = ipToInt(normalized)
+	const baseInt = ipToInt(base)
+	if (ipInt === null || baseInt === null) return false
+	if (bits === 0) return true
+	const mask = (0xffffffff << (32 - bits)) >>> 0
+	return (ipInt & mask) === (baseInt & mask)
+}
+
+/**
+ * IP клиента. Заголовкам x-forwarded-for / x-real-ip доверяем только от
+ * сокет-адреса из TRUST_PROXY_IPS / TRUST_PROXY_CIDRS (или localhost),
+ * иначе берём адрес сокета напрямую — иначе заголовки можно подделать
+ * и обойти rate-limit / автобан.
+ */
 export function clientIp(
 	headers: Record<string, string | undefined>,
 	fallback = ''
 ): string {
-	return (
-		headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-		headers['x-real-ip'] ||
-		fallback
-	)
+	const socketIp = fallback
+	if (socketIp && isTrustedProxyIp(socketIp)) {
+		const fwd = headers['x-forwarded-for']?.split(',')[0]?.trim()
+		if (fwd) return fwd
+		const real = headers['x-real-ip']?.trim()
+		if (real) return real
+	}
+	return socketIp
 }
 
 function metaFields(meta?: Prisma.InputJsonValue): AdminAlertField[] {

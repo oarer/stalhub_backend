@@ -2,6 +2,7 @@ import { redis } from 'bun'
 import { t } from 'elysia'
 import { env } from '@/env'
 import { prisma } from '@/lib/prisma'
+import { clientIp } from '@/utils/auto-ban'
 import { fromStore, requireAuth } from '@/utils/auth.guard'
 import { assignDefaultRole, createSession } from '@/utils/auth.service'
 import {
@@ -205,6 +206,8 @@ export const telegramAuth = createElysia()
 				async ({
 					query: { code, state },
 					headers,
+					request,
+					server,
 					cookie: { refresh_token, access_token },
 					jwt,
 					set,
@@ -216,10 +219,12 @@ export const telegramAuth = createElysia()
 						return { error: 'Invalid or expired state' }
 					}
 
+					const socketIp =
+						server?.requestIP?.(request)?.address ?? ''
+
 					const basic = btoa(
 						`${env.TELEGRAM_CLIENT_ID}:${env.TELEGRAM_CLIENT_SECRET}`
 					)
-
 					const tokenRes = await fetch(
 						'https://oauth.telegram.org/token',
 						{
@@ -318,10 +323,7 @@ export const telegramAuth = createElysia()
 							'user-agent'
 						] ?? ''
 					const h = headers as Record<string, string | undefined>
-					const ip =
-						h['x-forwarded-for']?.split(',')[0]?.trim() ??
-						h['x-real-ip'] ??
-						''
+					const ip = clientIp(h, socketIp)
 					const session = await createSession(user_id, ua, ip)
 					const access_token_value = await jwt.sign({
 						sub: String(user_id),
@@ -363,6 +365,8 @@ export const telegramAuth = createElysia()
 				async ({
 					body: { id_token },
 					headers,
+					request,
+					server,
 					cookie: { access_token, refresh_token },
 					jwt,
 					set,
@@ -409,10 +413,10 @@ export const telegramAuth = createElysia()
 							'user-agent'
 						] ?? ''
 					const h = headers as Record<string, string | undefined>
-					const ip =
-						h['x-forwarded-for']?.split(',')[0]?.trim() ??
-						h['x-real-ip'] ??
-						''
+					const ip = clientIp(
+						h,
+						server?.requestIP?.(request)?.address ?? ''
+					)
 					const session = await createSession(user_id, ua, ip)
 					const access_token_value = await jwt.sign({
 						sub: String(user_id),

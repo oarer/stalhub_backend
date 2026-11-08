@@ -8,6 +8,7 @@ import {
 } from 'generated/prisma/enums'
 import { buildsService } from '@/app/api/builds/builds.service'
 import { Regions } from '@/types/api.type'
+import { clientIp } from '@/utils/auto-ban'
 import {
 	fromStore,
 	fromStoreOpt,
@@ -78,16 +79,14 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 				}),
 				detail: { tags: ['Users'] },
 			},
-			async ({ body, store, set, request }) => {
+			async ({ body, store, set, request, server }) => {
 				const { name, username, social_links, ...settingsData } = body
 				const user_id = fromStore(store).user_id
 				const ip =
-					request.headers
-						.get('x-forwarded-for')
-						?.split(',')[0]
-						?.trim() ??
-					request.headers.get('x-real-ip') ??
-					'?'
+					clientIp(
+						Object.fromEntries(request.headers),
+						server?.requestIP?.(request)?.address ?? ''
+					) || '?'
 
 				const xss = await rejectOnXss({
 					fields: {
@@ -482,7 +481,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			{
 				beforeHandle: [requireAuth],
 				body: t.Object({
-					file: t.File(),
+					file: t.File({ maxSize: '10m' }),
 				}),
 				detail: { tags: ['Users'] },
 			},
@@ -511,7 +510,7 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 			{
 				beforeHandle: [requireAuth],
 				body: t.Object({
-					file: t.File(),
+					file: t.File({ maxSize: '10m' }),
 				}),
 				detail: { tags: ['Users'] },
 			},

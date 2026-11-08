@@ -1,13 +1,16 @@
-import { env } from '@/env'
 import { createElysia } from '@/utils/elysia'
 import { handleMapAsset } from './bundle'
+
+// Fail-closed: без настроенного ключа весь /map3d закрыт,
+// а не открыт всем желающим.
 export const map3dRoutes = createElysia({ prefix: '/map3d' }).all(
 	'/*',
 	{ parse: 'none' },
 	({ request, params, set }) => {
-		const accessKey = env.MAP3D_ACCESS_KEY
+		// Читаем на каждом запросе — tests переопределяют значение после импорта.
+		const accessKey = process.env.MAP3D_ACCESS_KEY
 		if (
-			accessKey &&
+			!accessKey ||
 			request.headers.get('x-stalhub-map-key') !== accessKey
 		) {
 			set.status = 404

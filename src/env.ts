@@ -1,8 +1,57 @@
 import { z } from 'zod'
 
+const envMode =
+	(
+		{
+			production: 'production',
+			development: 'development',
+			test: 'test',
+		} as Record<string, string>
+	)[String(process.env.NODE_ENV ?? '').trim().toLowerCase()] ??
+	'development'
+
+/**
+ * Порог автоматических блокировок. Число >= 1 — лимит включён,
+ * 0 — явно выключено. В production отсутствие переменной или пустое
+ * значение — ошибка старта, чтобы лимиты не «по умолчанию» оставались
+ * отключёнными.
+ */
+function thresholdSchema(label: string) {
+	const isProduction = envMode === 'production'
+	return z
+		.preprocess(
+			(v) => {
+				if (v === undefined) return undefined
+				if (typeof v === 'string') {
+					const trimmed = v.trim()
+					if (trimmed === '') return undefined
+					return trimmed
+				}
+				return v
+			},
+			z.coerce.number().int().min(0).max(100_000_000).or(z.undefined())
+		)
+		.transform((v) => {
+			if (v === undefined) {
+				if (isProduction) {
+					throw new Error(
+						`${label} is required in production (set 0 to disable)`
+					)
+				}
+				return 0
+			}
+			return v
+		})
+}
+
 const envVariables = z.object({
 	PORT: z.coerce.number().default(3001),
-	NODE_ENV: z.enum(['development', 'production']).default('development'),
+	NODE_ENV: z.enum(['development', 'production', 'test']).default(
+		// bun test выставляет NODE_ENV=test
+		process.env.NODE_ENV === undefined
+			? 'development'
+			: (process.env.NODE_ENV as 'development' | 'production' | 'test')
+	),
 	EXBO_TOKEN: z.string().default(''),
 	SC_GATEWAY_DIRECT_FALLBACK: z
 		.string()
@@ -146,11 +195,21 @@ const envVariables = z.object({
 	MAP3D_ACCESS_KEY: z.string().default(''),
 
 	// auto-ban
-	LOGIN_MAX_FAILURES: z.coerce.number().default(999),
-	RPS_THRESHOLD: z.coerce.number().default(999),
-	IP_BLOCK_MIN_SECONDS: z.coerce.number().default(60 * 60),
-	IP_BLOCK_MAX_SECONDS: z.coerce.number().default(48 * 60 * 60),
-	AUTO_BAN_SKIP_RANK: z.coerce.number().default(0),
+	LOGIN_MAX_FAILURES: thresholdSchema('LOGIN_MAX_FAILURES'),
+	RPS_THRESHOLD: thresholdSchema('RPS_THRESHOLD'),
+	IP_BLOCK_MIN_SECONDS: z.coerce
+		.number()
+		.int()
+		.min(30, 'IP_BLOCK_MIN_SECONDS must be at least 30s')
+		.max(30 * 24 * 60 * 60)
+		.default(60 * 60),
+	IP_BLOCK_MAX_SECONDS: z.coerce
+		.number()
+		.int()
+		.min(60, 'IP_BLOCK_MAX_SECONDS must be at least 60s')
+		.max(365 * 24 * 60 * 60)
+		.default(48 * 60 * 60),
+	AUTO_BAN_SKIP_RANK: z.coerce.number().int().min(0).max(100_000).default(0),
 	ADMIN_ALERT_WEBHOOK: z.string().default(''),
 
 	UNO_API_URL: z.string().default('https://server.tail0763fe.ts.net'),
@@ -194,6 +253,21 @@ const envVariables = z.object({
 		.default(
 			'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0'
 		),
+
+	// IP-адреса, которым разрешено задавать x-forwarded-for / x-real-ip.
+	// Пусто = заголовкам не доверяем (в production тоже, тогда берётся адрес сокета).
+	TRUST_PROXY_CIDRS: z.string().default(''),
 })
 
-export const env = envVariables.parse(process.env)
+export const env = (() => {
+	const parsed = envVariables.safeParse(process.env)
+	if (!parsed.success) {
+		console.error('[env] Invalid environment:', parsed.error.issues)
+		throw new Error('Invalid environment configuration')
+	}
+	return parsed.data
+})()
+
+export const TRUST_PROXY_IPS: string[] = env.TRUST_PROXY_CIDRS.split(',')
+	.map((v) => v.trim())
+	.filter(Boolean)
