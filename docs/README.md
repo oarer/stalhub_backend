@@ -84,8 +84,9 @@ Refresh-токен несёт только `sub`, `sid`, `exp`. Проверка
 
 - Счётчик работает по ключу `rps:<normalizedRoute>:<ip>:<текущая секунда>` в Redis, окно 3 секунды.
 - Порог — `RPS_THRESHOLD` (обязателен в production: `0` = откл., `>= 1` = лимит; в dev по умолчанию `0`).
-- IP определяется через заголовки `x-forwarded-for` (первое значение) → `x-real-ip`, но **только если сокет-адрес в `TRUST_PROXY_CIDRS`** (или localhost); иначе берётся адрес сокета напрямую — подделка заголовков неэффективна.
-- `TRUST_PROXY_CIDRS` — CSV IP/CIDR доверенных реверс-прокси (например, IP Nginx/CDN); пусто = заголовкам не доверяем.
+- IP определяется через `x-real-ip` (если задан) или обход `x-forwarded-for` **с конца**: пропускаются адреса доверенных прокси (`TRUST_PROXY_CIDRS`), первый недоверенный адрес — это клиент.
+- `TRUST_PROXY_CIDRS` — CSV IP/CIDR доверенных реверс-прокси (например, IP Nginx/CDN); пусто = заголовкам не доверяем. Сокет-адрес соединения должен попадать в этот список, иначе заголовки игнорируются.
+- **Если nginx на той же машине/в одной docker-сети с приложением** (`proxy_pass` с `proxy_set_header X-Real-IP $remote_addr; X-Forwarded-For $proxy_add_x_forwarded_for;`), достаточно добавить его адрес: `127.0.0.1` уже доверенный, для docker-сети — `TRUST_PROXY_CIDRS=172.16.0.0/12` или точный IP контейнера nginx.
 - Превышение порога блокирует IP (`blockIp`).
 - Заблокированный IP получает **429** `{ "error": "Too many requests, try again later" }`.
 - **Исключены из RPS** (префикс-матчинг в `shouldSkipRps`): `/api/v1/health`, `/api/v1/metrics`, `/uploads/`, `/swagger`.

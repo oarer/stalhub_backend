@@ -10,12 +10,6 @@ const envMode =
 	)[String(process.env.NODE_ENV ?? '').trim().toLowerCase()] ??
 	'development'
 
-/**
- * Порог автоматических блокировок. Число >= 1 — лимит включён,
- * 0 — явно выключено. В production отсутствие переменной или пустое
- * значение — ошибка старта, чтобы лимиты не «по умолчанию» оставались
- * отключёнными.
- */
 function thresholdSchema(label: string) {
 	const isProduction = envMode === 'production'
 	return z
@@ -47,7 +41,6 @@ function thresholdSchema(label: string) {
 const envVariables = z.object({
 	PORT: z.coerce.number().default(3001),
 	NODE_ENV: z.enum(['development', 'production', 'test']).default(
-		// bun test выставляет NODE_ENV=test
 		process.env.NODE_ENV === undefined
 			? 'development'
 			: (process.env.NODE_ENV as 'development' | 'production' | 'test')
@@ -254,8 +247,6 @@ const envVariables = z.object({
 			'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0'
 		),
 
-	// IP-адреса, которым разрешено задавать x-forwarded-for / x-real-ip.
-	// Пусто = заголовкам не доверяем (в production тоже, тогда берётся адрес сокета).
 	TRUST_PROXY_CIDRS: z.string().default(''),
 })
 

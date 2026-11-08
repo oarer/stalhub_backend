@@ -31,13 +31,10 @@ const IPV4_LOOPBACKS = new Set(['127.0.0.1', '::1'])
 
 function isTrustedProxyIp(ip: string): boolean {
 	if (TRUST_PROXY_IPS.includes(ip)) return true
-	// Локальные адреса чаще всего являются доверенным реверс-прокси.
 	if (IPV4_LOOPBACKS.has(ip)) return true
 	if (ip.startsWith('::ffff:')) {
 		const mapped = ip.slice('::ffff:'.length)
-		return (
-			IPV4_LOOPBACKS.has(mapped) || TRUST_PROXY_IPS.includes(mapped)
-		)
+		return IPV4_LOOPBACKS.has(mapped) || TRUST_PROXY_IPS.includes(mapped)
 	}
 	for (const cidr of TRUST_PROXY_CIDRS_LIST) {
 		if (ipInCidr(ip, cidr)) return true
@@ -71,24 +68,30 @@ function ipInCidr(ip: string, cidr: string): boolean {
 	return (ipInt & mask) === (baseInt & mask)
 }
 
-/**
- * IP клиента. Заголовкам x-forwarded-for / x-real-ip доверяем только от
- * сокет-адреса из TRUST_PROXY_IPS / TRUST_PROXY_CIDRS (или localhost),
- * иначе берём адрес сокета напрямую — иначе заголовки можно подделать
- * и обойти rate-limit / автобан.
- */
 export function clientIp(
 	headers: Record<string, string | undefined>,
 	fallback = ''
 ): string {
 	const socketIp = fallback
 	if (socketIp && isTrustedProxyIp(socketIp)) {
-		const fwd = headers['x-forwarded-for']?.split(',')[0]?.trim()
-		if (fwd) return fwd
 		const real = headers['x-real-ip']?.trim()
 		if (real) return real
+		const chain = headers['x-forwarded-for']
+			?.split(',')
+			.map((entry) => entry.trim())
+			.filter(Boolean)
+		if (chain?.length) {
+			for (let i = chain.length - 1; i >= 0; i--) {
+				const candidate = stripIpv6Mapped(chain[i])
+				if (!isTrustedProxyIp(candidate)) return chain[i]
+			}
+		}
 	}
 	return socketIp
+}
+
+function stripIpv6Mapped(ip: string): string {
+	return ip.startsWith('::ffff:') ? ip.slice('::ffff:'.length) : ip
 }
 
 function metaFields(meta?: Prisma.InputJsonValue): AdminAlertField[] {
