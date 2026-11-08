@@ -195,7 +195,8 @@ function renderElement(element: ItemElement, upgradeLevel = 0): string | null {
 			const name = messageToString(element.name)
 			if (!name) return null
 			const values = Array.isArray(element.value) ? element.value : []
-			const current = values[Math.min(upgradeLevel, Math.max(0, values.length - 1))]
+			const current =
+				values[Math.min(upgradeLevel, Math.max(0, values.length - 1))]
 			const display = Array.isArray(current)
 				? `${round(current[0])} — ${round(current[1])}`
 				: typeof current === 'number'
@@ -264,7 +265,11 @@ function maxUpgradeLevel(blocks: ItemBlock[] | undefined): number {
 	let max = 0
 	for (const block of blocks) {
 		if (block.type === 'grouped') {
-			max = Math.max(max, maxUpgradeLevel(block.compact), maxUpgradeLevel(block.detailed))
+			max = Math.max(
+				max,
+				maxUpgradeLevel(block.compact),
+				maxUpgradeLevel(block.detailed)
+			)
 			continue
 		}
 		if (block.type !== 'list' && block.type !== 'addStat') continue

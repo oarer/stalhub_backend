@@ -30,7 +30,8 @@ describe('Telegram formatting', () => {
 					{ id: 'bul-dea', value: 1 },
 				],
 			},
-			'RU'
+			'RU',
+			42
 		)
 		const text = textOf(result)
 		expect(text).toContain('A<& (RU)')
@@ -67,7 +68,8 @@ describe('Telegram formatting', () => {
 					},
 				],
 			},
-			'RU'
+			'RU',
+			42
 		)
 		const text = textOf(result)
 
@@ -102,12 +104,15 @@ describe('Telegram formatting', () => {
 			['new<&', 'new<&'],
 			['', '—'],
 		]) {
-			const text = profileArticle({ username: 'Nick', alliance }, 'RU')
-				.input_message_content.message_text
+			const text = profileArticle(
+				{ username: 'Nick', alliance },
+				'RU',
+				42
+			).input_message_content.message_text
 			expect(text).toContain(`Фракция: ${expected}\n`)
 		}
 		expect(
-			profileArticle({ username: 'Nick' }, 'RU').input_message_content
+			profileArticle({ username: 'Nick' }, 'RU', 42).input_message_content
 				.message_text
 		).toContain('Фракция: —\n')
 	})
@@ -143,7 +148,8 @@ describe('Telegram formatting', () => {
 						},
 					],
 				},
-				'RU'
+				'RU',
+				42
 			).input_message_content.message_text
 			expect(text).toContain(`Clan · ${expected} · RU`)
 		}
@@ -152,7 +158,8 @@ describe('Telegram formatting', () => {
 	test('omits empty clan history', () => {
 		const result = profileArticle(
 			{ username: 'Nick', clan_history: [] },
-			'RU'
+			'RU',
+			42
 		)
 		const text = result.input_message_content.message_text
 
@@ -203,7 +210,8 @@ describe('Telegram formatting', () => {
 					seen_at: '2025-06-07T03:04:05.000Z',
 				})),
 			},
-			'RU'
+			'RU',
+			42
 		)
 		const text = textOf(result)
 
@@ -227,6 +235,7 @@ describe('Telegram formatting', () => {
 				alliance: 'x&'.repeat(1_000),
 			},
 			'RU',
+			42,
 			longId
 		)
 		const message = messageArticle(

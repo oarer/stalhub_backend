@@ -186,7 +186,7 @@ describe('inline item results', () => {
 			'https://stalhub.dev/items/other/qyvk'
 		)
 		expect(results[0].reply_markup?.inline_keyboard[0]).toEqual([
-			{ text: 'Характеристики', callback_data: 'item:other:qyvk' },
+			{ text: 'Характеристики', callback_data: 'i:0:other:qyvk' },
 		])
 	})
 

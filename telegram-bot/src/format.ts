@@ -159,7 +159,10 @@ export function profileCardText(
 	return limitFormattable(cardText(profile, region))
 }
 
-export function profileStatsKeyboard(hash: string): InlineKeyboardButton[][] {
+export function profileStatsKeyboard(
+	hash: string,
+	userId: number
+): InlineKeyboardButton[][] {
 	const labels: Record<StatCategoryKey, string> = {
 		combat: 'Боёвка',
 		survival: 'Выживание',
@@ -170,18 +173,24 @@ export function profileStatsKeyboard(hash: string): InlineKeyboardButton[][] {
 	}
 	const button = (key: StatCategoryKey): InlineKeyboardButton => ({
 		text: labels[key],
-		callback_data: `st:${hash}:${key}`,
+		callback_data: `st:${userId}:${hash}:${key}`,
 	})
 	return [
 		[button('combat'), button('survival'), button('exploration')],
 		[button('session'), button('economy'), button('hideout')],
-		[{ text: 'История кланов', callback_data: `st:${hash}:history` }],
+		[
+			{
+				text: 'История кланов',
+				callback_data: `st:${userId}:${hash}:history`,
+			},
+		],
 	]
 }
 
 export function profileArticle(
 	profile: PlayerProfile,
 	region: Region,
+	userId: number,
 	id = `${region}:${profile.username}`
 ): InlineArticle {
 	const card = profileCardText(profile, region)
@@ -204,9 +213,10 @@ export function profileArticle(
 					},
 				],
 				...profileStatsKeyboard(
-					profileSessionKey(region, profile.username)
+					profileSessionKey(region, profile.username),
+					userId
 				),
-				[{ text: 'Главная', callback_data: 'home:inline' }],
+				[{ text: 'Главная', callback_data: `home:${userId}` }],
 			],
 		},
 	}
@@ -214,6 +224,7 @@ export function profileArticle(
 
 export function itemArticle(
 	entry: ListedItem,
+	userId: number,
 	id = `item:${entry.id}`
 ): InlineArticle {
 	const primary = display(entry.name.ru ?? entry.name.en)
@@ -221,7 +232,7 @@ export function itemArticle(
 	const card = limitFormattable(format`${bold(primary)}
 
 	Ранг: ${bold(display(rank ?? '—'))}`)
-	const callback = `item:${entry.category}:${entry.id}`
+	const callback = `i:${userId}:${entry.category}:${entry.id}`
 	const hasCallback = new TextEncoder().encode(callback).byteLength <= 64
 	const keyboard: InlineKeyboardButton[] = hasCallback
 		? [

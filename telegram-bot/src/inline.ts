@@ -45,12 +45,13 @@ export async function buildInlineResults(
 	input: string,
 	lookup: InlineLookup,
 	items?: ItemLookup,
-	session?: SessionStore<PlayerProfile>
+	session?: SessionStore<PlayerProfile>,
+	userId = 0
 ): Promise<InlineArticle[]> {
 	const parsed = parseInlineQuery(input)
 	if (parsed.kind === 'empty') return [emptyHint()]
 	if (parsed.kind === 'error') return [errorHint(parsed.message)]
-	if (parsed.kind === 'item') return itemResults(parsed, items)
+	if (parsed.kind === 'item') return itemResults(parsed, items, userId)
 
 	const lookupResult = await lookupProfiles(parsed, lookup)
 	if (lookupResult.successes.length > 0) {
@@ -63,7 +64,12 @@ export async function buildInlineResults(
 			}
 		}
 		return lookupResult.successes.map(({ profile, region }) =>
-			profileArticle(profile, region, `${region}:${profile.username}`)
+			profileArticle(
+				profile,
+				region,
+				userId,
+				`${region}:${profile.username}`
+			)
 		)
 	}
 	if (lookupResult.errors.every(({ error }) => isNotFound(error))) {
@@ -78,7 +84,8 @@ export async function buildInlineResults(
 
 async function itemResults(
 	parsed: Extract<ParsedQuery, { kind: 'item' }>,
-	items?: ItemLookup
+	items: ItemLookup | undefined,
+	userId: number
 ): Promise<InlineArticle[]> {
 	if (!items) return [errorHint('Поиск предметов недоступен.')]
 	try {
@@ -86,7 +93,7 @@ async function itemResults(
 		if (matches.length === 0)
 			return [errorHint(`Предмет «${parsed.name}» не найден.`)]
 		return matches.map((entry) =>
-			itemArticle(entry, `item:${entry.category}:${entry.id}`)
+			itemArticle(entry, userId, `item:${entry.category}:${entry.id}`)
 		)
 	} catch {
 		return [errorHint('Каталог предметов недоступен. Попробуйте позже.')]
