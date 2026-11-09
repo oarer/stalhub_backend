@@ -109,8 +109,7 @@ async function serveUploadedAvatar(pathname: string) {
 	}
 
 	const ext = pathname.split('.').pop()?.toLowerCase() ?? ''
-	// Response хочет ArrayBuffer; Buffer может быть view на пул —
-	// вырезаем точный кусок (бэкап SAB: Buffer никогда не на SharedArrayBuffer).
+
 	const body = (bytes.buffer as ArrayBuffer).slice(
 		bytes.byteOffset,
 		bytes.byteOffset + bytes.byteLength

@@ -92,22 +92,34 @@ export async function deleteUpload(publicPath: string): Promise<void> {
 		.catch(() => {})
 }
 
-export async function readUploadBytes(
+async function readLocalUploadBytes(
 	publicPath: string
 ): Promise<Buffer | null> {
 	try {
-		if (!isS3Uploads()) {
-			const abs = resolve(process.cwd(), publicPath.replace(/^\/+/, ''))
-			if (
-				abs !== LOCAL_UPLOADS_DIR &&
-				!abs.startsWith(LOCAL_UPLOADS_DIR + '/')
-			) {
-				return null
-			}
-			const file = Bun.file(abs)
-			if (!(await file.exists())) return null
-			return Buffer.from(await file.arrayBuffer())
+		const abs = resolve(process.cwd(), publicPath.replace(/^\/+/, ''))
+		if (
+			abs !== LOCAL_UPLOADS_DIR &&
+			!abs.startsWith(LOCAL_UPLOADS_DIR + '/')
+		) {
+			return null
 		}
+		const file = Bun.file(abs)
+		if (!(await file.exists())) return null
+		return Buffer.from(await file.arrayBuffer())
+	} catch {
+		return null
+	}
+}
+
+export async function readUploadBytes(
+	publicPath: string
+): Promise<Buffer | null> {
+	const local = await readLocalUploadBytes(publicPath)
+	if (local) return local
+
+	if (!isS3Uploads()) return null
+
+	try {
 		const key = toS3Key(publicPath)
 		if (!key) return null
 		const buf = await s3client().file(key).arrayBuffer()
