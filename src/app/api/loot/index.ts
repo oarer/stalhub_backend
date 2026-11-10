@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { env } from '@/env'
 import { createElysia } from '@/utils/elysia'
+import { deferStartup } from '@/utils/startup'
 import { buildCatalog } from './catalog'
 import { type EncryptedPayload, encryptBuffer } from './crypto'
 import { parseJsonObject } from './parse-json'
@@ -85,9 +86,11 @@ function loadFromEncrypted(): boolean {
 
 export const routeLoot = createElysia()
 	.onStart(() => {
-		if (!buildFromSources()) {
-			loadFromEncrypted()
-		}
+		deferStartup(() => {
+			if (!buildFromSources()) {
+				loadFromEncrypted()
+			}
+		})
 	})
 	.get('/loot', ({ set }) => {
 		if (!catalog) {

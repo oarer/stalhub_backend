@@ -1,5 +1,6 @@
 import { cron } from '@elysia/cron'
 import { createElysia } from '@/utils/elysia'
+import { deferStartup } from '@/utils/startup'
 import { getCache, shouldRevalidate } from './cache'
 import { updatePrices } from './utils'
 
@@ -12,11 +13,18 @@ export const routeArsenal = createElysia()
 			run: updatePrices,
 		})
 	)
-	.onStart(async () => {
-		const cached = await getCache()
-		if (!cached || shouldRevalidate(cached.updated_at)) {
-			await updatePrices()
-		}
+	.onStart(() => {
+		deferStartup(() => {
+			getCache()
+				.then((cached) => {
+					if (!cached || shouldRevalidate(cached.updated_at)) {
+						return updatePrices()
+					}
+				})
+				.catch((err) =>
+					console.error('[Arsenal] Failed to update on start:', err)
+				)
+		})
 	})
 	.get(
 		'/arsenal',

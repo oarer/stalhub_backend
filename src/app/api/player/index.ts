@@ -4,11 +4,18 @@ import { PlayerRole } from '@/types/player.type'
 import { requireAdmin, requireAuth } from '@/utils/auth.guard'
 import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
+import { deferStartup } from '@/utils/startup'
 import { playerService } from './player.service'
 
 export const playersRoute = createElysia()
-	.onStart(async () => {
-		await playerService.init()
+	.onStart(() => {
+		deferStartup(() => {
+			playerService
+				.init()
+				.catch((err) =>
+					console.error('[Player] Failed to initialize:', err)
+				)
+		})
 	})
 	.group('/player', (app) =>
 		app

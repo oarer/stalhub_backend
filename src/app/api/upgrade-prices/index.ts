@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia'
+import { deferStartup } from '@/utils/startup'
 import {
 	getUpgradePrices,
 	SUPPORTED_REGIONS,
@@ -7,12 +8,12 @@ import {
 import type { UpgradePricesResponse } from './upgrade-prices.type'
 
 export const upgradePricesRoutes = new Elysia()
-	.onStart(async () => {
-		try {
-			await updateAllRegions()
-		} catch (err) {
-			console.error('[UpgradePrices] Failed to parse on start:', err)
-		}
+	.onStart(() => {
+		deferStartup(() => {
+			updateAllRegions().catch((err) =>
+				console.error('[UpgradePrices] Failed to parse on start:', err)
+			)
+		})
 	})
 	.get(
 		'/upgrade-prices/:region',

@@ -12,6 +12,7 @@ import { updateAllRegions as updateUpgradePrices } from '@/app/api/upgrade-price
 import { withTracking } from '@/lib/cron-status'
 import { prisma } from '@/lib/prisma'
 import { createElysia } from '@/utils/elysia'
+import { deferStartup } from '@/utils/startup'
 
 export const crons = createElysia()
 	.use(
@@ -434,33 +435,41 @@ export const crons = createElysia()
 			),
 		})
 	)
-	.onStart(async () => {
-		console.log('[TierLists] Generating system tier lists...')
-		try {
-			const count = await generateSystemTierLists()
-			console.log(`TierLists] System tier lists generated: ${count}`)
-		} catch (err) {
-			console.error(
-				'[TierLists] Failed to generate system tier lists:',
-				err
-			)
-		}
-		try {
-			await refreshBalanceDiffs(true)
-			console.log('[Balance] Initial balance diff refresh done.')
-		} catch (err) {
-			console.error(
-				'[Balance] Failed to refresh balance diffs on start:',
-				err
-			)
-		}
-		try {
-			await updateUpgradePrices()
-			console.log('[UpgradePrices] Initial prices parsed on start.')
-		} catch (err) {
-			console.error(
-				'[UpgradePrices] Failed to parse prices on start:',
-				err
-			)
-		}
+	.onStart(() => {
+		deferStartup(() => {
+			void (async () => {
+				console.log('[TierLists] Generating system tier lists...')
+				try {
+					const count = await generateSystemTierLists()
+					console.log(
+						`TierLists] System tier lists generated: ${count}`
+					)
+				} catch (err) {
+					console.error(
+						'[TierLists] Failed to generate system tier lists:',
+						err
+					)
+				}
+				try {
+					await refreshBalanceDiffs(true)
+					console.log('[Balance] Initial balance diff refresh done.')
+				} catch (err) {
+					console.error(
+						'[Balance] Failed to refresh balance diffs on start:',
+						err
+					)
+				}
+				try {
+					await updateUpgradePrices()
+					console.log(
+						'[UpgradePrices] Initial prices parsed on start.'
+					)
+				} catch (err) {
+					console.error(
+						'[UpgradePrices] Failed to parse prices on start:',
+						err
+					)
+				}
+			})()
+		})
 	})

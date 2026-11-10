@@ -1,6 +1,7 @@
 import { cron } from '@elysia/cron'
 import { attachmentsRequestsTotal } from '@/app/api/metrics'
 import { createElysia } from '@/utils/elysia'
+import { deferStartup } from '@/utils/startup'
 import {
 	getWeaponAttachments,
 	loadAttachments,
@@ -18,25 +19,26 @@ export const routeAttachments = createElysia()
 			run: resetCache,
 		})
 	)
-	.onStart(async () => {
-		try {
-			await loadAttachments()
-			await loadWeapons()
-			await loadCompatibleIndex()
-		} catch (err) {
-			console.error(
-				'[Attachments] Failed to load data on start, will retry:',
-				err
-			)
-			setTimeout(
-				() =>
-					loadAttachments()
-						.then(loadWeapons)
-						.then(loadCompatibleIndex)
-						.catch(() => undefined),
-				60_000
-			)
-		}
+	.onStart(() => {
+		deferStartup(() => {
+			loadAttachments()
+				.then(loadWeapons)
+				.then(loadCompatibleIndex)
+				.catch((err) => {
+					console.error(
+						'[Attachments] Failed to load data on start, will retry:',
+						err
+					)
+					setTimeout(
+						() =>
+							loadAttachments()
+								.then(loadWeapons)
+								.then(loadCompatibleIndex)
+								.catch(() => undefined),
+						60_000
+					)
+				})
+		})
 	})
 	.get(
 		'/attachments/:weaponId',
