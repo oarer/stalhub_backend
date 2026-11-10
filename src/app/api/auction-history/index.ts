@@ -15,6 +15,27 @@ import { auctionProgress } from './progress'
 import { rollupStatus, runRollupOnce } from './rollup'
 import { applyAuctionSchema } from './schema'
 
+const initializeAuctionHistory = async (): Promise<void> => {
+	if (!isAuctionDbEnabled()) {
+		console.log('[AuctionHistory] disabled (no AUCTION_DATABASE_URL)')
+		return
+	}
+
+	const ok = await applyAuctionSchema()
+	if (!ok) {
+		setTimeout(() => {
+			initializeAuctionHistory().catch((err) =>
+				console.error('[AuctionHistory] schema retry failed:', err)
+			)
+		}, 60_000)
+		return
+	}
+
+	backfillOnce().catch((err) =>
+		console.error('[AuctionHistory] initial backfill failed:', err)
+	)
+}
+
 export const routeAuctionHistory = createElysia()
 	.use(jwtPlugin)
 	.use(
@@ -41,27 +62,9 @@ export const routeAuctionHistory = createElysia()
 			},
 		})
 	)
-	.onStart(async () => {
-		if (!isAuctionDbEnabled()) {
-			console.log('[AuctionHistory] disabled (no AUCTION_DATABASE_URL)')
-			return
-		}
-		const ok = await applyAuctionSchema()
-		if (!ok) {
-			setTimeout(
-				() =>
-					applyAuctionSchema()
-						.then((retryOk) => {
-							if (retryOk) backfillOnce().catch(() => {})
-						})
-						.catch(() => {}),
-				60_000
-			)
-			return
-		}
-
-		backfillOnce().catch((err) =>
-			console.error('[AuctionHistory] initial backfill failed:', err)
+	.onStart(() => {
+		initializeAuctionHistory().catch((err) =>
+			console.error('[AuctionHistory] initialization failed:', err)
 		)
 	})
 	.get('/auction-history/status', async ({ status }: any) => {
