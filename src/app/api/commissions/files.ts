@@ -29,6 +29,25 @@ async function directory() {
 	return actual
 }
 
+async function response(entry: {
+	id: string
+	name: string
+	mime: string
+}): Promise<Response> {
+	ensure(/^[a-zA-Z0-9]+$/.test(entry.id), 'FILE_NOT_FOUND', 404)
+	const file = Bun.file(resolve(await directory(), entry.id))
+	ensure(await file.exists(), 'FILE_NOT_FOUND', 404)
+	return new Response(file, {
+		headers: {
+			'Content-Type': entry.mime,
+			'Content-Disposition': `attachment; filename="download"; filename*=UTF-8''${encodeURIComponent(entry.name)}`,
+			'Cache-Control': 'private, no-store',
+			'X-Content-Type-Options': 'nosniff',
+			'Content-Security-Policy': "default-src 'none'; sandbox",
+		},
+	})
+}
+
 export const files = {
 	async cleanup() {
 		const expired = await prisma.commissionFile.findMany({
@@ -107,18 +126,12 @@ export const files = {
 			if (![order.artist_id, order.customer_id].includes(actor))
 				await audit(prisma, actor, 'commission:file:view', entry.id)
 		} else ensure(entry.owner_id === actor, 'FILE_NOT_FOUND', 404)
-		ensure(/^[a-zA-Z0-9]+$/.test(entry.id), 'FILE_NOT_FOUND', 404)
-		const file = Bun.file(resolve(await directory(), entry.id))
-		ensure(await file.exists(), 'FILE_NOT_FOUND', 404)
-		return new Response(file, {
-			headers: {
-				'Content-Type': entry.mime,
-				'Content-Disposition': `attachment; filename="download"; filename*=UTF-8''${encodeURIComponent(entry.name)}`,
-				'Cache-Control': 'private, no-store',
-				'X-Content-Type-Options': 'nosniff',
-				'Content-Security-Policy': "default-src 'none'; sandbox",
-			},
-		})
+		return response(entry)
+	},
+	async adminDownload(id: string) {
+		const entry = await prisma.commissionFile.findUnique({ where: { id } })
+		ensure(entry && entry.order_id, 'FILE_NOT_FOUND', 404)
+		return response(entry)
 	},
 	async remove(actor: number, id: string) {
 		const removed = await prisma.commissionFile.deleteMany({

@@ -22,12 +22,23 @@ export const arbitration = {
 		return permissions(actor)
 	},
 	async list(actor: number, page: number) {
-		ensure((await permissions(actor)).arbitrate, 'ARBITER_REQUIRED', 403)
+		const actorPermissions = await permissions(actor)
+		ensure(
+			actorPermissions.arbitrate || actorPermissions.owner,
+			'ARBITER_REQUIRED',
+			403
+		)
 		const arbiters = await prisma.user.findMany({
 			where: {
 				roles: {
 					some: {
-						permissions: { some: { name: 'commission:arbitrate' } },
+						permissions: {
+							some: {
+								name: {
+									in: ['commission:arbitrate', 'user:manage'],
+								},
+							},
+						},
 					},
 				},
 				NOT: { user_settings: { is: { banned: true } } },
@@ -35,15 +46,20 @@ export const arbitration = {
 			select: { id: true },
 		})
 		const available = arbiters.map((user) => user.id)
-		const where = {
-			order: { artist_id: { not: actor }, customer_id: { not: actor } },
-			opened_by: { not: actor },
-			OR: [
-				{ assigned_to: null },
-				{ assigned_to: actor },
-				{ assigned_to: { notIn: available } },
-			],
-		}
+		const where = actorPermissions.owner
+			? {}
+			: {
+					order: {
+						artist_id: { not: actor },
+						customer_id: { not: actor },
+					},
+					opened_by: { not: actor },
+					OR: [
+						{ assigned_to: null },
+						{ assigned_to: actor },
+						{ assigned_to: { notIn: available } },
+					],
+				}
 		const [rows, total] = await Promise.all([
 			prisma.commissionCase.findMany({
 				where,
@@ -64,8 +80,9 @@ export const arbitration = {
 		return {
 			data: rows.map((entry) => ({
 				...entry,
-				claimable:
-					entry.assigned_to === null
+				claimable: actorPermissions.owner
+					? entry.assigned_to !== actor
+					: entry.assigned_to === null
 						? entry.status === 'OPEN'
 						: !available.includes(entry.assigned_to),
 			})),
@@ -84,12 +101,15 @@ export const arbitration = {
 			})
 			ensure(entry, 'CASE_NOT_FOUND', 404)
 			const order = await getOrder(db, entry.order_id)
+			const actorPermissions = await permissions(actor, db)
+			const owner = actorPermissions.owner
 			const isArbiter =
-				(await permissions(actor, db)).arbitrate &&
+				actorPermissions.arbitrate &&
 				entry.assigned_to === actor &&
-				!participant(order, actor)
+				(owner || !participant(order, actor))
 			ensure(
-				participant(order, actor) ||
+				owner ||
+					participant(order, actor) ||
 					isArbiter ||
 					entry.opened_by === actor,
 				'CASE_NOT_FOUND',
@@ -97,24 +117,25 @@ export const arbitration = {
 			)
 			if (isArbiter) await audit(db, actor, 'commission:case:view', id)
 			const { review, ...safe } = entry
+			const canSee = owner || participant(order, actor) || isArbiter
 			return {
 				...safe,
-				review: isArbiter ? review : undefined,
-				currency:
-					participant(order, actor) || isArbiter
-						? order.currency
-						: undefined,
-				order_id:
-					participant(order, actor) || isArbiter
-						? order.id
-						: undefined,
+				review: canSee ? review : undefined,
+				currency: canSee ? order.currency : undefined,
+				order_id: canSee ? order.id : undefined,
 			}
 		})
 	},
-	async command(actor: number, id: string, input: CaseCommandInput) {
+	async command(
+		actor: number,
+		id: string,
+		input: CaseCommandInput,
+		admin = false
+	) {
 		return transaction(async (db) => {
+			const actorPermissions = await permissions(actor, db)
 			ensure(
-				(await permissions(actor, db)).arbitrate,
+				admin || actorPermissions.arbitrate || actorPermissions.owner,
 				'ARBITER_REQUIRED',
 				403
 			)
@@ -122,7 +143,8 @@ export const arbitration = {
 			ensure(entry, 'CASE_NOT_FOUND', 404)
 			const order = await getOrder(db, entry.order_id)
 			ensure(
-				!participant(order, actor) && entry.opened_by !== actor,
+				actorPermissions.owner ||
+					(!participant(order, actor) && entry.opened_by !== actor),
 				'CONFLICT_OF_INTEREST',
 				403
 			)
@@ -130,27 +152,36 @@ export const arbitration = {
 				return { id }
 			ensure(entry.version === input.version, 'STALE_CASE', 409)
 			if (input.action === 'claim') {
-				const previous =
-					entry.assigned_to === null
-						? null
-						: await db.user.findUnique({
-								where: { id: entry.assigned_to },
-								select: {
-									user_settings: { select: { banned: true } },
-								},
-							})
-				const previousAvailable =
-					entry.assigned_to !== null &&
-					previous &&
-					!previous.user_settings?.banned &&
-					(await permissions(entry.assigned_to, db)).arbitrate
-				ensure(
-					entry.assigned_to === null
-						? entry.status === 'OPEN'
-						: !previousAvailable,
-					'CASE_ASSIGNED',
-					409
-				)
+				if (!admin && !actorPermissions.owner) {
+					const previous =
+						entry.assigned_to === null
+							? null
+							: await db.user.findUnique({
+									where: { id: entry.assigned_to },
+									select: {
+										user_settings: {
+											select: { banned: true },
+										},
+									},
+								})
+					const previousPermissions =
+						entry.assigned_to !== null
+							? await permissions(entry.assigned_to, db)
+							: null
+					const previousAvailable =
+						entry.assigned_to !== null &&
+						previous &&
+						!previous.user_settings?.banned &&
+						(previousPermissions?.arbitrate ||
+							previousPermissions?.manage)
+					ensure(
+						entry.assigned_to === null
+							? entry.status === 'OPEN'
+							: !previousAvailable,
+						'CASE_ASSIGNED',
+						409
+					)
+				}
 			} else ensure(entry.assigned_to === actor, 'CASE_NOT_ASSIGNED', 403)
 			await bump(db, order, order.version)
 			const change = await db.commissionCase.updateMany({

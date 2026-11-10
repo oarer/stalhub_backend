@@ -5,6 +5,7 @@ import { compactPlayerGear } from './compact'
 import { parsePlayerGear } from './gear'
 import { compactGridEvent } from './grids'
 import { getUnoItemLookup } from './item-db'
+import { getSeasonTiers } from './season-tiers'
 import { UnoApiError, unoService } from './service'
 
 const FACTION = t.Union([
@@ -124,6 +125,16 @@ export const unoRoutes = createElysia().group('/uno', (app) =>
 			{ query: leaderboardQuery, detail: { tags: ['UNO'] } },
 			({ query, set }) =>
 				respond(set, () => unoService.request('/leaderboard', query))
+		)
+		.get(
+			'/season-tiers',
+			{
+				query: t.Object({
+					season: t.String({ minLength: 1, maxLength: 64 }),
+				}),
+				detail: { tags: ['UNO'] },
+			},
+			({ query, set }) => respond(set, () => getSeasonTiers(query.season))
 		)
 		.get(
 			'/clans/:clan_id',

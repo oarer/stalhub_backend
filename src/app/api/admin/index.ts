@@ -7,6 +7,7 @@ import { badgesRoutes } from './badges'
 import { bansRoutes } from './bans'
 import { clansRoutes } from './clans'
 import { dashboardRoutes } from './dashboard'
+import { disputesRoutes } from './disputes'
 import { healthRoutes } from './health'
 import { moderationRoutes } from './moderation'
 import { notificationsRoutes } from './notifications'
@@ -88,6 +89,7 @@ export const adminRoutes = createElysia()
 			.use(healthRoutes)
 			.use(auditRoutes)
 			.use(moderationRoutes)
+			.use(disputesRoutes)
 			.use(permissionsRoutes)
 			.use(rolesRoutes)
 			.use(usersRoutes)

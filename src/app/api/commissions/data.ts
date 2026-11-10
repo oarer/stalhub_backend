@@ -52,9 +52,14 @@ export async function permissions(userId: number, db: Tx = prisma) {
 	})
 	return {
 		author: user?.roles.some((r) => r.name === 'author') ?? false,
+		owner: user?.roles.some((r) => r.name === 'owner') ?? false,
 		arbitrate:
 			user?.roles.some((r) =>
 				r.permissions.some((p) => p.name === 'commission:arbitrate')
+			) ?? false,
+		manage:
+			user?.roles.some((r) =>
+				r.permissions.some((p) => p.name === 'user:manage')
 			) ?? false,
 	}
 }
