@@ -13,9 +13,11 @@ import { clanService, normalizeSchedule } from '@/app/api/clan/services/clan'
 import { prisma } from '@/lib/prisma'
 import { deleteUpload, putUpload } from '@/lib/uploads'
 import { authService } from '@/utils/auth.service'
+import { validateAudioUpload } from '@/utils/audio-validation'
 import { decryptSecretJson } from '@/utils/crypto'
-import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
 import { validateImageUpload } from '@/utils/upload-validation'
+import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
+import { enrichMusicSettings } from './music-metadata'
 
 const USERNAME_COOLDOWN_DAYS = 30
 
@@ -150,6 +152,69 @@ class UsersService {
 		return { ok: true }
 	}
 
+	async saveMusic(
+		user_id: number,
+		file: { name: string; type: string; buffer: Buffer }
+	) {
+		const { mime, ext } = validateAudioUpload(file.buffer)
+
+		const existing = await prisma.userCustomization.findUnique({
+			where: { user_id },
+			select: { music_url: true },
+		})
+		const oldPath = existing?.music_url
+		if (
+			oldPath &&
+			oldPath.startsWith('/uploads/users/music/') &&
+			!oldPath.includes('..')
+		) {
+			await deleteUpload(oldPath)
+		}
+
+		const filename = `${user_id}-${randomUUID()}${ext}`
+		const music_url = `/uploads/users/music/${filename}`
+		await putUpload(music_url, file.buffer, mime)
+		await prisma.userCustomization.upsert({
+			where: { user_id },
+			update: {
+				music_url,
+				music_title: '',
+				music_artist: '',
+				music_cover: '',
+			},
+			create: { user_id, music_url },
+		})
+
+		return { music_url }
+	}
+
+	async clearMusic(user_id: number) {
+		const existing = await prisma.userCustomization.findUnique({
+			where: { user_id },
+			select: { music_url: true },
+		})
+		const oldPath = existing?.music_url
+		if (
+			oldPath &&
+			oldPath.startsWith('/uploads/users/music/') &&
+			!oldPath.includes('..')
+		) {
+			await deleteUpload(oldPath)
+		}
+
+		await prisma.userCustomization.updateMany({
+			where: { user_id },
+			data: {
+				music_url: null,
+				music_title: null,
+				music_artist: null,
+				music_cover: null,
+			},
+		})
+
+		return { ok: true }
+	}
+
 	async getMe(session_id: string) {
 		const session = await authService.getSession(session_id)
 		return authService.userPayload(session!)
@@ -170,6 +235,11 @@ class UsersService {
 			card_color?: string
 			avatar?: AvatarSource
 
+			music_url?: string
+			music_title?: string
+			music_artist?: string
+			music_cover?: string
+
 			region?: string
 		}
 	) {
@@ -178,6 +248,18 @@ class UsersService {
 		}
 
 		const { public_profile, region, ...customization } = data
+		const hasMusicSettings = [
+			'music_url',
+			'music_title',
+			'music_artist',
+			'music_cover',
+		].some((key) => key in customization)
+		const customizationData = hasMusicSettings
+			? {
+					...customization,
+					...(await enrichMusicSettings(customization)),
+				}
+			: customization
 
 		const [settings, userCustomization] = await Promise.all([
 			public_profile !== undefined
@@ -187,11 +269,11 @@ class UsersService {
 						create: { user_id, public_profile },
 					})
 				: Promise.resolve(null),
-			Object.keys(customization).length > 0
+			Object.keys(customizationData).length > 0
 				? prisma.userCustomization.upsert({
 						where: { user_id },
-						update: customization,
-						create: { user_id, ...customization },
+						update: customizationData,
+						create: { user_id, ...customizationData },
 					})
 				: Promise.resolve(null),
 		])

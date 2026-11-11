@@ -9,6 +9,7 @@ const player: UnoRawPlayer = {
 	clan: 'Clan',
 	tag: 'TAG',
 	clan_rank: 2,
+	strings: ['twitch', 'tester', 'https://twitch.tv/tester'],
 	gear: {
 		slot_2: {
 			nbt: { id: 200, Count_i: 1, Damage: 0, tag: { owner: 'Tester' } },
@@ -196,6 +197,11 @@ describe('UNO gear parser', () => {
 		)
 
 		expect(summary.name).toBe('Tester')
+		expect(summary.strings).toEqual([
+			'twitch',
+			'tester',
+			'https://twitch.tv/tester',
+		])
 		expect(backpack?.slotType).toBe('backpack')
 		expect(backpack?.attachments.map((item) => item.itemId)).toEqual([
 			null,

@@ -6,6 +6,7 @@ import { parsePlayerGear } from './gear'
 import { compactGridEvent } from './grids'
 import { getUnoItemLookup } from './item-db'
 import { getSeasonTiers } from './season-tiers'
+import { getUnoPlayerProfile } from './profile'
 import { UnoApiError, unoService } from './service'
 
 const FACTION = t.Union([

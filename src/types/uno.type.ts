@@ -108,6 +108,7 @@ export interface UnoPlayerGear {
 	clan: string | null
 	tag: string | null
 	clanRank: number | null
+	strings: string[]
 	items: UnoGearItem[]
 }
 
@@ -144,6 +145,7 @@ export interface UnoGearItemSummary {
 
 export interface UnoPlayerGearSummary {
 	name: string
+	strings: string[]
 	items: UnoGearItemSummary[]
 }
 

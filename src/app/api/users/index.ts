@@ -66,6 +66,11 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 					card_background: t.Optional(t.Enum(CardBackground)),
 					card_color: t.Optional(t.String()),
 
+					music_url: t.Optional(t.String()),
+					music_title: t.Optional(t.String({ maxLength: 120 })),
+					music_artist: t.Optional(t.String({ maxLength: 120 })),
+					music_cover: t.Optional(t.String()),
+
 					social_links: t.Optional(t.Record(t.String(), t.String())),
 
 					name: t.Optional(t.String({ minLength: 1 })),
@@ -94,6 +99,10 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 						banner_image: settingsData.banner_image,
 						banner_color: settingsData.banner_color,
 						card_color: settingsData.card_color,
+						music_url: settingsData.music_url,
+						music_title: settingsData.music_title,
+						music_artist: settingsData.music_artist,
+						music_cover: settingsData.music_cover,
 						...(social_links ?? {}),
 					},
 					user_id,
@@ -110,6 +119,15 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 				) {
 					set.status = 400
 					return { error: 'Invalid banner_image URL' }
+				}
+				for (const [field, value] of [
+					['music_url', settingsData.music_url],
+					['music_cover', settingsData.music_cover],
+				] as const) {
+					if (value !== undefined && value !== '' && !isSafeUrl(value)) {
+						set.status = 400
+						return { error: `Invalid ${field} URL` }
+					}
 				}
 				if (social_links !== undefined) {
 					const bad = Object.entries(social_links).find(
@@ -526,6 +544,53 @@ export const usersRoutes = createElysia().group('/users', (app) =>
 							type: file.type,
 							buffer: buf,
 						}
+					)
+				} catch (err) {
+					set.status = 400
+					return { error: (err as Error).message }
+				}
+			}
+		)
+
+		.post(
+			'/@me/music',
+			{
+				beforeHandle: [requireAuth],
+				body: t.Object({
+					file: t.File({ maxSize: '10m' }),
+				}),
+				detail: { tags: ['Users'] },
+			},
+			async ({ body, store, set }) => {
+				const file = body.file
+				const buf = Buffer.from(await file.arrayBuffer())
+
+				try {
+					return await usersService.saveMusic(
+						fromStore(store).user_id,
+						{
+							name: file.name,
+							type: file.type,
+							buffer: buf,
+						}
+					)
+				} catch (err) {
+					set.status = 400
+					return { error: (err as Error).message }
+				}
+			}
+		)
+
+		.delete(
+			'/@me/music',
+			{
+				beforeHandle: [requireAuth],
+				detail: { tags: ['Users'] },
+			},
+			async ({ store, set }) => {
+				try {
+					return await usersService.clearMusic(
+						fromStore(store).user_id
 					)
 				} catch (err) {
 					set.status = 400

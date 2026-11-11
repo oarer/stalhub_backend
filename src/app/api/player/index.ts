@@ -1,4 +1,5 @@
 import { t } from 'elysia'
+import { getUnoPlayerProfile } from '@/app/api/uno/profile'
 import { Regions } from '@/types/api.type'
 import { PlayerRole } from '@/types/player.type'
 import { requireAdmin, requireAuth } from '@/utils/auth.guard'
@@ -6,6 +7,8 @@ import { createElysia } from '@/utils/elysia'
 import { jwtPlugin } from '@/utils/jwt.plugin'
 import { deferStartup } from '@/utils/startup'
 import { playerService } from './player.service'
+
+const UNO_ENRICH_TIMEOUT_MS = 5_000
 
 export const playersRoute = createElysia()
 	.onStart(() => {
@@ -166,11 +169,16 @@ export const playersRoute = createElysia()
 						region: t.Enum(Regions),
 						character: t.String(),
 					}),
+					query: t.Object({
+						history: t.Optional(t.Boolean()),
+						gear: t.Optional(t.Boolean()),
+						strings: t.Optional(t.Boolean()),
+					}),
 					detail: {
 						tags: ['Player'],
 					},
 				},
-				async ({ params }) => {
+				async ({ params, query }) => {
 					const profile = await playerService.get({
 						region: params.region,
 						character: params.character,
@@ -178,7 +186,44 @@ export const playersRoute = createElysia()
 					const clan_history = await playerService.getClanHistory({
 						player_name: profile.username,
 					})
-					return { ...profile, clan_history }
+					const base = { ...profile, clan_history }
+
+					if (!query.gear && !query.strings) return base
+
+					try {
+						const controller = new AbortController()
+						let timeout: ReturnType<typeof setTimeout> | undefined
+						const timedOut = new Promise<never>((_, reject) => {
+							timeout = setTimeout(() => {
+								controller.abort()
+								reject(new Error('UNO enrichment timeout'))
+							}, UNO_ENRICH_TIMEOUT_MS)
+						})
+						try {
+							const uno = await Promise.race([
+								getUnoPlayerProfile(
+									params.character,
+									controller.signal
+								),
+								timedOut,
+							])
+							return {
+								...base,
+								...(query.gear ? { gear: uno.gear } : {}),
+								...(query.strings
+									? { strings: uno.strings }
+									: {}),
+							}
+						} finally {
+							clearTimeout(timeout)
+						}
+					} catch {
+						return {
+							...base,
+							...(query.gear ? { gear: null } : {}),
+							...(query.strings ? { strings: [] } : {}),
+						}
+					}
 				}
 			)
 

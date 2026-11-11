@@ -162,6 +162,10 @@ class AuthService {
 				card_background: 'NONE',
 				card_color: '#171717',
 				avatar: null,
+				music_url: null,
+				music_title: null,
+				music_artist: null,
+				music_cover: null,
 			},
 		}
 	}

@@ -45,6 +45,7 @@ function compactItem(item: UnoPlayerGear['items'][number]): UnoGearItemSummary {
 export function compactPlayerGear(gear: UnoPlayerGear): UnoPlayerGearSummary {
 	return {
 		name: gear.name,
+		strings: gear.strings,
 		items: gear.items.map(compactItem),
 	}
 }

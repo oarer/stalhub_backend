@@ -259,6 +259,7 @@ export function parsePlayerGear(
 		clan: asString(player.clan),
 		tag: asString(player.tag),
 		clanRank: asNumber(player.clan_rank),
+		strings: asStringArray(player.strings) ?? [],
 		items,
 	}
 }

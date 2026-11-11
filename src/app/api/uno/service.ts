@@ -12,6 +12,10 @@ export class UnoApiError extends Error {
 
 type QueryValue = string | number | boolean | null | undefined
 
+interface RequestOptions {
+	signal?: AbortSignal
+}
+
 async function readResponseBody(
 	response: Response,
 	maxBytes: number
@@ -60,7 +64,8 @@ class UnoService {
 
 	async request<T>(
 		path: string,
-		query: Record<string, QueryValue> = {}
+		query: Record<string, QueryValue> = {},
+		options: RequestOptions = {}
 	): Promise<T> {
 		if (!env.UNO_API_URL || !env.UNO_API_TOKEN) {
 			throw new UnoApiError(503, { error: 'UNO API is not configured' })
@@ -74,19 +79,26 @@ class UnoService {
 
 		let response: Response
 		try {
+			const timeout = AbortSignal.timeout(env.UNO_API_TIMEOUT_MS)
 			response = await fetch(url, {
 				headers: {
 					Accept: 'application/json',
 					Authorization: `Bearer ${env.UNO_API_TOKEN}`,
 				},
-				signal: AbortSignal.timeout(env.UNO_API_TIMEOUT_MS),
+				signal: options.signal
+					? AbortSignal.any([timeout, options.signal])
+					: timeout,
 			})
 		} catch (error) {
-			const timeout =
+			const aborted =
+				error instanceof Error && error.name === 'AbortError'
+			if (aborted)
+				throw new UnoApiError(503, { error: 'UNO API aborted' })
+			const timedOut =
 				error instanceof Error && error.name === 'TimeoutError'
 			console.error('[uno] request failed:', error)
-			throw new UnoApiError(timeout ? 504 : 502, {
-				error: timeout ? 'UNO API timeout' : 'UNO API unavailable',
+			throw new UnoApiError(timedOut ? 504 : 502, {
+				error: timedOut ? 'UNO API timeout' : 'UNO API unavailable',
 			})
 		}
 

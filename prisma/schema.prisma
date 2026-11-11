@@ -257,6 +257,11 @@ model UserCustomization {
   avatar          AvatarSource?
   avatar_image    String?
 
+  music_url    String?
+  music_title  String?
+  music_artist String?
+  music_cover  String?
+
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 }

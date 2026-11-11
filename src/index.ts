@@ -126,10 +126,10 @@ export const app = createElysia()
 					return 'Not found'
 				}
 
-				// Только изображения (или octet-stream) и nosniff —
-				// загруженный HTML не должен исполняться в origin API.
+				// Изображения и аудио (nosniff + sandbox) — загруженный
+				// HTML/JS не должен исполняться в origin API.
 				const mime = file.type || 'application/octet-stream'
-				if (!/^image\//.test(mime)) {
+				if (!/^(image|audio)\//.test(mime)) {
 					set.status = 403
 					return 'Forbidden'
 				}
