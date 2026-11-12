@@ -15,10 +15,6 @@ import {
 	notifyAdmins,
 } from './notify'
 
-const TRUST_PROXY_CIDRS_LIST = TRUST_PROXY_IPS.filter((entry) =>
-	entry.includes('/')
-)
-
 export const AUTO_BAN_REASON =
 	'Аккаунт заблокирован, пока мы проводим расследование. Обратитесь в службу поддержки'
 
@@ -29,14 +25,19 @@ const IP_HITS_TTL_SECONDS = 7 * 24 * 60 * 60
 
 const IPV4_LOOPBACKS = new Set(['127.0.0.1', '::1'])
 
-function isTrustedProxyIp(ip: string): boolean {
-	if (TRUST_PROXY_IPS.includes(ip)) return true
+export function isTrustedProxyIp(
+	ip: string,
+	trusted: readonly string[] = TRUST_PROXY_IPS
+): boolean {
 	if (IPV4_LOOPBACKS.has(ip)) return true
+	if (trusted.includes(ip)) return true
 	if (ip.startsWith('::ffff:')) {
 		const mapped = ip.slice('::ffff:'.length)
-		return IPV4_LOOPBACKS.has(mapped) || TRUST_PROXY_IPS.includes(mapped)
+		if (IPV4_LOOPBACKS.has(mapped) || trusted.includes(mapped)) {
+			return true
+		}
 	}
-	for (const cidr of TRUST_PROXY_CIDRS_LIST) {
+	for (const cidr of trusted.filter((entry) => entry.includes('/'))) {
 		if (ipInCidr(ip, cidr)) return true
 	}
 	return false

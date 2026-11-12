@@ -3,7 +3,7 @@ import {
 	sortIpStats,
 	type UnoIpStatItem,
 } from '@/app/api/admin/uno/uno.service'
-import { normalizeIp } from '@/utils/auto-ban'
+import { isTrustedProxyIp, normalizeIp } from '@/utils/auto-ban'
 import { isValidIp } from '@/utils/auto-ban/uno'
 
 describe('normalizeIp', () => {
@@ -53,6 +53,36 @@ describe('isValidIp', () => {
 		expect(isValidIp('example.com')).toBe(false)
 		expect(isValidIp('')).toBe(false)
 		expect(isValidIp(`${'a'.repeat(45)}:1`)).toBe(false)
+	})
+})
+
+describe('isTrustedProxyIp', () => {
+	test('trusts mapped IPv4 socket IP via CIDR (production bug case)', () => {
+		expect(isTrustedProxyIp('::ffff:172.19.0.1', ['172.19.0.0/16'])).toBe(
+			true
+		)
+	})
+
+	test('trusts mapped IPv4 socket IP via exact entry', () => {
+		expect(isTrustedProxyIp('::ffff:172.19.0.1', ['172.19.0.1'])).toBe(true)
+	})
+
+	test('trusts plain IPv4 socket IP via CIDR', () => {
+		expect(isTrustedProxyIp('172.19.0.1', ['172.19.0.0/16'])).toBe(true)
+	})
+
+	test('rejects mapped socket IP with empty trusted list', () => {
+		expect(isTrustedProxyIp('::ffff:172.19.0.1', [])).toBe(false)
+	})
+
+	test('rejects foreign IP not in trusted list', () => {
+		expect(isTrustedProxyIp('203.0.113.5', ['172.19.0.0/16'])).toBe(false)
+	})
+
+	test('always trusts loopback addresses regardless of the list', () => {
+		expect(isTrustedProxyIp('::1', [])).toBe(true)
+		expect(isTrustedProxyIp('127.0.0.1', [])).toBe(true)
+		expect(isTrustedProxyIp('::ffff:127.0.0.1', [])).toBe(true)
 	})
 })
 
