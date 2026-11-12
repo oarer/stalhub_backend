@@ -6,6 +6,7 @@ import { compactPlayerGear } from './compact'
 import { parsePlayerGear } from './gear'
 import { compactGridEvent } from './grids'
 import { getUnoItemLookup } from './item-db'
+import { UNO_DATE_OR_DATETIME_PATTERN } from './query-schema'
 import { getSeasonTiers } from './season-tiers'
 import { respond, unoService } from './service'
 
@@ -32,9 +33,24 @@ const MODE = t.Union([
 ])
 
 const dateRangeQuery = t.Object({
-	from: t.Optional(t.String({ format: 'date' })),
-	to: t.Optional(t.String({ format: 'date' })),
-	date: t.Optional(t.String({ format: 'date' })),
+	from: t.Optional(
+		t.String({
+			pattern: UNO_DATE_OR_DATETIME_PATTERN,
+			maxLength: 40,
+		})
+	),
+	to: t.Optional(
+		t.String({
+			pattern: UNO_DATE_OR_DATETIME_PATTERN,
+			maxLength: 40,
+		})
+	),
+	date: t.Optional(
+		t.String({
+			pattern: UNO_DATE_OR_DATETIME_PATTERN,
+			maxLength: 40,
+		})
+	),
 	mode: t.Optional(MODE),
 	timezone: t.Optional(t.String({ maxLength: 64 })),
 	season: t.Optional(t.String({ maxLength: 64 })),
