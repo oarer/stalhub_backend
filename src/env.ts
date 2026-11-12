@@ -7,24 +7,24 @@ const envMode =
 			development: 'development',
 			test: 'test',
 		} as Record<string, string>
-	)[String(process.env.NODE_ENV ?? '').trim().toLowerCase()] ??
-	'development'
+	)[
+		String(process.env.NODE_ENV ?? '')
+			.trim()
+			.toLowerCase()
+	] ?? 'development'
 
 function thresholdSchema(label: string) {
 	const isProduction = envMode === 'production'
 	return z
-		.preprocess(
-			(v) => {
-				if (v === undefined) return undefined
-				if (typeof v === 'string') {
-					const trimmed = v.trim()
-					if (trimmed === '') return undefined
-					return trimmed
-				}
-				return v
-			},
-			z.coerce.number().int().min(0).max(100_000_000).or(z.undefined())
-		)
+		.preprocess((v) => {
+			if (v === undefined) return undefined
+			if (typeof v === 'string') {
+				const trimmed = v.trim()
+				if (trimmed === '') return undefined
+				return trimmed
+			}
+			return v
+		}, z.coerce.number().int().min(0).max(100_000_000).or(z.undefined()))
 		.transform((v) => {
 			if (v === undefined) {
 				if (isProduction) {
@@ -40,11 +40,16 @@ function thresholdSchema(label: string) {
 
 const envVariables = z.object({
 	PORT: z.coerce.number().default(3001),
-	NODE_ENV: z.enum(['development', 'production', 'test']).default(
-		process.env.NODE_ENV === undefined
-			? 'development'
-			: (process.env.NODE_ENV as 'development' | 'production' | 'test')
-	),
+	NODE_ENV: z
+		.enum(['development', 'production', 'test'])
+		.default(
+			process.env.NODE_ENV === undefined
+				? 'development'
+				: (process.env.NODE_ENV as
+						| 'development'
+						| 'production'
+						| 'test')
+		),
 	EXBO_TOKEN: z.string().default(''),
 	SC_GATEWAY_DIRECT_FALLBACK: z
 		.string()
@@ -220,6 +225,18 @@ const envVariables = z.object({
 		.max(16 * 1024 * 1024)
 		.default(2 * 1024 * 1024),
 	UNO_RPS_THRESHOLD: z.coerce.number().int().min(0).max(1000).default(30),
+	UNO_ABUSE_WINDOW_SECONDS: z.coerce
+		.number()
+		.int()
+		.min(0)
+		.max(24 * 60 * 60)
+		.default(60),
+	UNO_ABUSE_MAX_VIOLATIONS: z.coerce
+		.number()
+		.int()
+		.min(0)
+		.max(100_000)
+		.default(20),
 
 	IMAGE_SERVICE_URL: z.string().default('http://localhost:3002'),
 	IMAGE_SERVICE_TIMEOUT_MS: z.coerce

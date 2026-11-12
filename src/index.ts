@@ -15,11 +15,23 @@ import {
 	UNO_MAX_URL_LENGTH,
 } from '@/app/api/uno/request-policy'
 import { clientIp, enforceRateLimit, shouldSkipRps } from '@/utils/auto-ban'
+import {
+	isUnoManuallyBanned,
+	recordUnoAbuse,
+	recordUnoHit,
+	unoErrorStatus,
+} from '@/utils/auto-ban/uno'
 import { createElysia } from '@/utils/elysia'
 import { logger } from '@/utils/logger'
 import { routes } from './app'
 import { crons } from './crons'
 import { env } from './env'
+
+function recordUnoError(ip: string, route: string, status: number): void {
+	recordUnoAbuse(ip, { route, status }).catch((err) => {
+		console.error('[AutoBan] recordUnoAbuse failed:', err)
+	})
+}
 
 function originOf(url: string | undefined): string | null {
 	if (!url) return null
@@ -149,19 +161,33 @@ export const app = createElysia()
 
 		const pathname = new URL(request.url).pathname
 		const isUnoRequest = pathname.startsWith('/api/v1/uno/')
-		if (isUnoRequest && !isAllowedUnoRequest(request, allowedOrigins)) {
-			set.status = 403
-			return { error: 'Forbidden origin' }
-		}
-		if (isUnoRequest && request.url.length > UNO_MAX_URL_LENGTH) {
-			set.status = 414
-			return { error: 'UNO request URI too long' }
-		}
 		if (shouldSkipRps(pathname)) return
 
 		const headers = Object.fromEntries(request.headers)
 		const remoteIp = server?.requestIP?.(request)?.address ?? ''
 		const ip = clientIp(headers, remoteIp)
+
+		if (isUnoRequest) {
+			recordUnoHit(ip).catch((err) =>
+				console.error('[AutoBan] recordUnoHit failed:', err)
+			)
+			if (await isUnoManuallyBanned(ip)) {
+				set.status = 403
+				return { error: 'Forbidden (banned)' }
+			}
+		}
+
+		if (isUnoRequest && !isAllowedUnoRequest(request, allowedOrigins)) {
+			set.status = 403
+			recordUnoError(ip, pathname, 403)
+			return { error: 'Forbidden origin' }
+		}
+		if (isUnoRequest && request.url.length > UNO_MAX_URL_LENGTH) {
+			set.status = 414
+			recordUnoError(ip, pathname, 414)
+			return { error: 'UNO request URI too long' }
+		}
+
 		const routePath = pathname.startsWith('/api/v1')
 			? pathname.slice('/api/v1'.length)
 			: pathname
@@ -175,16 +201,37 @@ export const app = createElysia()
 			return { error: 'Too many requests, try again later' }
 		}
 	})
-	.onAfterHandle(({ request, set, store }) => {
+	.onAfterHandle(({ request, set, store, server }) => {
 		const start = (store as Record<string, unknown>)._reqStart as
 			| number
 			| undefined
+		const pathname = new URL(request.url).pathname
 		normalizeAndRecordHttpRequest({
 			method: request.method,
-			route: new URL(request.url).pathname,
+			route: pathname,
 			status: set.status ?? 200,
 			duration_seconds: start ? (Date.now() - start) / 1000 : 0,
 		})
+		const status = unoErrorStatus(set.status)
+		if (pathname.startsWith('/api/v1/uno/') && status >= 400) {
+			const headers = Object.fromEntries(request.headers)
+			const remoteIp = server?.requestIP?.(request)?.address ?? ''
+			const ip = clientIp(headers, remoteIp)
+			recordUnoError(ip, pathname, status)
+		}
+	})
+	.onError(({ request, set, server, error }) => {
+		const pathname = new URL(request.url).pathname
+		if (!pathname.startsWith('/api/v1/uno/')) return
+		const errorStatus =
+			typeof (error as { status?: unknown })?.status === 'number'
+				? (error as { status: number }).status
+				: unoErrorStatus(set.status)
+		const status = errorStatus >= 400 ? errorStatus : 500
+		const headers = Object.fromEntries(request.headers)
+		const remoteIp = server?.requestIP?.(request)?.address ?? ''
+		const ip = clientIp(headers, remoteIp)
+		recordUnoError(ip, pathname, status)
 	})
 
 	.use(routes)

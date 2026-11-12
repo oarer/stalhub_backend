@@ -14,6 +14,7 @@ import { notificationsRoutes } from './notifications'
 import { permissionsRoutes } from './permissions'
 import { rolesRoutes } from './roles'
 import { scAdminRoutes } from './sc-nodes'
+import { unoAdminRoutes } from './uno'
 import { usersRoutes } from './users'
 
 const AUDIT_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
@@ -99,4 +100,5 @@ export const adminRoutes = createElysia()
 			.use(bansRoutes)
 			.use(adminArtsRoutes)
 			.use(scAdminRoutes)
+			.use(unoAdminRoutes)
 	)

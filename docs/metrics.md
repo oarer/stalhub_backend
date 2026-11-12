@@ -46,6 +46,9 @@ http_requests_total{method="GET",route="/health",status="200"} 42
 | `attachments_requests_total` | Counter | — | Всего запросов обвесов оружия |
 | `exbo_api_requests_total` | Counter | `status` | Всего запросов к внешнему API EXBO |
 | `exbo_api_request_duration_seconds` | Histogram | — | Длительность запросов к API EXBO; buckets `0.1, 0.5, 1, 2, 5, 10` |
+| `uno_upstream_requests_total` | Counter | `route`, `status` | Всего запросов к upstream UNO API; `status` — HTTP-код для HTTP-исходов либо `ok`/`timeout`/`aborted`/`network`/`too_large`/`parse` для не-HTTP |
+| `uno_upstream_request_duration_seconds` | Histogram | `route` | Длительность запросов к upstream UNO API; buckets `0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10` |
+| `uno_upstream_errors_total` | Counter | `route`, `kind` | Неудачных запросов к upstream UNO API; `kind` — `timeout`, `aborted`, `network`, `too_large`, `parse`, `http_error` |
 | `app_errors_total` | Counter | `type` | Всего ошибок приложения |
 | `ai_analysis_total` | Counter | `status` | Всего AI-анализов скриншотов |
 | `ai_analysis_duration_seconds` | Histogram | — | Длительность AI-анализа; buckets `1, 5, 10, 30, 60` |

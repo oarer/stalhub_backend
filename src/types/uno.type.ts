@@ -149,6 +149,57 @@ export interface UnoPlayerGearSummary {
 	items: UnoGearItemSummary[]
 }
 
+export interface UnoRawAuctionLot {
+	lot_id?: number
+	item_id?: number
+	price_start?: number
+	price_step?: number
+	price_buyout?: number
+	current_price?: number
+	date_start_sec?: number
+	date_start_nano?: number
+	date_end_sec?: number
+	date_end_nano?: number
+	stack_size?: number
+	owner?: string
+	category?: string
+	rarity?: string
+	additional?: string
+	current_bidder?: string
+	uuid?: string
+	name?: string | null
+	item_data?: string
+	unit_buyout?: number | null
+	unit_current?: number | null
+	[field: string]: unknown
+}
+
+export interface UnoRawAuctionPage {
+	lots?: UnoRawAuctionLot[]
+	lots_count?: number
+	total?: number
+	query?: Record<string, unknown>
+	source?: string
+	observed_at?: string
+	[field: string]: unknown
+}
+
+export interface UnoAuctionLot {
+	itemId: string
+	amount: number
+	startPrice: number
+	currentPrice?: number
+	buyoutPrice?: number
+	startTime: string | null
+	endTime: string | null
+	additional?: Record<string, unknown>
+}
+
+export interface UnoAuctionLotsResponse {
+	total: number
+	lots: UnoAuctionLot[]
+}
+
 export interface UnoSeasonTierClan {
 	id: string
 	name: string
