@@ -1,3 +1,9 @@
+import {
+	normalizeUnoRoute,
+	unoUpstreamErrorsTotal,
+	unoUpstreamRequestDurationSeconds,
+	unoUpstreamRequestsTotal,
+} from '@/app/api/metrics'
 import { env } from '@/env'
 
 export class UnoApiError extends Error {
@@ -14,6 +20,21 @@ type QueryValue = string | number | boolean | null | undefined
 
 interface RequestOptions {
 	signal?: AbortSignal
+}
+
+export function respond<T>(
+	set: { status?: number | string },
+	run: () => Promise<T>
+) {
+	return run().catch((error: unknown) => {
+		if (error instanceof UnoApiError) {
+			set.status = error.status
+			return error.payload
+		}
+		console.error('[uno] unexpected error:', error)
+		set.status = 502
+		return { error: 'UNO API unavailable' }
+	})
 }
 
 async function readResponseBody(
@@ -77,6 +98,22 @@ class UnoService {
 			url.searchParams.set(key, String(value))
 		}
 
+		const route = normalizeUnoRoute(path)
+		const startedAt = Date.now()
+
+		const record = (status: string, kind?: string) => {
+			try {
+				unoUpstreamRequestsTotal.inc({ route, status })
+				unoUpstreamRequestDurationSeconds.observe(
+					{ route },
+					(Date.now() - startedAt) / 1000
+				)
+				if (kind) unoUpstreamErrorsTotal.inc({ route, kind })
+			} catch (error) {
+				console.error('[uno] metrics recording failed:', error)
+			}
+		}
+
 		let response: Response
 		try {
 			const timeout = AbortSignal.timeout(env.UNO_API_TIMEOUT_MS)
@@ -92,36 +129,54 @@ class UnoService {
 		} catch (error) {
 			const aborted =
 				error instanceof Error && error.name === 'AbortError'
-			if (aborted)
+			if (aborted) {
+				record('aborted', 'aborted')
 				throw new UnoApiError(503, { error: 'UNO API aborted' })
+			}
 			const timedOut =
 				error instanceof Error && error.name === 'TimeoutError'
+			record(
+				timedOut ? 'timeout' : 'network',
+				timedOut ? 'timeout' : 'network'
+			)
 			console.error('[uno] request failed:', error)
 			throw new UnoApiError(timedOut ? 504 : 502, {
 				error: timedOut ? 'UNO API timeout' : 'UNO API unavailable',
 			})
 		}
 
-		const raw = await readResponseBody(
-			response,
-			env.UNO_API_MAX_RESPONSE_BYTES
-		)
+		let raw: string
+		try {
+			raw = await readResponseBody(
+				response,
+				env.UNO_API_MAX_RESPONSE_BYTES
+			)
+		} catch (error) {
+			if (error instanceof UnoApiError) record('too_large', 'too_large')
+			else record('network', 'network')
+			throw error
+		}
 		let body: unknown = null
+		let parseFailed = false
 
 		if (raw) {
 			try {
 				body = JSON.parse(raw)
 			} catch {
+				parseFailed = true
 				body = { error: raw.slice(0, 500) }
 			}
 		}
 
 		if (!response.ok) {
+			record(String(response.status), 'http_error')
 			throw new UnoApiError(
 				response.status,
 				body ?? { error: `UNO API responded ${response.status}` }
 			)
 		}
+
+		record(parseFailed ? 'parse' : 'ok', parseFailed ? 'parse' : undefined)
 
 		return body as T
 	}

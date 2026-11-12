@@ -1,13 +1,13 @@
 import { t } from 'elysia'
 import type { UnoRawPlayer } from '@/types/uno.type'
 import { createElysia } from '@/utils/elysia'
+import { unoAuctionRoutes } from './auction'
 import { compactPlayerGear } from './compact'
 import { parsePlayerGear } from './gear'
 import { compactGridEvent } from './grids'
 import { getUnoItemLookup } from './item-db'
 import { getSeasonTiers } from './season-tiers'
-import { getUnoPlayerProfile } from './profile'
-import { UnoApiError, unoService } from './service'
+import { respond, unoService } from './service'
 
 const FACTION = t.Union([
 	t.Literal('duty'),
@@ -61,20 +61,9 @@ const gridParams = t.Object({ grid_id: t.String({ format: 'uuid' }) })
 
 const clanParams = t.Object({ clan_id: t.String({ format: 'uuid' }) })
 
-function respond<T>(set: { status?: number | string }, run: () => Promise<T>) {
-	return run().catch((error: unknown) => {
-		if (error instanceof UnoApiError) {
-			set.status = error.status
-			return error.payload
-		}
-		console.error('[uno] unexpected error:', error)
-		set.status = 502
-		return { error: 'UNO API unavailable' }
-	})
-}
-
 export const unoRoutes = createElysia().group('/uno', (app) =>
 	app
+		.use(unoAuctionRoutes)
 		.get('/player-session', { detail: { tags: ['UNO'] } }, ({ set }) =>
 			respond(set, () => unoService.request('/player-session'))
 		)
