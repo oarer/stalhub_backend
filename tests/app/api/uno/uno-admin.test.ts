@@ -3,7 +3,26 @@ import {
 	sortIpStats,
 	type UnoIpStatItem,
 } from '@/app/api/admin/uno/uno.service'
+import { normalizeIp } from '@/utils/auto-ban'
 import { isValidIp } from '@/utils/auto-ban/uno'
+
+describe('normalizeIp', () => {
+	test('strips the IPv4-mapped prefix from a valid mapped address', () => {
+		expect(normalizeIp('::ffff:172.19.0.1')).toBe('172.19.0.1')
+		expect(normalizeIp('::FFFF:10.0.0.5')).toBe('10.0.0.5')
+	})
+
+	test('keeps plain addresses unchanged', () => {
+		expect(normalizeIp('172.19.0.1')).toBe('172.19.0.1')
+		expect(normalizeIp('2001:db8::1')).toBe('2001:db8::1')
+	})
+
+	test('keeps the prefix when the remainder is not a real IPv4', () => {
+		expect(normalizeIp('::ffff:not-an-ip')).toBe('::ffff:not-an-ip')
+		expect(normalizeIp('::ffff:1.2.3.256')).toBe('::ffff:1.2.3.256')
+		expect(normalizeIp('::ffff:1.2.3')).toBe('::ffff:1.2.3')
+	})
+})
 
 describe('isValidIp', () => {
 	test('accepts IPv4 quads', () => {

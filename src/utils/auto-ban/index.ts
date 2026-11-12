@@ -75,7 +75,7 @@ export function clientIp(
 	const socketIp = fallback
 	if (socketIp && isTrustedProxyIp(socketIp)) {
 		const real = headers['x-real-ip']?.trim()
-		if (real) return real
+		if (real) return normalizeIp(real)
 		const chain = headers['x-forwarded-for']
 			?.split(',')
 			.map((entry) => entry.trim())
@@ -83,11 +83,17 @@ export function clientIp(
 		if (chain?.length) {
 			for (let i = chain.length - 1; i >= 0; i--) {
 				const candidate = stripIpv6Mapped(chain[i])
-				if (!isTrustedProxyIp(candidate)) return chain[i]
+				if (!isTrustedProxyIp(candidate)) return normalizeIp(chain[i])
 			}
 		}
 	}
-	return socketIp
+	return normalizeIp(socketIp)
+}
+
+export function normalizeIp(ip: string): string {
+	if (!ip.toLowerCase().startsWith('::ffff:')) return ip
+	const mapped = ip.slice('::ffff:'.length)
+	return ipToInt(mapped) !== null ? mapped : ip
 }
 
 function stripIpv6Mapped(ip: string): string {
