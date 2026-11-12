@@ -25,7 +25,7 @@ import { createElysia } from '@/utils/elysia'
 import { logger } from '@/utils/logger'
 import { routes } from './app'
 import { crons } from './crons'
-import { env } from './env'
+import { env, TRUST_PROXY_IPS } from './env'
 
 function recordUnoError(ip: string, route: string, status: number): void {
 	recordUnoAbuse(ip, { route, status }).catch((err) => {
@@ -240,6 +240,11 @@ export const app = createElysia()
 		const protocol = env.NODE_ENV === 'production' ? 'https' : 'http'
 		console.log(
 			`StalHub backend started on: ${protocol}://${hostname}:${port}`
+		)
+		console.log(
+			`[AutoBan] trusted proxy CIDRs: ${
+				TRUST_PROXY_IPS.length ? TRUST_PROXY_IPS.join(', ') : '(none)'
+			}`
 		)
 		goldService.createSchedule(2).catch((err) => {
 			console.error('Failed to create gold drop schedule:', err)
