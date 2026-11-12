@@ -33,7 +33,7 @@ function recordUnoError(ip: string, route: string, status: number): void {
 	})
 }
 
-let lastProxyHeadersWarn = 0
+let lastUnoIpSample = 0
 
 function originOf(url: string | undefined): string | null {
 	if (!url) return null
@@ -170,14 +170,10 @@ export const app = createElysia()
 		const ip = clientIp(headers, remoteIp)
 
 		if (isUnoRequest) {
-			if (
-				!headers['x-real-ip'] &&
-				!headers['x-forwarded-for'] &&
-				Date.now() - lastProxyHeadersWarn >= 60_000
-			) {
-				lastProxyHeadersWarn = Date.now()
-				console.warn(
-					'[AutoBan] trusted socket without proxy headers (X-Real-IP / X-Forwarded-For missing) — check reverse proxy config'
+			if (Date.now() - lastUnoIpSample >= 60_000) {
+				lastUnoIpSample = Date.now()
+				console.log(
+					`[AutoBan] uno ip sample: socket=${remoteIp} ip=${ip} x-real-ip=${headers['x-real-ip'] ? 'present' : 'absent'} x-forwarded-for=${headers['x-forwarded-for'] ? 'present' : 'absent'}`
 				)
 			}
 			recordUnoHit(ip).catch((err) =>
