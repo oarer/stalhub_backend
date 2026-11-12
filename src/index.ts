@@ -33,8 +33,6 @@ function recordUnoError(ip: string, route: string, status: number): void {
 	})
 }
 
-let lastUnoIpSample = 0
-
 function originOf(url: string | undefined): string | null {
 	if (!url) return null
 	try {
@@ -170,12 +168,6 @@ export const app = createElysia()
 		const ip = clientIp(headers, remoteIp)
 
 		if (isUnoRequest) {
-			if (Date.now() - lastUnoIpSample >= 60_000) {
-				lastUnoIpSample = Date.now()
-				console.log(
-					`[AutoBan] uno ip sample: socket=${remoteIp} ip=${ip} x-real-ip=${headers['x-real-ip'] ? 'present' : 'absent'} x-forwarded-for=${headers['x-forwarded-for'] ? 'present' : 'absent'}`
-				)
-			}
 			recordUnoHit(ip).catch((err) =>
 				console.error('[AutoBan] recordUnoHit failed:', err)
 			)
