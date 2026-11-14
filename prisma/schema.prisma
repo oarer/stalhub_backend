@@ -43,6 +43,21 @@ enum StarTargetType {
   BUILD
   ARTICLE
   ART
+  TIER_LIST
+  POST
+}
+
+enum PostSource {
+  USER
+  EXBO_TG
+  STALZONE_REPORT
+  OFFICIAL_MEDIA
+  EFORUM
+}
+
+enum PollType {
+  SINGLE
+  MULTIPLE
 }
 
 enum CardBackground {
@@ -162,6 +177,13 @@ enum BoostMode {
   SELF
 }
 
+enum AchievementRarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
 // ================ USER MODEL ===================
 model User {
   id                  Int      @id @default(autoincrement())
@@ -172,12 +194,12 @@ model User {
   social_links        Json? // { network: url } record of social links
   password_hash       String?
 
-  sessions      Sessions[]
-  user_settings UserSettings?
-  customization UserCustomization?
-  notifications        Notifications[]       @relation("Notifications")
+  sessions             Sessions[]
+  user_settings        UserSettings?
+  customization        UserCustomization?
+  notifications        Notifications[]      @relation("Notifications")
   global_notifications GlobalNotification[]
-  joined_at            DateTime              @default(now())
+  joined_at            DateTime             @default(now())
 
   roles Role[]
 
@@ -187,11 +209,15 @@ model User {
   exbo_auth     EXBOAuth?
 
   badges UserBadges[]
+  achievements UserAchievement[]
 
   builds           Build[]
   articles         Article[]
   arts             Art[]
   tier_lists       TierList[]
+  posts            Post[]
+  post_poll_votes  PostPollVote[]
+  posts_edited_by  Post[]         @relation("PostEditedBy")
   stars            Star[]
   comments         ArticleComment[]
   profile_comments ArticleComment[] @relation("ProfileComments")
@@ -223,6 +249,32 @@ model UserBadges {
   image String?
   color String  @default("#0ea5e9")
   users User[]
+}
+
+model Achievement {
+  id          Int               @id @default(autoincrement())
+  slug        String            @unique
+  title       String
+  description String            @default("")
+  icon        String            @default("mdi:trophy")
+  rarity      AchievementRarity @default(COMMON)
+  hidden      Boolean           @default(false)
+  created_at  DateTime          @default(now())
+
+  users UserAchievement[]
+}
+
+model UserAchievement {
+  id             Int         @id @default(autoincrement())
+  user_id        Int
+  achievement_id Int
+  unlocked_at    DateTime    @default(now())
+
+  user        User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievement_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, achievement_id])
+  @@index([user_id])
 }
 
 model UserSettings {
@@ -292,12 +344,12 @@ model Notifications {
 }
 
 model GlobalNotification {
-  id         Int                   @id @default(autoincrement())
+  id         Int                    @id @default(autoincrement())
   title      String
   type       GlobalNotificationType
   content    Json
-  is_active  Boolean               @default(true)
-  starts_at  DateTime              @default(now())
+  is_active  Boolean                @default(true)
+  starts_at  DateTime               @default(now())
   expires_at DateTime?
 
   author    User? @relation(fields: [author_id], references: [id], onDelete: SetNull)
@@ -407,17 +459,96 @@ model Build {
   title String
   data  String
 
-  flags Int    @default(0)
-  tags  String @default("")
-  views Int    @default(0)
+  flags            Int     @default(0)
+  tags             String  @default("")
+  views            Int     @default(0)
+  stars_count      Int     @default(0)
+  comments_count   Int     @default(0)
+  hidden_from_feed Boolean @default(false)
 
   author    User @relation(fields: [author_id], references: [id], onDelete: Cascade)
   author_id Int
+
+  comments ArticleComment[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
   @@map("builds")
+}
+
+model Post {
+  id                     Int        @id @default(autoincrement())
+  external_id            String     @unique
+  title                  String?
+  content                String
+  image_urls             String[]   @default([])
+  source                 PostSource @default(USER)
+  external_key           String?
+  author_name            String?
+  attached_build_ids     Int[]      @default([])
+  attached_tier_list_ids Int[]      @default([])
+  repost_of_id           Int?
+  stars_count            Int        @default(0)
+  comments_count         Int        @default(0)
+
+  author    User? @relation(fields: [author_id], references: [id], onDelete: SetNull)
+  author_id Int?
+
+  repost_of Post?            @relation("PostReposts", fields: [repost_of_id], references: [id], onDelete: SetNull)
+  reposts   Post[]           @relation("PostReposts")
+  comments  ArticleComment[]
+
+  edited_by        User? @relation("PostEditedBy", fields: [edited_by_id], references: [id], onDelete: SetNull)
+  edited_by_id     Int?
+  edited_by_name   String?
+  poll      PostPoll?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([source, external_key])
+  @@index([repost_of_id])
+  @@map("posts")
+}
+
+model PostPoll {
+  id       Int      @id @default(autoincrement())
+  post_id  Int      @unique
+  question String
+  type     PollType
+
+  post    Post             @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  options PostPollOption[]
+
+  @@map("post_polls")
+}
+
+model PostPollOption {
+  id          Int    @id @default(autoincrement())
+  poll_id     Int
+  text        String
+  votes_count Int    @default(0)
+
+  poll  PostPoll       @relation(fields: [poll_id], references: [id], onDelete: Cascade)
+  votes PostPollVote[]
+
+  @@index([poll_id])
+  @@map("post_poll_options")
+}
+
+model PostPollVote {
+  id         Int      @id @default(autoincrement())
+  option_id  Int
+  user_id    Int
+  created_at DateTime @default(now())
+
+  option PostPollOption @relation(fields: [option_id], references: [id], onDelete: Cascade)
+  user   User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([option_id, user_id])
+  @@index([user_id])
+  @@map("post_poll_votes")
 }
 
 model Article {
@@ -509,6 +640,15 @@ model ArticleComment {
   art    Art? @relation(fields: [art_id], references: [id])
   art_id Int?
 
+  build    Build? @relation(fields: [build_id], references: [id], onDelete: Cascade)
+  build_id Int?
+
+  tier_list    TierList? @relation(fields: [tier_list_id], references: [id], onDelete: Cascade)
+  tier_list_id Int?
+
+  post    Post? @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  post_id Int?
+
   profile_user    User? @relation("ProfileComments", fields: [profile_user_id], references: [id], onDelete: Cascade)
   profile_user_id Int?
 
@@ -520,6 +660,9 @@ model ArticleComment {
   updated_at DateTime @updatedAt
 
   @@index([profile_user_id])
+  @@index([build_id])
+  @@index([tier_list_id])
+  @@index([post_id])
   @@map("article_comments")
 }
 
@@ -1001,16 +1144,19 @@ model UserLoadout {
 // ================ TIER LISTS ===================
 
 model TierList {
-  id          Int          @id @default(autoincrement())
-  external_id String       @unique
-  title       String
-  description String       @default("")
-  views       Int          @default(0)
-  kind        TierListKind @default(USER)
-  item_kind   TierItemKind @default(WEAPON)
-  is_public   Boolean      @default(true)
-  scenario    String?
-  category    String?
+  id               Int          @id @default(autoincrement())
+  external_id      String       @unique
+  title            String
+  description      String       @default("")
+  views            Int          @default(0)
+  stars_count      Int          @default(0)
+  comments_count   Int          @default(0)
+  kind             TierListKind @default(USER)
+  item_kind        TierItemKind @default(WEAPON)
+  is_public        Boolean      @default(true)
+  hidden_from_feed Boolean      @default(false)
+  scenario         String?
+  category         String?
 
   generated_at  DateTime?
   source_commit String?
@@ -1020,7 +1166,8 @@ model TierList {
   author    User? @relation(fields: [author_id], references: [id], onDelete: SetNull)
   author_id Int?
 
-  entries TierListEntry[]
+  entries  TierListEntry[]
+  comments ArticleComment[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt

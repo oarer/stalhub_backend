@@ -1,8 +1,12 @@
+import { PostSource } from 'generated/prisma/client'
+import { env } from '@/env'
+import { prisma } from '@/lib/prisma'
 import { TRACKED_AUTHORS } from './authors'
-import { cleanMessage, formatDevMessage } from './format'
+import { cleanMessage, extractImageLinks, formatDevMessage } from './format'
 import {
 	DELAY_BETWEEN_AUTHORS_MS,
 	fetchLastPost,
+	fetchUserByUsername,
 	getPostWithDetails,
 	pingForum,
 	sleep,
@@ -17,6 +21,13 @@ import {
 	readHistory,
 	setLastId,
 } from './store'
+
+const resolveForumUser = async (username: string) => {
+	const user = await fetchUserByUsername(username)
+	return user
+		? { avatarUrl: user.avatarUrl, displayName: user.displayName }
+		: null
+}
 
 let checkPromise: Promise<CheckResult> | null = null
 let lastCheck: {
@@ -36,16 +47,23 @@ export interface CheckResult {
 
 async function buildRecord(
 	author: string,
-	postId: string,
-	contentHtml: string,
-	link: string,
-	slug: string | null,
-	postNumber: number | null,
-	forumCreatedAt: string | null
+	post: Awaited<ReturnType<typeof fetchLastPost>>
 ): Promise<DevCommentRecord> {
+	if (!post) throw new Error('post is empty')
+
 	const formatted = await formatDevMessage(
-		{ author, contentHtml, messageLink: link },
-		(postId) => getPostWithDetails(postId)
+		{
+			author,
+			contentHtml: post.contentHtml,
+			messageLink: post.link,
+			discussionTitle: post.discussionTitle,
+			authorDisplayName: post.author?.displayName ?? null,
+			authorAvatarUrl: post.author?.avatarUrl ?? null,
+		},
+		{
+			loadOriginalPost: (postId) => getPostWithDetails(postId),
+			resolveUser: resolveForumUser,
+		}
 	)
 
 	const plain = cleanMessage(
@@ -53,15 +71,20 @@ async function buildRecord(
 	)
 
 	return {
-		postId,
+		postId: post.postId,
 		author,
-		link,
-		slug,
-		postNumber,
-		forumCreatedAt,
-		contentHtml,
+		authorDisplayName: formatted.authorDisplayName,
+		authorAvatarUrl: formatted.authorAvatarUrl,
+		authorProfileUrl: formatted.authorProfileUrl,
+		link: post.link,
+		slug: post.slug,
+		discussionTitle: post.discussionTitle,
+		postNumber: post.postNumber,
+		forumCreatedAt: post.createdAt,
+		contentHtml: post.contentHtml,
 		telegramHtml: formatted.telegramHtml,
 		plainText: plain,
+		blocks: formatted.blocks,
 		quotes: formatted.quotes,
 		responseHtml: formatted.responseHtml,
 		checkedAt: new Date().toISOString(),
@@ -95,19 +118,36 @@ export async function checkNewPosts(): Promise<CheckResult> {
 				if (hasSeen(author, fetched.postId)) continue
 
 				try {
-					const record = await buildRecord(
-						author,
-						fetched.postId,
-						fetched.contentHtml,
-						fetched.link,
-						fetched.slug,
-						fetched.postNumber,
-						fetched.createdAt
-					)
+					const record = await buildRecord(author, fetched)
 					const { isNew } = appendRecord(record)
 					if (isNew) {
 						newCount++
 						newItems.push(record)
+						if (env.EFORUM_FEED_MIRROR) {
+							try {
+								await prisma.post.create({
+									data: {
+										external_id: crypto
+											.randomUUID()
+											.slice(0, 8),
+										content:
+											record.plainText ||
+											record.contentHtml,
+										image_urls: extractImageLinks(
+											record.contentHtml
+										).filter(Boolean),
+										source: PostSource.EFORUM,
+										external_key: `eforum:${record.postId}`,
+										author_name: record.author,
+									},
+								})
+							} catch (mirrorError) {
+								console.error(
+									'[EForum] feed mirror failed:',
+									mirrorError
+								)
+							}
+						}
 					}
 				} catch (err) {
 					errors++
@@ -150,8 +190,19 @@ export async function previewMessage(
 	contentHtml: string,
 	link = ''
 ): Promise<Awaited<ReturnType<typeof formatDevMessage>>> {
-	return formatDevMessage({ author, contentHtml, messageLink: link }, (id) =>
-		getPostWithDetails(id)
+	const user = await fetchUserByUsername(author).catch(() => null)
+	return formatDevMessage(
+		{
+			author,
+			contentHtml,
+			messageLink: link,
+			authorDisplayName: user?.displayName ?? null,
+			authorAvatarUrl: user?.avatarUrl ?? null,
+		},
+		{
+			loadOriginalPost: (postId) => getPostWithDetails(postId),
+			resolveUser: resolveForumUser,
+		}
 	)
 }
 

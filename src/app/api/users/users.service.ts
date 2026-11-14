@@ -12,8 +12,8 @@ import { decompress } from '@/app/api/builds/builds.service'
 import { clanService, normalizeSchedule } from '@/app/api/clan/services/clan'
 import { prisma } from '@/lib/prisma'
 import { deleteUpload, putUpload } from '@/lib/uploads'
-import { authService } from '@/utils/auth.service'
 import { validateAudioUpload } from '@/utils/audio-validation'
+import { authService } from '@/utils/auth.service'
 import { decryptSecretJson } from '@/utils/crypto'
 import { validateImageUpload } from '@/utils/upload-validation'
 import { AUTHOR_WITH_BADGES_SELECT } from '@/utils/user-select'
@@ -711,6 +711,38 @@ class UsersService {
 				target_type: StarTargetType.ART,
 				fetch: (ids) =>
 					prisma.art.findMany({
+						where: { id: { in: ids } },
+						include: { author: { select: authorSelect } },
+					}) as never,
+				map: (item) => ({
+					id: item.id,
+					external_id: item.external_id,
+					title: item.title ?? '',
+					author: item.author,
+					created_at: item.created_at,
+				}),
+			},
+			{
+				type: 'tier_list',
+				target_type: StarTargetType.TIER_LIST,
+				fetch: (ids) =>
+					prisma.tierList.findMany({
+						where: { id: { in: ids } },
+						include: { author: { select: authorSelect } },
+					}),
+				map: (item) => ({
+					id: item.id,
+					external_id: item.external_id,
+					title: item.title,
+					author: item.author,
+					created_at: item.created_at,
+				}),
+			},
+			{
+				type: 'post',
+				target_type: StarTargetType.POST,
+				fetch: (ids) =>
+					prisma.post.findMany({
 						where: { id: { in: ids } },
 						include: { author: { select: authorSelect } },
 					}) as never,

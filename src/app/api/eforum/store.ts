@@ -1,17 +1,22 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
-import type { ParsedQuote } from './format'
+import type { MessageBlock, ParsedQuote } from './format'
 
 export interface DevCommentRecord {
 	postId: string
 	author: string
+	authorDisplayName?: string | null
+	authorAvatarUrl?: string | null
+	authorProfileUrl?: string | null
 	link: string
 	slug: string | null
+	discussionTitle?: string | null
 	postNumber: number | null
 	forumCreatedAt: string | null
 	contentHtml: string
 	telegramHtml: string
 	plainText: string
+	blocks?: MessageBlock[]
 	quotes: ParsedQuote[]
 	responseHtml: string
 	checkedAt: string

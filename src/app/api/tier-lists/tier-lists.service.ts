@@ -1,4 +1,5 @@
 import {
+	StarTargetType,
 	TierItemKind,
 	TierListKind,
 	type TierRank,
@@ -26,6 +27,8 @@ function serialize(tierList: {
 	generated_at: Date | null
 	is_current: boolean
 	removed_at: Date | null
+	stars_count: number
+	comments_count: number
 	created_at: Date
 	updated_at: Date
 	author: { id: number; name: string; username: string } | null
@@ -51,6 +54,8 @@ function serialize(tierList: {
 		generated_at: tierList.generated_at,
 		is_current: tierList.is_current,
 		removed_at: tierList.removed_at,
+		stars_count: tierList.stars_count,
+		comments_count: tierList.comments_count,
 		author: tierList.author,
 		entries: tierList.entries.map((e) => ({
 			id: e.id,
@@ -113,6 +118,8 @@ class TierListsService {
 				scenario: r.scenario,
 				category: r.category,
 				views: r.views,
+				stars_count: r.stars_count,
+				comments_count: r.comments_count,
 				is_public: r.is_public,
 				is_current: r.is_current,
 				generated_at: r.generated_at,
@@ -157,6 +164,8 @@ class TierListsService {
 				scenario: r.scenario,
 				category: r.category,
 				views: r.views,
+				stars_count: r.stars_count,
+				comments_count: r.comments_count,
 				is_public: r.is_public,
 				is_current: r.is_current,
 				generated_at: r.generated_at,
@@ -197,6 +206,17 @@ class TierListsService {
 		}
 
 		const serialized = serialize(tierList)
+		const is_starred = user_id
+			? !!(await prisma.star.findUnique({
+					where: {
+						target_type_target_id_user_id: {
+							target_type: StarTargetType.TIER_LIST,
+							target_id: tierList.id,
+							user_id,
+						},
+					},
+				}))
+			: false
 
 		let previousVersion: ReturnType<typeof serialize> | null = null
 		if (tierList.kind === TierListKind.SYSTEM && tierList.category) {
@@ -220,6 +240,7 @@ class TierListsService {
 		return {
 			...serialized,
 			views: serialized.views + (counted ? 1 : 0),
+			is_starred,
 			previous_version: previousVersion,
 		}
 	}
@@ -278,6 +299,8 @@ class TierListsService {
 			scenario: tierList.scenario,
 			category: tierList.category,
 			is_public: tierList.is_public,
+			stars_count: tierList.stars_count,
+			comments_count: tierList.comments_count,
 			author: tierList.author,
 			entries: tierList.entries.map((e) => ({
 				id: e.id,
@@ -368,6 +391,8 @@ class TierListsService {
 			scenario: tierList.scenario,
 			category: tierList.category,
 			is_public: tierList.is_public,
+			stars_count: tierList.stars_count,
+			comments_count: tierList.comments_count,
 			author: tierList.author,
 			entries: tierList.entries.map((e) => ({
 				id: e.id,
@@ -392,6 +417,76 @@ class TierListsService {
 		if (existing.author_id !== author_id && !is_admin) return false
 		await prisma.tierList.delete({ where: { id: existing.id } })
 		return true
+	}
+
+	async hideFromFeed(id: string, user_id: number) {
+		const num = Number(id)
+		const tierList = await prisma.tierList.findFirst({
+			where: isNaN(num)
+				? { external_id: id }
+				: { OR: [{ external_id: id }, { id: num }] },
+			select: { id: true, author_id: true },
+		})
+		if (!tierList || tierList.author_id !== user_id) return false
+		await prisma.tierList.update({
+			where: { id: tierList.id },
+			data: { hidden_from_feed: true },
+		})
+		return true
+	}
+
+	async showInFeed(id: string, user_id: number) {
+		const num = Number(id)
+		const tierList = await prisma.tierList.findFirst({
+			where: isNaN(num)
+				? { external_id: id }
+				: { OR: [{ external_id: id }, { id: num }] },
+			select: { id: true, author_id: true },
+		})
+		if (!tierList || tierList.author_id !== user_id) return false
+		await prisma.tierList.update({
+			where: { id: tierList.id },
+			data: { hidden_from_feed: false },
+		})
+		return true
+	}
+
+	async addStar(tierListId: number, user_id: number) {
+		try {
+			await prisma.$transaction(async (tx) => {
+				await tx.star.create({
+					data: {
+						target_type: StarTargetType.TIER_LIST,
+						target_id: tierListId,
+						user_id,
+					},
+				})
+				await tx.tierList.update({
+					where: { id: tierListId },
+					data: { stars_count: { increment: 1 } },
+				})
+			})
+		} catch (error) {
+			if ((error as { code?: string }).code !== 'P2002') throw error
+		}
+	}
+
+	async removeStar(tierListId: number, user_id: number) {
+		await prisma.$transaction(async (tx) => {
+			const result = await tx.star.deleteMany({
+				where: {
+					target_type: StarTargetType.TIER_LIST,
+					target_id: tierListId,
+					user_id,
+				},
+			})
+			if (result.count > 0) {
+				await tx.tierList.update({
+					where: { id: tierListId },
+					data: { stars_count: { decrement: result.count } },
+				})
+			}
+		})
 	}
 }
 

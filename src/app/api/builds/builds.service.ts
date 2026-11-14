@@ -440,6 +440,8 @@ class BuildsService {
 			author: build.author,
 			stars_count,
 			is_starred,
+			comments_count: build.comments_count,
+			hidden_from_feed: build.hidden_from_feed,
 			created_at: build.created_at,
 			updated_at: build.updated_at,
 		}
@@ -551,30 +553,66 @@ class BuildsService {
 	}
 
 	async addStar(buildId: number, user_id: number) {
-		await prisma.star.upsert({
-			where: {
-				target_type_target_id_user_id: {
+		try {
+			await prisma.$transaction(async (tx) => {
+				await tx.star.create({
+					data: {
+						target_type: StarTargetType.BUILD,
+						target_id: buildId,
+						user_id,
+					},
+				})
+				await tx.build.update({
+					where: { id: buildId },
+					data: { stars_count: { increment: 1 } },
+				})
+			})
+		} catch (error) {
+			if ((error as { code?: string }).code !== 'P2002') throw error
+		}
+	}
+
+	async hideFromFeed(buildId: number, user_id: number) {
+		const build = await prisma.build.findUnique({
+			where: { id: buildId },
+			select: { author_id: true },
+		})
+		if (!build || build.author_id !== user_id) return false
+		await prisma.build.update({
+			where: { id: buildId },
+			data: { hidden_from_feed: true },
+		})
+		return true
+	}
+
+	async showInFeed(buildId: number, user_id: number) {
+		const build = await prisma.build.findUnique({
+			where: { id: buildId },
+			select: { author_id: true },
+		})
+		if (!build || build.author_id !== user_id) return false
+		await prisma.build.update({
+			where: { id: buildId },
+			data: { hidden_from_feed: false },
+		})
+		return true
+	}
+
+	async removeStar(buildId: number, user_id: number) {
+		await prisma.$transaction(async (tx) => {
+			const result = await tx.star.deleteMany({
+				where: {
 					target_type: StarTargetType.BUILD,
 					target_id: buildId,
 					user_id,
 				},
-			},
-			create: {
-				target_type: StarTargetType.BUILD,
-				target_id: buildId,
-				user_id,
-			},
-			update: {},
-		})
-	}
-
-	async removeStar(buildId: number, user_id: number) {
-		await prisma.star.deleteMany({
-			where: {
-				target_type: StarTargetType.BUILD,
-				target_id: buildId,
-				user_id,
-			},
+			})
+			if (result.count > 0) {
+				await tx.build.update({
+					where: { id: buildId },
+					data: { stars_count: { decrement: result.count } },
+				})
+			}
 		})
 	}
 

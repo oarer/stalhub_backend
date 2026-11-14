@@ -2,6 +2,7 @@ import { createElysia } from '@/utils/elysia'
 import { adminRoutes } from './admin'
 import { routeArsenal } from './arsenal'
 import { articlesRoutes } from './articles'
+import { achievementRoutes } from './achievements'
 import { artifactsRoutes } from './artifacts'
 import { artsRoutes } from './arts'
 import { routeAttachments } from './attachments'
@@ -18,6 +19,7 @@ import { commissionsRoutes } from './commissions'
 import { routeDonate } from './donate'
 import { eforumRoutes } from './eforum'
 import { exboRoutes } from './exbo'
+import { feedRoutes } from './feed'
 import { globalNotificationsRoutes } from './global-notifications'
 import { routeHealth } from './health'
 import { routeHideout } from './hideout'
@@ -29,6 +31,7 @@ import { map3dRoutes } from './map3d'
 import { metricsRoute } from './metrics'
 import { personalRoutes } from './personal'
 import { playersRoute } from './player'
+import { postsRoutes } from './posts'
 import { serverOnlineRoutes } from './server-online'
 import { tierListsRoutes } from './tier-lists'
 import { unoRoutes } from './uno'
@@ -52,7 +55,9 @@ export const api = createElysia()
 	.use(routeHideout)
 	.use(metricsRoute)
 	.use(usersRoutes)
+	.use(achievementRoutes)
 	.use(buildsRoutes)
+	.use(feedRoutes)
 	.use(articlesRoutes)
 	.use(artsRoutes)
 	.use(tierListsRoutes)
@@ -67,6 +72,7 @@ export const api = createElysia()
 	.use(loadoutRoutes)
 	.use(routeLoot)
 	.use(personalRoutes)
+	.use(postsRoutes)
 	.use(serverOnlineRoutes)
 	.use(unoRoutes)
 	.use(internalRoutes)

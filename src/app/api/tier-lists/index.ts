@@ -1,4 +1,5 @@
 import { t } from 'elysia'
+import { tierListCommentsRoutes } from '@/app/api/feed/comments'
 import {
 	checkPermission,
 	fromStore,
@@ -217,6 +218,76 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 			}
 		)
 
+		.post(
+			'/:id/hide-from-feed',
+			{
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+			},
+			async ({ params, store, set }) => {
+				const ok = await tierListsService.hideFromFeed(
+					params.id,
+					fromStore(store).user_id
+				)
+				if (!ok) {
+					set.status = 403
+					return { error: 'Forbidden' }
+				}
+				return { success: true }
+			}
+		)
+
+		.delete(
+			'/:id/hide-from-feed',
+			{
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+			},
+			async ({ params, store, set }) => {
+				const ok = await tierListsService.showInFeed(
+					params.id,
+					fromStore(store).user_id
+				)
+				if (!ok) {
+					set.status = 403
+					return { error: 'Forbidden' }
+				}
+				return { success: true }
+			}
+		)
+
+		.post(
+			'/:id/star',
+			{
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+				detail: { tags: ['Tier Lists'] },
+			},
+			async ({ params, store }) => {
+				await tierListsService.addStar(
+					Number(params.id),
+					fromStore(store).user_id
+				)
+				return { success: true }
+			}
+		)
+
+		.delete(
+			'/:id/star',
+			{
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+				detail: { tags: ['Tier Lists'] },
+			},
+			async ({ params, store }) => {
+				await tierListsService.removeStar(
+					Number(params.id),
+					fromStore(store).user_id
+				)
+				return { success: true }
+			}
+		)
+
 		.delete(
 			'/:id',
 			{
@@ -244,4 +315,5 @@ export const tierListsRoutes = createElysia().group('/tier-lists', (app) =>
 				return { success: true }
 			}
 		)
+		.use(tierListCommentsRoutes)
 )

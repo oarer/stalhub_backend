@@ -1,6 +1,8 @@
 import { t } from 'elysia'
 import { createElysia } from '@/utils/elysia'
 import { TRACKED_AUTHORS } from './authors'
+import { getUserProfileUrl } from './format'
+import { fetchUserByUsername } from './forum'
 import { toFrontendFeed, toFrontendItem } from './present'
 import {
 	checkNewPosts,
@@ -84,13 +86,34 @@ export const eforumRoutes = createElysia().group('/eforum', (app) =>
 			{
 				detail: { tags: ['EForum'] },
 			},
-			() => ({
-				total: TRACKED_AUTHORS.length,
-				authors: [...TRACKED_AUTHORS].map((name) => ({
-					name,
-					profileUrl: `https://forum.exbo.net/u/${name}`,
-				})),
-			})
+			async () => {
+				const authors = [...TRACKED_AUTHORS]
+				const result: Array<{
+					name: string
+					displayName: string
+					profileUrl: string
+					avatarUrl: string | null
+				}> = []
+				// Ограничиваем параллелизм, чтобы не бомбить форум 55 запросами.
+				for (let i = 0; i < authors.length; i += 5) {
+					const chunk = authors.slice(i, i + 5)
+					const resolved = await Promise.all(
+						chunk.map(async (name) => {
+							const user = await fetchUserByUsername(name).catch(
+								() => null
+							)
+							return {
+								name,
+								displayName: user?.displayName ?? name,
+								profileUrl: getUserProfileUrl(name),
+								avatarUrl: user?.avatarUrl ?? null,
+							}
+						})
+					)
+					result.push(...resolved)
+				}
+				return { total: authors.length, authors: result }
+			}
 		)
 		.get(
 			'/status',
@@ -126,13 +149,18 @@ export const eforumRoutes = createElysia().group('/eforum', (app) =>
 				return toFrontendItem({
 					postId: 'preview',
 					author: body.author,
+					authorDisplayName: formatted.authorDisplayName,
+					authorAvatarUrl: formatted.authorAvatarUrl,
+					authorProfileUrl: formatted.authorProfileUrl,
 					link: body.link ?? '',
 					slug: null,
+					discussionTitle: null,
 					postNumber: null,
 					forumCreatedAt: new Date().toISOString(),
 					contentHtml: body.contentHtml,
 					telegramHtml: formatted.telegramHtml,
 					plainText: '',
+					blocks: formatted.blocks,
 					quotes: formatted.quotes,
 					responseHtml: formatted.responseHtml,
 					checkedAt: new Date().toISOString(),

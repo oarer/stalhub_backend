@@ -263,6 +263,10 @@ const envVariables = z.object({
 		.default(
 			'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0'
 		),
+	EFORUM_FEED_MIRROR: z
+		.string()
+		.default('true')
+		.transform((v) => v.toLowerCase() !== 'false' && v !== '0'),
 
 	TRUST_PROXY_CIDRS: z.string().default(''),
 })

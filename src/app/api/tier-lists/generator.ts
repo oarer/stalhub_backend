@@ -45,6 +45,7 @@ interface GameItem {
 	id: string
 	category: string
 	color?: string
+	uno?: boolean
 	name?: Translation
 	infoBlocks: InfoBlock[]
 }
@@ -674,8 +675,8 @@ export async function generateSystemTierLists() {
 		fetchJson<Record<string, GameItem>>(`${DATA_BASE}/listing/ammo.json`),
 	])
 
-	const weapons = Object.values(weaponsDict)
-	const ammoItems = Object.values(ammoDict)
+	const weapons = Object.values(weaponsDict).filter((item) => !item.uno)
+	const ammoItems = Object.values(ammoDict).filter((item) => !item.uno)
 
 	const setups = buildSetups()
 	const existingSystemList = await prisma.tierList.findFirst({

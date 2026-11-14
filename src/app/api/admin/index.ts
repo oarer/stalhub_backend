@@ -2,6 +2,7 @@ import { logAdminAction } from '@/lib/admin-audit'
 import { prisma } from '@/lib/prisma'
 import { createElysia } from '@/utils/elysia'
 import { adminArtsRoutes } from './arts'
+import { adminAchievementRoutes } from './achievements'
 import { auditRoutes } from './audit'
 import { badgesRoutes } from './badges'
 import { bansRoutes } from './bans'
@@ -95,6 +96,7 @@ export const adminRoutes = createElysia()
 			.use(rolesRoutes)
 			.use(usersRoutes)
 			.use(badgesRoutes)
+			.use(adminAchievementRoutes)
 			.use(notificationsRoutes)
 			.use(clansRoutes)
 			.use(bansRoutes)

@@ -1,4 +1,5 @@
 import { t } from 'elysia'
+import { buildCommentsRoutes } from '@/app/api/feed/comments'
 import type { BuildData } from '@/types/build.type'
 import {
 	checkPermission,
@@ -249,6 +250,44 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 		)
 
 		.post(
+			'/:id/hide-from-feed',
+			{
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+			},
+			async ({ params, store, set }) => {
+				const ok = await buildsService.hideFromFeed(
+					Number(params.id),
+					fromStore(store).user_id
+				)
+				if (!ok) {
+					set.status = 403
+					return { error: 'Forbidden' }
+				}
+				return { success: true }
+			}
+		)
+
+		.delete(
+			'/:id/hide-from-feed',
+			{
+				beforeHandle: [requireAuth],
+				params: t.Object({ id: t.String() }),
+			},
+			async ({ params, store, set }) => {
+				const ok = await buildsService.showInFeed(
+					Number(params.id),
+					fromStore(store).user_id
+				)
+				if (!ok) {
+					set.status = 403
+					return { error: 'Forbidden' }
+				}
+				return { success: true }
+			}
+		)
+
+		.post(
 			'/:id/star',
 			{
 				beforeHandle: [requireAuth],
@@ -279,4 +318,5 @@ export const buildsRoutes = createElysia().group('/builds', (app) =>
 				return { success: true }
 			}
 		)
+		.use(buildCommentsRoutes)
 )
