@@ -1,11 +1,7 @@
 import { t } from 'elysia'
-import type { UnoRawPlayer } from '@/types/uno.type'
 import { createElysia } from '@/utils/elysia'
 import { unoAuctionRoutes } from './auction'
-import { compactPlayerGear } from './compact'
-import { parsePlayerGear } from './gear'
 import { compactGridEvent } from './grids'
-import { getUnoItemLookup } from './item-db'
 import { UNO_DATE_OR_DATETIME_PATTERN } from './query-schema'
 import { getSeasonTiers } from './season-tiers'
 import { respond, unoService } from './service'
@@ -80,9 +76,8 @@ const clanParams = t.Object({ clan_id: t.String({ format: 'uuid' }) })
 export const unoRoutes = createElysia().group('/uno', (app) =>
 	app
 		.use(unoAuctionRoutes)
-		.get('/player-session', { detail: { tags: ['UNO'] } }, ({ set }) =>
-			respond(set, () => unoService.request('/player-session'))
-		)
+
+		/*
 		.get(
 			'/players/:nickname',
 			{
@@ -117,6 +112,7 @@ export const unoRoutes = createElysia().group('/uno', (app) =>
 					return compactPlayerGear(parsePlayerGear(player, lookup))
 				})
 		)
+		*/
 		.get('/health', { detail: { tags: ['UNO'] } }, ({ set }) =>
 			respond(set, () => unoService.request('/health'))
 		)

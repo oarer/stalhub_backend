@@ -60,7 +60,6 @@ export function normalizeUnoRoute(path: string): string {
 	const [head, ...rest] = segments
 
 	switch (head) {
-		case 'player-session':
 		case 'health':
 		case 'calendar':
 		case 'coverage':

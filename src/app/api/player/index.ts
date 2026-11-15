@@ -169,16 +169,11 @@ export const playersRoute = createElysia()
 						region: t.Enum(Regions),
 						character: t.String(),
 					}),
-					query: t.Object({
-						history: t.Optional(t.Boolean()),
-						gear: t.Optional(t.Boolean()),
-						strings: t.Optional(t.Boolean()),
-					}),
 					detail: {
 						tags: ['Player'],
 					},
 				},
-				async ({ params, query }) => {
+				async ({ params }) => {
 					const profile = await playerService.get({
 						region: params.region,
 						character: params.character,
@@ -187,8 +182,6 @@ export const playersRoute = createElysia()
 						player_name: profile.username,
 					})
 					const base = { ...profile, clan_history }
-
-					if (!query.gear && !query.strings) return base
 
 					try {
 						const controller = new AbortController()
@@ -209,10 +202,11 @@ export const playersRoute = createElysia()
 							])
 							return {
 								...base,
-								...(query.gear ? { gear: uno.gear } : {}),
-								...(query.strings
-									? { strings: uno.strings }
-									: {}),
+								exens: uno.exens,
+								social_links: uno.social_links,
+								customization: uno.customization,
+								gear: uno.gear,
+								strings: uno.strings,
 							}
 						} finally {
 							clearTimeout(timeout)
@@ -220,8 +214,16 @@ export const playersRoute = createElysia()
 					} catch {
 						return {
 							...base,
-							...(query.gear ? { gear: null } : {}),
-							...(query.strings ? { strings: [] } : {}),
+							exens: null,
+							social_links: null,
+							customization: {
+								background: null,
+								pattern: null,
+								frame: null,
+								stickers: null,
+							},
+							gear: null,
+							strings: [],
 						}
 					}
 				}

@@ -1,4 +1,5 @@
 import { auctionService } from '@/app/api/auction/auction.service'
+import { env } from '@/env'
 import type { LotsHistoryResponse } from '@/types/api.type'
 import type { Root } from '@/types/hideout.type'
 
@@ -101,6 +102,8 @@ const retryFailedIds = async (ids: string[]) => {
 }
 
 export const updatePrices = async () => {
+	if (env.PRICE_PARSING_DISABLED) return
+
 	if (updatePromise) return updatePromise
 
 	if (retryTimer) {

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { LotsPuller, withRetry } from '@/app/api/auction/lots-puller'
+import { env } from '@/env'
 import type { LotsResponse } from '@/types/api.type'
 import type {
 	ArtifactAggregate,
@@ -294,6 +295,8 @@ const scheduleRetry = (attempt: number) => {
 }
 
 export const updateAllRegions = async (attempt = 0): Promise<number> => {
+	if (env.PRICE_PARSING_DISABLED) return 0
+
 	if (updatePromise) return updatePromise
 
 	updatePromise = (async () => {

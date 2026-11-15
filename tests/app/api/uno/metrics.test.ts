@@ -57,7 +57,6 @@ afterEach(() => {
 describe('normalizeUnoRoute', () => {
 	test('keeps static top-level routes as-is', () => {
 		expect(normalizeUnoRoute('/health')).toBe('/health')
-		expect(normalizeUnoRoute('/player-session')).toBe('/player-session')
 		expect(normalizeUnoRoute('/calendar')).toBe('/calendar')
 		expect(normalizeUnoRoute('/coverage')).toBe('/coverage')
 		expect(normalizeUnoRoute('/leaderboard')).toBe('/leaderboard')

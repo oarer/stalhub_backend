@@ -246,6 +246,11 @@ const envVariables = z.object({
 		.max(120000)
 		.default(15000),
 
+	PRICE_PARSING_DISABLED: z
+		.string()
+		.default('false')
+		.transform((v) => v.toLowerCase() === 'true' || v === '1'),
+
 	S3_UPLOADS_ENABLED: z
 		.string()
 		.default('false')

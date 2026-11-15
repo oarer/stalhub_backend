@@ -1,4 +1,9 @@
 import type { Regions } from './api.type'
+import type {
+	UnoExensValue,
+	UnoPlayerGearSummary,
+	UnoProfileCustomization,
+} from './uno.type'
 
 export enum PlayerRole {
 	EXBO = 'EXBO',
@@ -19,6 +24,11 @@ export interface PlayerResponse {
 	displayedAchievements: Achievements[]
 	clan: Clan
 	stats: Stat[]
+	gear?: UnoPlayerGearSummary | null
+	strings?: string[]
+	exens?: UnoExensValue | null
+	social_links?: Record<string, string> | null
+	customization?: UnoProfileCustomization | null
 	role?: {
 		role: PlayerRole
 		description: string | null

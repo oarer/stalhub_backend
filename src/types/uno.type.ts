@@ -22,12 +22,58 @@ export interface UnoRawGearSlot {
 	[field: string]: unknown
 }
 
+export type UnoExensValue =
+	| string
+	| number
+	| boolean
+	| null
+	| UnoExensValue[]
+	| { [key: string]: UnoExensValue }
+
+export type UnoProfileStickers = string[] | Record<string, string>
+
+export interface UnoStickerFlipbook {
+	frames: number
+	rows: number
+	columns: number
+	fps: number
+	frameBlending: boolean
+	pingPong: boolean
+}
+
+export interface UnoProfileStickerItem {
+	src: string
+	top: number | null
+	left: number | null
+	width: number | null
+	rotate: number | null
+	image_width: number | null
+	image_height: number | null
+	slot: number | null
+	flipbook: UnoStickerFlipbook | null
+}
+
+export interface UnoProfileCustomization {
+	background: string | null
+	pattern: string | null
+	frame: string | null
+	stickers: UnoProfileStickerItem[] | null
+}
+
 export interface UnoRawPlayer {
 	name?: string
 	faction?: string | null
 	clan?: string | null
 	tag?: string | null
 	clan_rank?: number | null
+	exens?: UnoExensValue | null
+	social_links?: Record<string, string> | null
+	customization?: Record<string, unknown> | null
+	profile?: Record<string, unknown> | null
+	appearance?: Record<string, unknown> | null
+	background?: string | null
+	frame?: string | null
+	stickers?: UnoProfileStickers | null
 	gear?: Record<string, UnoRawGearSlot | null>
 	[field: string]: unknown
 }

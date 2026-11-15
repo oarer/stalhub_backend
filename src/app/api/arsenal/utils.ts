@@ -1,5 +1,6 @@
 import { scGateway } from '@/app/api/sc-gateway/gateway'
 import items from '@/data/arsenal.json'
+import { env } from '@/env'
 import type { LotsHistoryResponse } from '@/types/api.type'
 import type { ItemInput, ItemResult } from '@/types/arsenal.type'
 import { acquireLock, releaseLock, setCache } from './cache'
@@ -46,6 +47,8 @@ export const fetchItemPrice = async (item_id: string, region = 'eu') => {
 }
 
 export const updatePrices = async () => {
+	if (env.PRICE_PARSING_DISABLED) return
+
 	const gotLock = await acquireLock()
 	if (!gotLock) return
 
