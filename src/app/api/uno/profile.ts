@@ -1,3 +1,4 @@
+import { redis } from 'bun'
 import type {
 	UnoExensValue,
 	UnoProfileCustomization,
@@ -16,6 +17,12 @@ const PROFILE_ASSET_OPTIONS = {
 	baseUrl: 'https://static.stalhub.dev',
 	pathPrefix: 'sc',
 } as const
+
+const PROFILE_CACHE_TTL_SECONDS = 60 * 5
+
+function profileCacheKey(nickname: string): string {
+	return `uno:player-profile:${encodeURIComponent(nickname.trim().toLowerCase())}`
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -270,10 +277,56 @@ export function normalizeCustomization(
 	}
 }
 
+type UnoPlayerProfile = {
+	gear: ReturnType<typeof compactPlayerGear>
+	strings: string[]
+	exens: UnoExensValue | null
+	social_links: Record<string, string> | null
+	customization: UnoProfileCustomization
+}
+
+async function getCachedProfile(
+	nickname: string
+): Promise<UnoPlayerProfile | null> {
+	try {
+		const cached = await redis.get(profileCacheKey(nickname))
+		if (!cached) return null
+
+		try {
+			return JSON.parse(cached) as UnoPlayerProfile
+		} catch {
+			await redis.del(profileCacheKey(nickname))
+			return null
+		}
+	} catch (error) {
+		console.error('[uno] profile cache read failed:', error)
+		return null
+	}
+}
+
+async function setCachedProfile(
+	nickname: string,
+	profile: UnoPlayerProfile
+): Promise<void> {
+	try {
+		await redis.set(
+			profileCacheKey(nickname),
+			JSON.stringify(profile),
+			'EX',
+			PROFILE_CACHE_TTL_SECONDS
+		)
+	} catch (error) {
+		console.error('[uno] profile cache write failed:', error)
+	}
+}
+
 export async function getUnoPlayerProfile(
 	nickname: string,
 	signal?: AbortSignal
-) {
+): Promise<UnoPlayerProfile> {
+	const cached = await getCachedProfile(nickname)
+	if (cached) return cached
+
 	const [rawPlayer, lookup] = await Promise.all([
 		unoService.request<unknown>(
 			`/players/${encodeURIComponent(nickname)}`,
@@ -285,11 +338,14 @@ export async function getUnoPlayerProfile(
 	const player = validateUnoPlayer(rawPlayer)
 	const gear = compactPlayerGear(parsePlayerGear(player, lookup))
 
-	return {
+	const profile: UnoPlayerProfile = {
 		gear,
 		strings: gear.strings,
 		exens: normalizeExens(player.exens) ?? null,
 		social_links: normalizeSocialLinks(player.social_links),
 		customization: normalizeCustomization(player),
 	}
+
+	await setCachedProfile(nickname, profile)
+	return profile
 }
