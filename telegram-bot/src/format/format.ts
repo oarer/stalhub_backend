@@ -6,18 +6,18 @@ import {
 	FormattableString,
 	format,
 } from 'gramio'
-import type { ListedItem } from './items'
-import { rankName } from './items'
-import { profileUrl, type Region } from './query'
-import { profileSessionKey } from './session'
-import type { StatCategoryKey } from './stat-view'
+import type { ListedItem } from '../services/items'
+import { rankName } from '../services/items'
+import { profileUrl, type Region } from '../services/query'
+import { profileSessionKey } from '../services/session'
+import type { StatCategoryKey } from '../services/stat-view'
 import {
 	extractMetrics,
 	formatDate,
 	formatHours,
 	formatMetric,
 	type PlayerProfile,
-} from './stats'
+} from '../services/stats'
 
 export type InlineKeyboardButton = {
 	text: string

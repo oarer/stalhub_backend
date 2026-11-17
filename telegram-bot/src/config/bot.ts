@@ -1,3 +1,5 @@
+import { normalizeBackendUrl, positiveNumber } from './shared'
+
 export type BotConfig = {
 	token: string
 	backendUrl: string
@@ -12,24 +14,13 @@ export type BotConfig = {
 	sessionTtlMs: number
 }
 
-function positiveNumber(value: string | undefined, fallback: number): number {
-	const parsed = Number(value)
-	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
-}
-
 export function loadConfig(
 	env: Record<string, string | undefined> = process.env
 ): BotConfig {
 	const token = env.TG_BOT_TOKEN?.trim()
 	if (!token) throw new Error('TG_BOT_TOKEN is not set')
 
-	const rawBackendUrl = (env.BACKEND_URL ?? 'http://localhost:3001').replace(
-		/\/$/,
-		''
-	)
-	const backendUrl = rawBackendUrl.endsWith('/api/v1')
-		? rawBackendUrl
-		: `${rawBackendUrl}/api/v1`
+	const backendUrl = normalizeBackendUrl(env.BACKEND_URL)
 
 	const rawWebAppUrl = (env.TG_WEBAPP_URL ?? 'https://stalhub.dev').replace(
 		/\/$/,

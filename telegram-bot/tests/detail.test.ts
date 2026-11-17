@@ -6,7 +6,7 @@ import {
 	messageToString,
 	renderItemDetail,
 	statusName,
-} from '../src/detail'
+} from '../src/services/detail'
 
 const weapon: ItemDetail = {
 	id: 'aksu',

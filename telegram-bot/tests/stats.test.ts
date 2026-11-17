@@ -4,7 +4,7 @@ import {
 	formatDate,
 	formatHours,
 	formatMetric,
-} from '../src/stats'
+} from '../src/services/stats'
 
 describe('player metrics', () => {
 	test('calculates requested ratios and time units', () => {

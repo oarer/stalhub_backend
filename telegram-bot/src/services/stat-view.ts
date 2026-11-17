@@ -4,8 +4,8 @@ import {
 	type FormattableString,
 	format,
 } from 'gramio'
-import { CLAN_RANK_NAMES } from './format'
-import catalog from './stat-catalog.json'
+import { CLAN_RANK_NAMES } from '../format/format'
+import catalog from '../format/stat-catalog.json'
 import { formatDate, type PlayerProfile } from './stats'
 
 const STATS = catalog as StatMeta[]

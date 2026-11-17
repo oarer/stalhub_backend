@@ -15,8 +15,8 @@ services:
       - .env
     environment:
       IMAGE_SERVICE_URL: http://image-service:3002
-      NO_PROXY: localhost,127.0.0.1,::1,app,image-service,host.docker.internal
-      no_proxy: localhost,127.0.0.1,::1,app,image-service,host.docker.internal
+      NO_PROXY: localhost,127.0.0.1,::1,app,image-service,rsshub,host.docker.internal
+      no_proxy: localhost,127.0.0.1,::1,app,image-service,rsshub,host.docker.internal
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { limitFormattable } from '../src/format'
+import { limitFormattable } from '../src/format/format'
 import {
 	CATEGORIES,
 	categoryMeta,
@@ -7,7 +7,7 @@ import {
 	clanHistoryText,
 	collectCategoryStats,
 	formatStatValue,
-} from '../src/stat-view'
+} from '../src/services/stat-view'
 
 type RawStat = { id: string; type?: string; value: unknown }
 

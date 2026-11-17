@@ -6,7 +6,7 @@ import {
 	type FormattableString,
 	format,
 } from 'gramio'
-import { helpText, messageArticle, profileArticle } from '../src/format'
+import { helpText, messageArticle, profileArticle } from '../src/format/format'
 
 function entitiesOf(
 	article: ReturnType<typeof profileArticle>

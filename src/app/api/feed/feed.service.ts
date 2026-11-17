@@ -27,6 +27,7 @@ const artAuthorInclude = {
 class FeedService {
 	async list(opts: {
 		types?: FeedItemType[]
+		categories?: number[]
 		page: number
 		take: number
 		sort: FeedSort
@@ -40,9 +41,20 @@ class FeedService {
 
 		const wantsUserPosts = wants('post')
 		const wantsEforumPosts = wants('eforum')
-		const postSources: ('USER' | 'EFORUM')[] = []
-		if (wantsUserPosts) postSources.push('USER')
+		const postSources: ('USER' | 'TG' | 'YOUTUBE' | 'EFORUM')[] = []
+		if (wantsUserPosts) postSources.push('USER', 'TG', 'YOUTUBE')
 		if (wantsEforumPosts) postSources.push('EFORUM')
+		const categoryWhere = opts.categories?.length
+			? {
+					feed_source: {
+						categories: {
+							some: {
+								category_id: { in: opts.categories },
+							},
+						},
+					},
+				}
+			: {}
 
 		const [builds, tierLists, posts, arts] = await Promise.all([
 			wants('build')
@@ -78,6 +90,7 @@ class FeedService {
 						where: {
 							...(dateWhere && { created_at: dateWhere }),
 							source: { in: postSources },
+							...categoryWhere,
 						},
 						include: { author: includeAuthor },
 					})

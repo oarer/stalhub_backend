@@ -10,8 +10,7 @@ import {
 	validateImageUpload,
 } from '@/utils/upload-validation'
 
-function isAcceptedImageUrl(value: string): boolean {
-	if (value.startsWith('/uploads/')) return !value.includes('..')
+function isHttpUrl(value: string): boolean {
 	try {
 		const url = new URL(value)
 		return url.protocol === 'http:' || url.protocol === 'https:'
@@ -20,11 +19,16 @@ function isAcceptedImageUrl(value: string): boolean {
 	}
 }
 
+function isAcceptedImageUrl(value: string): boolean {
+	if (value.startsWith('/uploads/')) return !value.includes('..')
+	return isHttpUrl(value)
+}
+
 const feedPostBody = t.Object({
 	source: t.Union([
-		t.Literal('EXBO_TG'),
-		t.Literal('STALZONE_REPORT'),
-		t.Literal('OFFICIAL_MEDIA'),
+		t.Literal('TG'),
+		t.Literal('YOUTUBE'),
+		t.Literal('EFORUM'),
 	]),
 	external_key: t.String({ minLength: 1, maxLength: 500 }),
 	content: t.String({ minLength: 1, maxLength: 50000 }),
@@ -32,6 +36,8 @@ const feedPostBody = t.Object({
 		t.Array(t.String({ maxLength: 2000 }), { maxItems: 10 })
 	),
 	author_name: t.Optional(t.String({ maxLength: 200 })),
+	source_url: t.Optional(t.String({ maxLength: 2000 })),
+	source_avatar_url: t.Optional(t.String({ maxLength: 2000 })),
 })
 
 export const internalRoutes = createElysia().group('/internal', (app) =>
@@ -79,12 +85,25 @@ export const internalRoutes = createElysia().group('/internal', (app) =>
 					set.status = 400
 					return { error: 'Invalid image URL' }
 				}
+				if (body.source_url && !isHttpUrl(body.source_url)) {
+					set.status = 400
+					return { error: 'Invalid source URL' }
+				}
+				if (
+					body.source_avatar_url &&
+					!isHttpUrl(body.source_avatar_url)
+				) {
+					set.status = 400
+					return { error: 'Invalid source avatar URL' }
+				}
 				return postsService.createIngest({
 					source: body.source as PostSource,
 					external_key: body.external_key,
 					content: body.content,
 					image_urls: body.image_urls,
 					author_name: body.author_name,
+					source_url: body.source_url,
+					source_avatar_url: body.source_avatar_url,
 				})
 			}
 		)

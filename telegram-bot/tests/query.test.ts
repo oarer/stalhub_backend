@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { parseInlineQuery } from '../src/query'
+import { parseInlineQuery } from '../src/services/query'
 
 describe('parseInlineQuery', () => {
 	test('defaults to RU when region is omitted', () => {

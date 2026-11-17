@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { fetchProfile } from '../src/backend'
-import { loadConfig } from '../src/config'
+import { fetchProfile } from '../src/api/stats'
+import { loadConfig } from '../src/config/bot'
 
 describe('backend requests', () => {
 	test('keeps the v1 player endpoint and encodes the character', async () => {

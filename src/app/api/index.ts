@@ -7,7 +7,6 @@ import { artifactsRoutes } from './artifacts'
 import { artsRoutes } from './arts'
 import { routeAttachments } from './attachments'
 import { auctionRoutes } from './auction'
-import { routeAuctionHistory } from './auction-history'
 import { authRoutes } from './auth'
 import { authorsRoutes } from './authors'
 import { balanceRoutes } from './balance'
@@ -45,7 +44,6 @@ export const api = createElysia()
 	.use(routeArsenal)
 	.use(artifactsRoutes)
 	.use(auctionRoutes)
-	.use(routeAuctionHistory)
 	.use(authRoutes)
 	.use(balanceRoutes)
 	.use(playersRoute)

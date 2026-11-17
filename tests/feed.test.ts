@@ -8,11 +8,15 @@ let buildsService: typeof import('../src/app/api/builds/builds.service').buildsS
 let tierListsService: typeof import('../src/app/api/tier-lists/tier-lists.service').tierListsService
 let postsService: typeof import('../src/app/api/posts/posts.service').postsService
 let usersService: typeof import('../src/app/api/users/users.service').usersService
+let syncTelegramSources: typeof import('../src/app/api/feed-sources/telegram').syncTelegramSources
+let htmlToText: typeof import('../src/app/api/feed-sources/telegram').htmlToText
 let userId = 0
 let commenterId = 0
 let buildId = 0
 let tierListId = 0
 let postExternalId = ''
+let telegramSourceId = 0
+let telegramExternalId = ''
 const prefix = `feed_${Date.now()}`
 
 beforeAll(async () => {
@@ -35,6 +39,12 @@ beforeAll(async () => {
 		.postsService
 	usersService = (await import('../src/app/api/users/users.service'))
 		.usersService
+	syncTelegramSources = (await import('../src/app/api/feed-sources/telegram'))
+		.syncTelegramSources
+	htmlToText = (await import('../src/app/api/feed-sources/telegram'))
+		.htmlToText
+	const { env } = await import('../src/env')
+	env.RSSHUB_BASE_URL = 'http://rsshub.test'
 	const user = await db.user.create({ data: { username: `${prefix}_user` } })
 	userId = user.id
 	const commenter = await db.user.create({
@@ -75,10 +85,27 @@ beforeAll(async () => {
 			author_id: userId,
 		},
 	})
+	telegramExternalId = `${prefix}_tg`
+	const telegramSource = await db.feedSource.create({
+		data: {
+			type: 'TG',
+			external_id: telegramExternalId,
+			label: 'Test Telegram',
+		},
+	})
+	telegramSourceId = telegramSource.id
 })
 
 afterAll(async () => {
 	if (!enabled) return
+	await db.post.deleteMany({
+		where: {
+			source: PostSource.TG,
+			external_key: { startsWith: `tg:${telegramExternalId}:` },
+		},
+	})
+	if (telegramSourceId)
+		await db.feedSource.delete({ where: { id: telegramSourceId } })
 	await db.user.delete({ where: { id: userId } })
 	await db.user.delete({ where: { id: commenterId } })
 })
@@ -317,19 +344,106 @@ if (!enabled) {
 
 	test('internal ingest deduplicates automatic posts', async () => {
 		const first = await postsService.createIngest({
-			source: PostSource.EXBO_TG,
+			source: PostSource.TG,
 			external_key: `${prefix}:ingest`,
 			content: 'Imported post',
 			author_name: 'Bot source',
+			source_url: 'https://t.me/bot_source',
+			source_avatar_url: 'https://cdn.test/bot_source.jpg',
 		})
 		const second = await postsService.createIngest({
-			source: PostSource.EXBO_TG,
+			source: PostSource.TG,
 			external_key: `${prefix}:ingest`,
 			content: 'Duplicate post',
 		})
 		expect(first.created).toBe(true)
+		expect(first.post?.source_url).toBe('https://t.me/bot_source')
+		expect(first.post?.source_avatar_url).toBe(
+			'https://cdn.test/bot_source.jpg'
+		)
 		expect(second.created).toBe(false)
 		expect(second.post?.content).toBe('Imported post')
+	})
+
+	test('syncs Telegram RSSHub feeds with a baseline and later posts', async () => {
+		const originalFetch = globalThis.fetch
+		let requestCount = 0
+		globalThis.fetch = (async (input) => {
+			expect(String(input)).toBe(
+				`http://rsshub.test/telegram/channel/${telegramExternalId}?format=json`
+			)
+			requestCount += 1
+			const items =
+				requestCount === 1
+					? [
+							{
+								title: 'Old title',
+								content_html:
+									'<p>Old body</p><figure><img src="https://img.test/old.jpg"></figure>',
+								url: `https://t.me/${telegramExternalId}/41`,
+								date_published: '2026-01-01T00:00:00.000Z',
+								authors: [{ name: 'Test channel' }],
+							},
+						]
+					: [
+							{
+								title: 'Old title',
+								content_html: '<p>Old body</p>',
+								url: `https://t.me/${telegramExternalId}/41`,
+								date_published: '2026-01-01T00:00:00.000Z',
+							},
+							{
+								title: 'New title',
+								content_html:
+									'<p>New &amp; body<br>second line</p><figure><img src="https://img.test/new.jpg"></figure>',
+								url: `https://t.me/${telegramExternalId}/42`,
+								date_published: '2026-01-02T00:00:00.000Z',
+								authors: [{ name: 'Test channel' }],
+							},
+						]
+			return new Response(
+				JSON.stringify({
+					icon: 'https://cdn.test/channel.jpg',
+					items,
+				}),
+				{ status: 200 }
+			)
+		}) as typeof fetch
+		try {
+			const baseline = await syncTelegramSources([telegramSourceId])
+			expect(baseline.synced).toBe(0)
+			expect(baseline.errors).toEqual([])
+			const afterBaseline = await db.feedSource.findUniqueOrThrow({
+				where: { id: telegramSourceId },
+			})
+			expect(afterBaseline.last_synced_at?.toISOString()).toBe(
+				'2026-01-01T00:00:00.000Z'
+			)
+
+			const update = await syncTelegramSources([telegramSourceId])
+			expect(update.synced).toBe(1)
+			expect(update.errors).toEqual([])
+			const post = await db.post.findUniqueOrThrow({
+				where: {
+					source_external_key: {
+						source: PostSource.TG,
+						external_key: `tg:${telegramExternalId}:42`,
+					},
+				},
+			})
+			expect(post.content).toBe('New title\n\nNew & body\nsecond line')
+			expect(post.image_urls).toEqual(['https://img.test/new.jpg'])
+			expect(post.author_name).toBe('Test channel')
+			expect(post.source_url).toBe(`https://t.me/${telegramExternalId}`)
+			expect(post.source_avatar_url).toBe('https://cdn.test/channel.jpg')
+			expect(
+				htmlToText(
+					'<p>Hello &amp; <b>world</b><br>next</p><figure><img src="https://img.test/x.jpg"></figure>'
+				)
+			).toBe('Hello & world\nnext')
+		} finally {
+			globalThis.fetch = originalFetch
+		}
 	})
 
 	test('hide-from-feed excludes content and requires ownership', async () => {
@@ -412,7 +526,11 @@ if (!enabled) {
 		})
 		expect(onlyEforumPosts.data).toHaveLength(1)
 		expect(onlyEforumPosts.data[0].type).toBe('post')
-		expect(onlyEforumPosts.data[0].post.source).toBe('EFORUM')
+		expect(
+			onlyEforumPosts.data.every(
+				(item) => item.type === 'post' && item.post.source === 'EFORUM'
+			)
+		).toBe(true)
 
 		const both = await feedService.list({
 			types: ['post', 'eforum'],

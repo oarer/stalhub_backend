@@ -1,6 +1,6 @@
-import type { BotConfig } from './config'
-import type { Region } from './query'
-import type { PlayerProfile } from './stats'
+import type { BotConfig } from '../config'
+import type { Region } from '../services/query'
+import type { PlayerProfile } from '../services/stats'
 
 export class BackendError extends Error {
 	constructor(

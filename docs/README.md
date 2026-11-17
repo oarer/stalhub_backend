@@ -14,6 +14,7 @@
 - [arts.md](arts.md) — рисунки
 - [tier-lists.md](tier-lists.md) — тир-листы
 - [builds.md](builds.md) — сборки
+- [feed.md](feed.md) — лента и источники ленты
 - [attachments.md](attachments.md) — обвесы на оружие
 - [authors.md](authors.md) — авторы контента
 - [player.md](player.md) — профиль игрока

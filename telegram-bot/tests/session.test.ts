@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { profileSessionKey, SessionStore, shortHash } from '../src/session'
+import { profileSessionKey, SessionStore, shortHash } from '../src/services/session'
 
 describe('SessionStore', () => {
 	test('stores and returns values by key', () => {

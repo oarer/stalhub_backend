@@ -216,7 +216,9 @@ async function postProjection(postId: number, user_id?: number) {
 		image_urls: post.image_urls,
 		source: post.source,
 		author: post.author,
-		author_name: post.author_name,
+		author_name: post.author_name?.trim() || null,
+		source_url: post.source_url?.trim() || null,
+		source_avatar_url: post.source_avatar_url?.trim() || null,
 		edited_by:
 			post.edited_by_id &&
 			(post.edited_by?.username || post.edited_by_name)
@@ -238,7 +240,7 @@ async function postProjection(postId: number, user_id?: number) {
 					content: excerpt(post.repost_of.content),
 					image_urls: post.repost_of.image_urls,
 					author: post.repost_of.author,
-					author_name: post.repost_of.author_name,
+					author_name: post.repost_of.author_name?.trim() || null,
 					created_at: post.repost_of.created_at,
 				}
 			: null,
@@ -254,6 +256,9 @@ class PostsService {
 			source?: PostSource
 			external_key?: string | null
 			author_name?: string | null
+			source_url?: string | null
+			source_avatar_url?: string | null
+			feed_source_id?: number | null
 		}
 	) {
 		const buildIds = uniqueIds(data.attached_build_ids)
@@ -277,6 +282,9 @@ class PostsService {
 						source: data.source ?? PostSource.USER,
 						external_key: data.external_key ?? null,
 						author_name: data.author_name ?? null,
+						source_url: data.source_url ?? null,
+						source_avatar_url: data.source_avatar_url ?? null,
+						feed_source_id: data.feed_source_id ?? null,
 						author_id,
 						attached_build_ids: buildIds,
 						attached_tier_list_ids: tierListIds,
@@ -312,6 +320,9 @@ class PostsService {
 		content: string
 		image_urls?: string[]
 		author_name?: string
+		source_url?: string | null
+		source_avatar_url?: string | null
+		feed_source_id?: number | null
 	}) {
 		const existing = await prisma.post.findUnique({
 			where: {
@@ -332,6 +343,9 @@ class PostsService {
 					source: data.source,
 					external_key: data.external_key,
 					author_name: data.author_name ?? null,
+					source_url: data.source_url ?? null,
+					source_avatar_url: data.source_avatar_url ?? null,
+					feed_source_id: data.feed_source_id ?? null,
 				},
 			})
 			return { created: true, post: await postProjection(post.id) }

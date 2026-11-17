@@ -49,10 +49,14 @@ enum StarTargetType {
 
 enum PostSource {
   USER
-  EXBO_TG
-  STALZONE_REPORT
-  OFFICIAL_MEDIA
+  TG
+  YOUTUBE
   EFORUM
+}
+
+enum FeedSourceType {
+  TG
+  YOUTUBE
 }
 
 enum PollType {
@@ -352,8 +356,8 @@ model GlobalNotification {
   starts_at  DateTime               @default(now())
   expires_at DateTime?
 
-  author    User? @relation(fields: [author_id], references: [id], onDelete: SetNull)
-  author_id Int?
+  author      User?       @relation(fields: [author_id], references: [id], onDelete: SetNull)
+  author_id   Int?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -486,14 +490,18 @@ model Post {
   source                 PostSource @default(USER)
   external_key           String?
   author_name            String?
+  source_url             String?
+  source_avatar_url      String?
+  feed_source_id         Int?
   attached_build_ids     Int[]      @default([])
   attached_tier_list_ids Int[]      @default([])
   repost_of_id           Int?
   stars_count            Int        @default(0)
   comments_count         Int        @default(0)
 
-  author    User? @relation(fields: [author_id], references: [id], onDelete: SetNull)
-  author_id Int?
+  author      User?       @relation(fields: [author_id], references: [id], onDelete: SetNull)
+  author_id   Int?
+  feed_source FeedSource? @relation(fields: [feed_source_id], references: [id], onDelete: SetNull)
 
   repost_of Post?            @relation("PostReposts", fields: [repost_of_id], references: [id], onDelete: SetNull)
   reposts   Post[]           @relation("PostReposts")
@@ -509,7 +517,50 @@ model Post {
 
   @@unique([source, external_key])
   @@index([repost_of_id])
+  @@index([feed_source_id])
   @@map("posts")
+}
+
+model FeedSource {
+  id             Int             @id @default(autoincrement())
+  type           FeedSourceType
+  external_id    String
+  label          String
+  enabled        Boolean         @default(true)
+  last_synced_at DateTime?
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
+
+  posts      Post[]
+  categories FeedSourceCategory[]
+
+  @@unique([type, external_id])
+  @@map("feed_sources")
+}
+
+model FeedCategory {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique
+  enabled    Boolean  @default(true)
+  position   Int      @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  sources FeedSourceCategory[]
+
+  @@map("feed_categories")
+}
+
+model FeedSourceCategory {
+  source_id   Int
+  category_id Int
+
+  source   FeedSource   @relation(fields: [source_id], references: [id], onDelete: Cascade)
+  category FeedCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  @@id([source_id, category_id])
+  @@index([category_id])
+  @@map("feed_source_categories")
 }
 
 model PostPoll {
@@ -600,8 +651,8 @@ model Art {
   tags  String @default("")
   views Int    @default(0)
 
-  author    User? @relation(fields: [author_id], references: [id], onDelete: SetNull)
-  author_id Int?
+  author      User?       @relation(fields: [author_id], references: [id], onDelete: SetNull)
+  author_id   Int?
 
   author_name         String?
   author_social_links Json?
@@ -1163,8 +1214,8 @@ model TierList {
   is_current    Boolean   @default(false)
   removed_at    DateTime?
 
-  author    User? @relation(fields: [author_id], references: [id], onDelete: SetNull)
-  author_id Int?
+  author      User?       @relation(fields: [author_id], references: [id], onDelete: SetNull)
+  author_id   Int?
 
   entries  TierListEntry[]
   comments ArticleComment[]

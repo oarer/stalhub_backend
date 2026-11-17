@@ -1,15 +1,15 @@
-import { BackendError, fetchProfile, type ProfileCache } from './backend'
-import type { BotConfig } from './config'
+import { BackendError, fetchProfile, type ProfileCache } from '../api/stats'
+import type { BotConfig } from '../config'
 import {
 	type InlineArticle,
 	itemArticle,
 	messageArticle,
 	profileArticle,
-} from './format'
-import type { ItemLookup } from './items'
-import { type ParsedQuery, parseInlineQuery, type Region } from './query'
-import { profileSessionKey, type SessionStore } from './session'
-import type { PlayerProfile } from './stats'
+} from '../format/format'
+import type { ItemLookup } from '../services/items'
+import { type ParsedQuery, parseInlineQuery, type Region } from '../services/query'
+import { profileSessionKey, type SessionStore } from '../services/session'
+import type { PlayerProfile } from '../services/stats'
 
 export type InlineLookup = (
 	region: Region,

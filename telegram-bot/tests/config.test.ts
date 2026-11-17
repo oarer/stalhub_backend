@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { loadConfig } from '../src/config'
+import { loadConfig } from '../src/config/bot'
 
 const baseEnv = { TG_BOT_TOKEN: 'test-token' }
 

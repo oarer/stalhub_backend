@@ -422,6 +422,51 @@ export const crons = createElysia()
 	)
 	.use(
 		cron({
+			name: 'feedSourcesSync',
+			pattern: '* * * * *',
+			run: withTracking(
+				'feedSourcesSync',
+				'* * * * *',
+				undefined,
+				async () => {
+					try {
+						const { syncTelegramSources } = await import(
+							'@/app/api/feed-sources/telegram'
+						)
+						const result = await syncTelegramSources()
+						if (result.errors.length)
+							console.error(
+								'[FeedSources] Telegram sync errors:',
+								result.errors
+							)
+					} catch (error) {
+						console.error(
+							'[FeedSources] Telegram sync failed:',
+							error
+						)
+					}
+					try {
+						const { syncYouTubeSources } = await import(
+							'@/app/api/feed-sources/youtube'
+						)
+						const result = await syncYouTubeSources()
+						if (result.errors.length)
+							console.error(
+								'[FeedSources] YouTube sync errors:',
+								result.errors
+							)
+					} catch (error) {
+						console.error(
+							'[FeedSources] YouTube sync failed:',
+							error
+						)
+					}
+				}
+			),
+		})
+	)
+	.use(
+		cron({
 			name: 'adminDigest',
 			pattern: '0 9 * * *',
 			timezone: 'Europe/Moscow',

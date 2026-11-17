@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
-import { BackendError } from '../src/backend'
-import { buildInlineResults, isNotFound } from '../src/inline'
-import { type ItemLookup, parseListing } from '../src/items'
-import type { Region } from '../src/query'
+import { BackendError } from '../src/api/stats'
+import { buildInlineResults, isNotFound } from '../src/bot/inline'
+import { type ItemLookup, parseListing } from '../src/services/items'
+import type { Region } from '../src/services/query'
 
 const dbUrl = 'https://cdn.stalhub.dev/db'
 const items = parseListing(

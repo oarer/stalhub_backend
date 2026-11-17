@@ -13,8 +13,6 @@
 		"typescript": "latest"
 	},
 	"dependencies": {
-		"gramio": "^0.15.3",
-		"input": "^1.0.1",
-		"telegram": "^2.26.22"
+		"gramio": "^0.15.3"
 	}
 }

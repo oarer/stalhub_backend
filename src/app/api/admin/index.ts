@@ -1,8 +1,10 @@
+import { feedCategoriesRoutes } from '@/app/api/feed-categories'
+import { feedSourcesRoutes } from '@/app/api/feed-sources'
 import { logAdminAction } from '@/lib/admin-audit'
 import { prisma } from '@/lib/prisma'
 import { createElysia } from '@/utils/elysia'
-import { adminArtsRoutes } from './arts'
 import { adminAchievementRoutes } from './achievements'
+import { adminArtsRoutes } from './arts'
 import { auditRoutes } from './audit'
 import { badgesRoutes } from './badges'
 import { bansRoutes } from './bans'
@@ -102,5 +104,7 @@ export const adminRoutes = createElysia()
 			.use(bansRoutes)
 			.use(adminArtsRoutes)
 			.use(scAdminRoutes)
+			.use(feedSourcesRoutes)
+			.use(feedCategoriesRoutes)
 			.use(unoAdminRoutes)
 	)

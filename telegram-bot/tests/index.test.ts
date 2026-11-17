@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { processUpdate } from '../src/bot'
+import { processUpdate } from '../src/bot/index'
 
 describe('update processing', () => {
 	test('does not finish until the update handler succeeds', async () => {

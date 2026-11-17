@@ -7,7 +7,7 @@ import {
 	rankName,
 	rankPriority,
 	searchItems,
-} from '../src/items'
+} from '../src/services/items'
 
 const entry = (
 	category: string,

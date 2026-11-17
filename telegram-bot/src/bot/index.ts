@@ -7,27 +7,27 @@ import {
 	format,
 	InlineKeyboard,
 } from 'gramio'
-import type { BotConfig } from './config'
-import type { KeyedDebouncer } from './debounce'
-import type { ItemDetailCache } from './detail'
+import type { BotConfig } from '../config'
+import type { KeyedDebouncer } from '../services/debounce'
+import type { ItemDetailCache } from '../services/detail'
 import {
 	helpText,
 	messageArticle,
 	profileCardText,
 	profileStatsKeyboard,
-} from './format'
+} from '../format/format'
 import { buildInlineResults, emptyHint, type InlineLookup } from './inline'
-import type { ItemLookup } from './items'
-import { parseInlineQuery, type Region } from './query'
-import type { RateLimiter } from './rate-limit'
-import { profileSessionKey, type SessionStore } from './session'
+import type { ItemLookup } from '../services/items'
+import { parseInlineQuery, type Region } from '../services/query'
+import type { RateLimiter } from '../services/rate-limit'
+import { profileSessionKey, type SessionStore } from '../services/session'
 import {
 	CLAN_KIND,
 	categoryMeta,
 	categoryStatsText,
 	clanHistoryText,
-} from './stat-view'
-import type { PlayerProfile } from './stats'
+} from '../services/stat-view'
+import type { PlayerProfile } from '../services/stats'
 
 export type UpdateProcessResult = 'handled' | 'skipped'
 

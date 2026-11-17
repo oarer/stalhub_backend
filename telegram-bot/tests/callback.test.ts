@@ -1,12 +1,12 @@
 import { describe, expect, mock, test } from 'bun:test'
 import type { AnswerCallbackQueryParams, EditMessageTextParams } from '@gramio/types'
-import { createBot } from '../src/bot'
-import { loadConfig } from '../src/config'
-import { KeyedDebouncer } from '../src/debounce'
-import { ItemDetailCache } from '../src/detail'
-import { RateLimiter } from '../src/rate-limit'
-import { profileSessionKey, SessionStore } from '../src/session'
-import type { PlayerProfile } from '../src/stats'
+import { createBot } from '../src/bot/index'
+import { loadConfig } from '../src/config/bot'
+import { KeyedDebouncer } from '../src/services/debounce'
+import { ItemDetailCache } from '../src/services/detail'
+import { RateLimiter } from '../src/services/rate-limit'
+import { profileSessionKey, SessionStore } from '../src/services/session'
+import type { PlayerProfile } from '../src/services/stats'
 
 const authorId = 1234567890123
 const hash = profileSessionKey('RU', 'Nick')

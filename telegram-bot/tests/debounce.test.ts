@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { KeyedDebouncer } from '../src/debounce'
+import { KeyedDebouncer } from '../src/services/debounce'
 
 type TimerId = ReturnType<typeof setTimeout>
 

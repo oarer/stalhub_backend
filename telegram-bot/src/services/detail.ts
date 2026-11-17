@@ -1,6 +1,6 @@
 import { FormattableString } from 'gramio'
-import type { BotConfig } from './config'
-import { limitFormattable } from './format'
+import type { BotConfig } from '../config'
+import { limitFormattable } from '../format/format'
 
 export type ItemMessage =
 	| { type: 'text'; text: string }
