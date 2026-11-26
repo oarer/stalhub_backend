@@ -1580,7 +1580,8 @@ model CommissionRefund {
 // =================== AWARDS ===================
 model AwardCampaign {
   id                   String      @id @default(cuid())
-  year                 Int         @unique
+  year                 Int
+  is_test              Boolean     @default(false)
   title                String      @default("StalZone Awards")
   status               AwardStatus @default(DRAFT)
   ends_at              DateTime?
@@ -1592,6 +1593,7 @@ model AwardCampaign {
 
   categories AwardCategory[]
 
+  @@index([year])
   @@map("award_campaigns")
 }
 

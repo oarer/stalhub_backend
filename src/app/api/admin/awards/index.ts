@@ -22,12 +22,14 @@ const campaignBody = t.Object({
 	year: t.Integer(),
 	title: t.Optional(t.String()),
 	ends_at: t.Optional(t.String()),
+	is_test: t.Optional(t.Boolean()),
 })
 
 const patchBody = t.Object({
 	title: t.Optional(t.String()),
 	ends_at: t.Optional(t.Union([t.String(), t.Null()])),
 	status: t.Optional(t.String()),
+	is_test: t.Optional(t.Boolean()),
 })
 
 const categoryBody = t.Object({

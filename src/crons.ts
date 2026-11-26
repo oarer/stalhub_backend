@@ -27,7 +27,11 @@ export const crons = createElysia()
 				async () => {
 					const now = new Date()
 					const result = await prisma.awardCampaign.updateMany({
-						where: { status: 'VOTING', ends_at: { lte: now } },
+						where: {
+							status: 'VOTING',
+							is_test: false,
+							ends_at: { lte: now },
+						},
 						data: { status: 'ENDED', voting_closed_at: now },
 					})
 					if (result.count > 0)

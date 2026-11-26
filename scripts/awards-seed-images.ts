@@ -146,8 +146,8 @@ async function resolveCampaign(): Promise<Campaign> {
 
 		const year = Number(target)
 		if (Number.isInteger(year)) {
-			const byYear = await prisma.awardCampaign.findUnique({
-				where: { year },
+			const byYear = await prisma.awardCampaign.findFirst({
+				where: { year, is_test: false },
 				select: campaignSelect,
 			})
 			if (byYear) return byYear
@@ -158,6 +158,7 @@ async function resolveCampaign(): Promise<Campaign> {
 	}
 
 	const latest = await prisma.awardCampaign.findFirst({
+		where: { is_test: false },
 		orderBy: { year: 'desc' },
 		select: campaignSelect,
 	})

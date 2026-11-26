@@ -175,7 +175,7 @@ function publicCategory(
 async function latestCampaign() {
 	return prisma.awardCampaign.findFirst({
 		where: { status: { not: 'DRAFT' } },
-		orderBy: { year: 'desc' },
+		orderBy: [{ year: 'desc' }, { created_at: 'desc' }],
 		select: campaignSelect,
 	})
 }
@@ -267,8 +267,9 @@ export async function getCategory(
 	userId?: number,
 	hasExbo?: boolean
 ) {
-	const campaign = await prisma.awardCampaign.findUnique({
-		where: { year },
+	const campaign = await prisma.awardCampaign.findFirst({
+		where: { year, status: { not: 'DRAFT' } },
+		orderBy: { created_at: 'desc' },
 		select: campaignSelect,
 	})
 	if (!campaign || campaign.status === 'DRAFT') throw err(404, 'not_found')
@@ -329,7 +330,7 @@ function snapshotPlayerTop(category: Record<string, unknown>) {
 export async function getResults(locale: Locale) {
 	const campaign = await prisma.awardCampaign.findFirst({
 		where: { status: 'PUBLISHED' },
-		orderBy: { year: 'desc' },
+		orderBy: [{ year: 'desc' }, { created_at: 'desc' }],
 		select: {
 			year: true,
 			title: true,

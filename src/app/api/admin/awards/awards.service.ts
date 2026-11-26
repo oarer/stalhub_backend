@@ -100,6 +100,7 @@ export async function list() {
 		select: {
 			id: true,
 			year: true,
+			is_test: true,
 			title: true,
 			status: true,
 			ends_at: true,
@@ -114,6 +115,7 @@ export async function list() {
 		items: rows.map((x) => ({
 			id: x.id,
 			year: x.year,
+			is_test: x.is_test,
 			title: x.title,
 			status: STATUS[x.status],
 			ends_at: x.ends_at,
@@ -179,22 +181,33 @@ export async function createCampaign(input: {
 	year: number
 	title?: string
 	ends_at?: string
+	is_test?: boolean
 }) {
 	if (input.ends_at) {
 		const d = new Date(input.ends_at)
 		if (Number.isNaN(d.getTime()) || d.getTime() <= Date.now())
 			throw { status: 422, code: 'invalid_ends_at' }
 	}
+	const is_test = input.is_test ?? false
+	if (!is_test) {
+		const existing = await prisma.awardCampaign.findFirst({
+			where: { year: input.year, is_test: false },
+			select: { id: true },
+		})
+		if (existing) throw { status: 409, code: 'already_exists' }
+	}
 	try {
 		return await prisma.awardCampaign.create({
 			data: {
 				year: input.year,
+				is_test,
 				title: input.title ?? 'StalZone Awards',
 				ends_at: input.ends_at ? new Date(input.ends_at) : null,
 			},
 			select: {
 				id: true,
 				year: true,
+				is_test: true,
 				title: true,
 				status: true,
 				ends_at: true,
@@ -209,12 +222,23 @@ export async function createCampaign(input: {
 
 export async function patchCampaign(
 	id: string,
-	input: { title?: string; ends_at?: string | null; status?: string },
+	input: {
+		title?: string
+		ends_at?: string | null
+		status?: string
+		is_test?: boolean
+	},
 	actor: number
 ) {
 	const c = await prisma.awardCampaign.findUnique({
 		where: { id },
-		select: { id: true, status: true, ends_at: true },
+		select: {
+			id: true,
+			status: true,
+			ends_at: true,
+			year: true,
+			is_test: true,
+		},
 	})
 	if (!c) throw { status: 404, code: 'not_found' }
 	await ownerOnly(id, actor)
@@ -227,6 +251,13 @@ export async function patchCampaign(
 		['ENDED', 'PUBLISHED'].includes(c.status)
 	)
 		throw { status: 422, code: 'ends_at_immutable' }
+	if (input.is_test === false) {
+		const existing = await prisma.awardCampaign.findFirst({
+			where: { year: c.year, is_test: false, id: { not: id } },
+			select: { id: true },
+		})
+		if (existing) throw { status: 409, code: 'already_exists' }
+	}
 	const next = input.status?.toUpperCase()
 	if (
 		next &&
@@ -244,6 +275,7 @@ export async function patchCampaign(
 		where: { id },
 		data: {
 			title: input.title,
+			is_test: input.is_test,
 			ends_at:
 				input.ends_at === undefined
 					? undefined
@@ -258,21 +290,28 @@ export async function patchCampaign(
 						? null
 						: undefined,
 		},
-		select: { id: true, status: true, title: true, ends_at: true },
+		select: {
+			id: true,
+			year: true,
+			is_test: true,
+			status: true,
+			title: true,
+			ends_at: true,
+		},
 	})
-	if (c.status === 'DRAFT' && next === 'VOTING')
+	if (!c.is_test && c.status === 'DRAFT' && next === 'VOTING')
 		await adminNotificationService.sendToAll({
 			title: 'Голосование началось',
 			content: 'Голосование за StalZone Awards открыто',
 			link: '/awards',
 		})
-	if (c.status === 'VOTING' && next === 'ENDED')
+	if (!c.is_test && c.status === 'VOTING' && next === 'ENDED')
 		await adminNotificationService.sendToAll({
 			title: 'Голосование завершено',
 			content: 'Приём голосов завершён, ожидайте итоги',
 			link: '/awards',
 		})
-	if (c.status === 'ENDED' && next === 'VOTING')
+	if (!c.is_test && c.status === 'ENDED' && next === 'VOTING')
 		await adminNotificationService.sendToAll({
 			title: 'Голосование началось',
 			content: 'Голосование за StalZone Awards открыто',
@@ -451,6 +490,7 @@ export async function results(
 		select: {
 			id: true,
 			status: true,
+			is_test: true,
 			results_published_at: true,
 			categories: {
 				select: {
@@ -532,6 +572,7 @@ export async function results(
 	const blocked = categories.find((x) => x.ties)
 	return {
 		campaign_id: c.id,
+		is_test: c.is_test,
 		categories,
 		can_publish: c.status === 'ENDED' && !blocked,
 		publish_block_reason: blocked ? 'tie' : null,
@@ -578,11 +619,12 @@ async function publish(id: string, actor: number) {
 			throw { status: 409, code: 'illegal_transition' }
 		return { ok: true }
 	})
-	await adminNotificationService.sendToAll({
-		title: 'Итоги опубликованы',
-		content: 'Итоги StalZone Awards опубликованы',
-		link: '/awards',
-	})
+	if (!pre.is_test)
+		await adminNotificationService.sendToAll({
+			title: 'Итоги опубликованы',
+			content: 'Итоги StalZone Awards опубликованы',
+			link: '/awards',
+		})
 	return result
 }
 
