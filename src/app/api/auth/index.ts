@@ -23,7 +23,7 @@ import { exboCredentials } from './providers/exbo/credentials'
 import { telegramAuth } from './providers/telegram'
 
 const cookieSchema = t.Cookie({
-	refresh_token: t.String(),
+	refresh_token: t.Optional(t.String()),
 	access_token: t.Optional(t.String()),
 })
 
@@ -94,10 +94,7 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 					desktopUa
 						? `StalHubApp_${desktopUa}`
 						: (h['user-agent'] ?? 'Stalhub Desktop'),
-					clientIp(
-						h,
-						server?.requestIP?.(request)?.address ?? ''
-					)
+					clientIp(h, server?.requestIP?.(request)?.address ?? '')
 				)
 				const roles = user.roles.map((role) => role.name)
 				const accessValue = await jwt.sign({
@@ -253,7 +250,12 @@ export const authRoutes = createElysia().group('/auth', (app) =>
 				},
 			},
 			async ({ cookie: { refresh_token, access_token }, jwt, set }) => {
-				const payload = await jwt.verify(refresh_token.value)
+				const token = refresh_token?.value
+				if (!token) {
+					set.status = 401
+					return { error: 'No refresh token' }
+				}
+				const payload = await jwt.verify(token)
 
 				if (
 					!payload ||

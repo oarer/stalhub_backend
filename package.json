@@ -6,6 +6,8 @@
 		"test:map3d": "bun test map3d",
 		"dev": "bun run --watch src/index.ts",
 		"db:deploy": "bunx prisma migrate deploy && bunx prisma generate",
+		"awards:seed-categories": "bun run scripts/awards-seed-categories.ts",
+		"awards:seed-images": "bun run scripts/awards-seed-images.ts",
 		"grenade:seed": "bun run scripts/grenade-seed-snapshots.ts"
 	},
 	"dependencies": {

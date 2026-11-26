@@ -87,6 +87,20 @@ enum UserLayout {
   COMPACT
 }
 
+enum AwardStatus {
+  DRAFT
+  VOTING
+  ENDED
+  PUBLISHED
+}
+
+enum AwardCategoryKind {
+  NOMINEES
+  UPDATES
+  CLAN
+  PLAYER
+}
+
 enum ArticleStatus {
   PENDING
   APPROVED
@@ -212,7 +226,7 @@ model User {
   telegram_auth TelegramAuth?
   exbo_auth     EXBOAuth?
 
-  badges UserBadges[]
+  badges       UserBadges[]
   achievements UserAchievement[]
 
   builds           Build[]
@@ -221,7 +235,7 @@ model User {
   tier_lists       TierList[]
   posts            Post[]
   post_poll_votes  PostPollVote[]
-  posts_edited_by  Post[]         @relation("PostEditedBy")
+  posts_edited_by  Post[]           @relation("PostEditedBy")
   stars            Star[]
   comments         ArticleComment[]
   profile_comments ArticleComment[] @relation("ProfileComments")
@@ -238,6 +252,7 @@ model User {
   clan_invite      ClanInvite?
   authored_notes   ClanMemberNote[]
   personal_profile PersonalProfile?
+  award_votes      AwardVote[]
 
   artist_profile        ArtistProfile?
   commissions_requested CommissionOrder[]   @relation("CommissionCustomer")
@@ -269,10 +284,10 @@ model Achievement {
 }
 
 model UserAchievement {
-  id             Int         @id @default(autoincrement())
+  id             Int      @id @default(autoincrement())
   user_id        Int
   achievement_id Int
-  unlocked_at    DateTime    @default(now())
+  unlocked_at    DateTime @default(now())
 
   user        User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
   achievement Achievement @relation(fields: [achievement_id], references: [id], onDelete: Cascade)
@@ -356,8 +371,8 @@ model GlobalNotification {
   starts_at  DateTime               @default(now())
   expires_at DateTime?
 
-  author      User?       @relation(fields: [author_id], references: [id], onDelete: SetNull)
-  author_id   Int?
+  author    User? @relation(fields: [author_id], references: [id], onDelete: SetNull)
+  author_id Int?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -507,10 +522,10 @@ model Post {
   reposts   Post[]           @relation("PostReposts")
   comments  ArticleComment[]
 
-  edited_by        User? @relation("PostEditedBy", fields: [edited_by_id], references: [id], onDelete: SetNull)
-  edited_by_id     Int?
-  edited_by_name   String?
-  poll      PostPoll?
+  edited_by      User?     @relation("PostEditedBy", fields: [edited_by_id], references: [id], onDelete: SetNull)
+  edited_by_id   Int?
+  edited_by_name String?
+  poll           PostPoll?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -522,14 +537,14 @@ model Post {
 }
 
 model FeedSource {
-  id             Int             @id @default(autoincrement())
+  id             Int            @id @default(autoincrement())
   type           FeedSourceType
   external_id    String
   label          String
-  enabled        Boolean         @default(true)
+  enabled        Boolean        @default(true)
   last_synced_at DateTime?
-  created_at     DateTime        @default(now())
-  updated_at     DateTime        @updatedAt
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
 
   posts      Post[]
   categories FeedSourceCategory[]
@@ -651,8 +666,8 @@ model Art {
   tags  String @default("")
   views Int    @default(0)
 
-  author      User?       @relation(fields: [author_id], references: [id], onDelete: SetNull)
-  author_id   Int?
+  author    User? @relation(fields: [author_id], references: [id], onDelete: SetNull)
+  author_id Int?
 
   author_name         String?
   author_social_links Json?
@@ -800,7 +815,8 @@ model Clan {
   squads        ClanSquad[]
   profile       UserClanProfile[]
 
-  boost_orders ClanBoostOrder[]
+  boost_orders   ClanBoostOrder[]
+  award_nominees AwardNominee[]
 
   synced_at  DateTime @updatedAt
   created_at DateTime @default(now())
@@ -1214,8 +1230,8 @@ model TierList {
   is_current    Boolean   @default(false)
   removed_at    DateTime?
 
-  author      User?       @relation(fields: [author_id], references: [id], onDelete: SetNull)
-  author_id   Int?
+  author    User? @relation(fields: [author_id], references: [id], onDelete: SetNull)
+  author_id Int?
 
   entries  TierListEntry[]
   comments ArticleComment[]
@@ -1559,4 +1575,94 @@ model CommissionRefund {
   received_at DateTime?
 
   @@index([order_id])
+}
+
+// =================== AWARDS ===================
+model AwardCampaign {
+  id                   String      @id @default(cuid())
+  year                 Int         @unique
+  title                String      @default("StalZone Awards")
+  status               AwardStatus @default(DRAFT)
+  ends_at              DateTime?
+  voting_closed_at     DateTime?
+  results_published_at DateTime?
+  results_snapshot     Json?
+  created_at           DateTime    @default(now())
+  updated_at           DateTime    @updatedAt
+
+  categories AwardCategory[]
+
+  @@map("award_campaigns")
+}
+
+model AwardCategory {
+  id               String            @id @default(cuid())
+  campaign_id      String
+  slug             String
+  title_i18n       Json
+  description_i18n Json?
+  kind             AwardCategoryKind @default(NOMINEES)
+  position         Int               @default(0)
+  image_url        String?
+
+  campaign AwardCampaign  @relation(fields: [campaign_id], references: [id], onDelete: Cascade)
+  nominees AwardNominee[]
+  votes    AwardVote[]
+
+  @@unique([campaign_id, slug])
+  @@index([campaign_id, position])
+  @@map("award_categories")
+}
+
+model AwardNominee {
+  id                String    @id @default(cuid())
+  category_id       String
+  name              String
+  avatar_url        String?
+  date              DateTime?
+  patch_url         String?
+  clan_id           String?
+  clan_name         String?
+  clan_tag          String?
+  clan_member_count Int?
+  nominated_by      Int?
+  social_links      Json?
+  description_i18n  Json?
+  position          Int       @default(0)
+  manual_place      Int?
+  player_uuid       String?
+  player_region     String?
+  player_alliance   String?
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+
+  category AwardCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  votes    AwardVote[]
+  clan     Clan?         @relation(fields: [clan_id], references: [id], onDelete: SetNull)
+
+  @@unique([category_id, clan_id])
+  @@unique([category_id, player_uuid])
+  @@index([category_id, position])
+  @@map("award_nominees")
+}
+
+model AwardVote {
+  id             String    @id @default(cuid())
+  category_id    String
+  user_id        Int
+  nominee_id     String
+  created_at     DateTime  @default(now())
+  excluded_at    DateTime?
+  excluded_by    Int?
+  exclude_reason String?
+
+  category AwardCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  nominee  AwardNominee  @relation(fields: [nominee_id], references: [id], onDelete: Cascade)
+
+  @@unique([category_id, user_id])
+  @@index([nominee_id])
+  @@index([created_at])
+  @@index([category_id, excluded_at])
+  @@map("award_votes")
 }

@@ -48,7 +48,7 @@ export const FACTION_NAMES = new Map([
 	['merc', 'Наёмник'],
 	['covenant', 'Завет'],
 	['freedom', 'Заря'],
-	['duty', 'Долг'],
+	['duty', 'Рубеж'],
 	['bandits', 'Бандит'],
 	['stalkers', 'Сталкер'],
 ])

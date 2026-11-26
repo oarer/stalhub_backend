@@ -34,7 +34,7 @@ const CYRILLIC_MAP: Record<string, string> = {
 	я: 'ya',
 }
 
-const transliterate = (str: string): string =>
+export const transliterate = (str: string): string =>
 	str
 		.split('')
 		.map((ch) => {

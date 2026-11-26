@@ -1,5 +1,6 @@
 import { cron } from '@elysia/cron'
 import { sendAdminDigest } from '@/app/api/admin/dashboard/digest.service'
+import { adminNotificationService } from '@/app/api/admin/notifications/notifications.service'
 import { updateAllRegions as updateArtifacts } from '@/app/api/artifacts/aggregate'
 import { refreshBalanceDiffs } from '@/app/api/balance/service'
 import { clanService } from '@/app/api/clan/services/clan'
@@ -15,6 +16,30 @@ import { createElysia } from '@/utils/elysia'
 import { deferStartup } from '@/utils/startup'
 
 export const crons = createElysia()
+	.use(
+		cron({
+			name: 'awardsAutoClose',
+			pattern: '0 * * * *',
+			run: withTracking(
+				'awardsAutoClose',
+				'0 * * * *',
+				undefined,
+				async () => {
+					const now = new Date()
+					const result = await prisma.awardCampaign.updateMany({
+						where: { status: 'VOTING', ends_at: { lte: now } },
+						data: { status: 'ENDED', voting_closed_at: now },
+					})
+					if (result.count > 0)
+						await adminNotificationService.sendToAll({
+							title: 'Голосование завершено',
+							content: 'Приём голосов завершён, ожидайте итоги',
+							link: '/awards',
+						})
+				}
+			),
+		})
+	)
 	.use(
 		cron({
 			name: 'clanSync',

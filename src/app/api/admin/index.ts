@@ -6,6 +6,7 @@ import { createElysia } from '@/utils/elysia'
 import { adminAchievementRoutes } from './achievements'
 import { adminArtsRoutes } from './arts'
 import { auditRoutes } from './audit'
+import { adminAwardsRoutes } from './awards'
 import { badgesRoutes } from './badges'
 import { bansRoutes } from './bans'
 import { clansRoutes } from './clans'
@@ -103,6 +104,7 @@ export const adminRoutes = createElysia()
 			.use(clansRoutes)
 			.use(bansRoutes)
 			.use(adminArtsRoutes)
+			.use(adminAwardsRoutes)
 			.use(scAdminRoutes)
 			.use(feedSourcesRoutes)
 			.use(feedCategoriesRoutes)

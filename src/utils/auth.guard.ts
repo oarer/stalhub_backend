@@ -145,6 +145,16 @@ export async function requireAdmin({ store, set }: AuthContext) {
 	}
 }
 
+export function requireRole(role: string) {
+	return async ({ store, set }: AuthContext) => {
+		const user_id = store.authUserId as number
+		if (await checkRole(user_id, role)) return
+
+		set.status = 403
+		return { error: 'Forbidden' }
+	}
+}
+
 export function requirePermission(permission: string) {
 	return async ({ store, set }: AuthContext) => {
 		const user_id = store.authUserId as number
